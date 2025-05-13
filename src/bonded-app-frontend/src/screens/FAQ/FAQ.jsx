@@ -183,7 +183,7 @@ export const FAQ = () => {
           <h1 className="faq-intro-title">How can we help?</h1>
           <p className="faq-intro-text">Find answers to common questions about using Bonded for your relationship verification needs.</p>
         </div>
-
+        
         {faqData.map((faq, index) => (
           <FAQItem 
             key={index} 

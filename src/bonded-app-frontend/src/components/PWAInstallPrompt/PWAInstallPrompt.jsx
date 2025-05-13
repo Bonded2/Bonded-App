@@ -80,19 +80,19 @@ export const PWAInstallPrompt = () => {
   const handleInstallClick = () => {
     if (installPromptEvent) {
       // Show the install prompt for browsers that support it
-      installPromptEvent.prompt();
+    installPromptEvent.prompt();
 
-      // Wait for the user to respond to the prompt
-      installPromptEvent.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('User accepted the install prompt');
-        } else {
-          console.log('User dismissed the install prompt');
-        }
-        // Clear the saved prompt since it can't be used again
-        setInstallPromptEvent(null);
-        setShowPrompt(false);
-      });
+    // Wait for the user to respond to the prompt
+    installPromptEvent.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      } else {
+        console.log('User dismissed the install prompt');
+      }
+      // Clear the saved prompt since it can't be used again
+      setInstallPromptEvent(null);
+      setShowPrompt(false);
+    });
     } else if (isIOS) {
       // Show iOS specific instructions
       alert('To install this app on your iPhone: tap the Share button below, then "Add to Home Screen"');

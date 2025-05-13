@@ -18,6 +18,9 @@ export const TimelineTile = ({
   icon = <StyleOutlined className="icon-instance-node" color="#2C4CDF" />,
   maskGroupClassName,
 }) => {
+  // Determine if the image is a local path
+  const isLocalImage = maskGroup && (maskGroup.startsWith('/') || maskGroup.startsWith('./'));
+  
   return (
     <div className={`timeline-tile ${className}`}>
       <div className="overlap-group">
@@ -50,8 +53,9 @@ export const TimelineTile = ({
 
         <img
           className={`mask-group ${maskGroupClassName}`}
-          alt="Mask group"
+          alt={`Relationship evidence from ${text1}`}
           src={maskGroup}
+          loading="lazy"
         />
       </div>
     </div>

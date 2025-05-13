@@ -2,19 +2,28 @@
     height: 155px;
     width: 285px;
     box-sizing: border-box;
+    position: relative;
   }
   
   .timeline-tile .overlap-group {
     background-color: var(--variable-collection-white);
     border: 1px solid;
     border-color: var(--variable-collection-red-screen-friendly);
-    border-radius: 8px;
+    border-radius: 12px;
     height: 156px;
     left: -1px;
     position: relative;
     top: -1px;
     width: 287px;
     box-sizing: border-box;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .overlap-group {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border-color: #FF8066;
   }
   
   .timeline-tile .overlap {
@@ -33,6 +42,11 @@
     position: absolute;
     top: 41px;
     width: 122px;
+    transition: transform 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .frame {
+    transform: translateY(-2px);
   }
   
   .timeline-tile .div {
@@ -52,6 +66,13 @@
     width: 24px !important;
     min-width: 24px !important;
     min-height: 24px !important;
+    transition: transform 0.3s ease;
+    color: var(--variable-collection-deep-blue);
+  }
+  
+  .timeline-tile-wrapper:hover .photo {
+    transform: scale(1.15);
+    color: #3D5EF0;
   }
   
   .timeline-tile .element-photos {
@@ -69,6 +90,11 @@
     width: 94px;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .element-photos {
+    color: #3D5EF0;
   }
   
   .timeline-tile .overlap-2 {
@@ -102,6 +128,11 @@
     width: 127px;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .text-wrapper-2 {
+    color: #FF8066;
   }
   
   .timeline-tile .frame-2 {
@@ -113,6 +144,11 @@
     position: absolute;
     top: 113px;
     width: 123px;
+    transition: transform 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .frame-2 {
+    transform: translateY(-2px);
   }
   
   .timeline-tile .icon-instance-node {
@@ -121,6 +157,13 @@
     width: 24px !important;
     min-width: 24px !important;
     min-height: 24px !important;
+    transition: transform 0.3s ease, color 0.3s ease;
+    color: var(--variable-collection-deep-blue);
+  }
+  
+  .timeline-tile-wrapper:hover .icon-instance-node {
+    transform: scale(1.15);
+    color: #3D5EF0;
   }
   
   .timeline-tile .thailand {
@@ -139,6 +182,11 @@
     width: 107px;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .thailand {
+    color: #3D5EF0;
   }
   
   .timeline-tile .rectangle {
@@ -149,6 +197,11 @@
     position: absolute;
     top: 0;
     width: 1px;
+    transition: background-color 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .rectangle {
+    background-color: #d0d0d0;
   }
   
   .timeline-tile .frame-3 {
@@ -160,6 +213,11 @@
     position: absolute;
     top: 76px;
     width: 122px;
+    transition: transform 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .frame-3 {
+    transform: translateY(-2px);
   }
   
   .timeline-tile .element-messages {
@@ -177,6 +235,11 @@
     width: 94px;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: color 0.3s ease;
+  }
+  
+  .timeline-tile-wrapper:hover .element-messages {
+    color: #3D5EF0;
   }
   
   .timeline-tile .mask-group {
@@ -185,7 +248,47 @@
     position: absolute;
     top: 0;
     width: 117px;
+    transition: transform 0.5s ease;
+    object-fit: cover;
+    border-radius: 12px 0 0 12px;
+    background-color: rgba(0, 0, 0, 0.05);
   }
+  
+  .timeline-tile-wrapper:hover .mask-group {
+    transform: scale(1.05);
+  }
+
+/* Add a subtle gradient overlay on images for better text visibility */
+.timeline-tile .overlap-group::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 117px; /* Same width as the image */
+  height: 154px; /* Same height as the image */
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.1) 70%,
+    rgba(0, 0, 0, 0) 100%
+  );
+  z-index: 1;
+  border-radius: 12px 0 0 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.timeline-tile-wrapper:hover .overlap-group::before {
+  opacity: 1;
+}
+
+/* Optimize image loading */
+.timeline-tile img {
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-font-smoothing: subpixel-antialiased;
+}
 
 /* Media queries for timeline tile responsiveness */
 @media (max-width: 320px) {
