@@ -12,6 +12,7 @@
   top: 0;
   left: 0;
   z-index: 3000;
+  box-sizing: border-box;
 }
 
 .image-preview-container {
@@ -38,6 +39,7 @@
   position: absolute;
   top: 0;
   left: 0;
+  box-sizing: border-box;
 }
 
 .back-button {
@@ -51,6 +53,8 @@
   background-color: rgba(255, 255, 255, 0.1);
   border-radius: 50%;
   margin-right: 12px;
+  min-width: 32px;
+  min-height: 32px;
 }
 
 .back-button:hover {
@@ -64,6 +68,9 @@
   line-height: 1.3em;
   color: #ffffff;
   flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Main image container */
@@ -86,6 +93,7 @@
   object-fit: contain;
   width: auto;
   height: auto;
+  padding: 64px 0; /* Space for navigation bars */
 }
 
 /* Bottom action bar */
@@ -103,6 +111,7 @@
   bottom: 0;
   left: 0;
   z-index: 10;
+  box-sizing: border-box;
 }
 
 .action-button {
@@ -135,4 +144,74 @@
 
 .delete-button svg path {
   fill: #FF704D;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 320px) {
+  .image-preview-navbar {
+    height: 56px;
+    padding: 8px 12px;
+  }
+  
+  .back-button {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
+    margin-right: 8px;
+  }
+  
+  .preview-title {
+    font-size: 16px;
+  }
+  
+  .preview-image {
+    padding: 56px 0;
+  }
+  
+  .image-actions-bar {
+    height: 56px;
+    padding: 8px 12px;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 480px) {
+  .image-preview-navbar {
+    height: 60px;
+  }
+  
+  .preview-title {
+    font-size: 18px;
+  }
+  
+  .preview-image {
+    padding: 60px 0;
+  }
+  
+  .image-actions-bar {
+    height: 60px;
+  }
+}
+
+/* Support for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .image-preview-navbar {
+    padding-top: calc(8px + env(safe-area-inset-top));
+    height: calc(64px + env(safe-area-inset-top));
+  }
+  
+  .preview-image {
+    padding-top: calc(64px + env(safe-area-inset-top));
+  }
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .image-actions-bar {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    height: calc(64px + env(safe-area-inset-bottom));
+  }
+  
+  .preview-image {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
 } 

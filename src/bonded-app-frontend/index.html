@@ -3,21 +3,45 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
   <title>Bonded App - Relationship Verification for Immigration</title>
   <meta name="description" content="Bonded helps you collect and organize proof of your genuine relationship for visa, residency and citizenship applications." />
   <meta name="keywords" content="visa application, relationship verification, immigration, citizenship, relationship proof" />
   <base href="/" />
   <link rel="icon" href="/favicon.ico" />
-  <link rel="manifest" href="/manifest.json" />
+  <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+  
+  <!-- Primary Theme Color for browsers -->
   <meta name="theme-color" content="#2C4CDF" />
+  <meta name="msapplication-TileColor" content="#2C4CDF" />
+  <meta name="msapplication-navbutton-color" content="#2C4CDF" />
+
+  <!-- iOS PWA specific tags -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Bonded" />
+  
+  <!-- iOS splash screens -->
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1668-2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1536-2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1125-2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1242-2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-828-1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-750-1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-640-1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  
+  <!-- iOS icons -->
   <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
   <link rel="apple-touch-icon" sizes="152x152" href="/images/apple-touch-icon-152x152.png" />
   <link rel="apple-touch-icon" sizes="167x167" href="/images/apple-touch-icon-167x167.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
   <link rel="apple-touch-icon" sizes="120x120" href="/images/apple-touch-icon-120x120.png" />
+  
+  <!-- Microsoft Tiles -->
+  <meta name="msapplication-TileImage" content="/images/ms-tile-144x144.png" />
+  <meta name="msapplication-config" content="/browserconfig.xml" />
+  
   <style>
     html, body, #root {
       margin: 0;
@@ -31,6 +55,17 @@
       left: 0;
       right: 0;
       bottom: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Add iOS specific styles for notched devices */
+    @supports (padding-top: env(safe-area-inset-top)) {
+      body, #root {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
     }
   </style>
 </head>
@@ -39,15 +74,44 @@
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script>
+    // Register service worker with improved error handling and update flow
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
           .then(registration => {
             console.log('Service Worker registered: ', registration);
+            
+            // Handle service worker updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New content is available, notify the user if needed
+                  if (window.confirm('New version available! Reload to update?')) {
+                    window.location.reload();
+                  }
+                }
+              });
+            });
           })
           .catch(registrationError => {
             console.log('Service Worker registration failed: ', registrationError);
           });
+          
+        // Handle browser compatibility differences
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        
+        if (isIOS) {
+          // iOS specific adjustments
+          document.body.classList.add('ios-device');
+          
+          // Fix for iOS Safari standalone mode
+          if (window.navigator.standalone === true) {
+            document.body.classList.add('ios-standalone');
+          }
+        }
       });
     }
   </script>

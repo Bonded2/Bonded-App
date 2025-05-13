@@ -4,8 +4,42 @@ import './style.css';
 export const PWAInstallPrompt = () => {
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
+  const [browserInfo, setBrowserInfo] = useState('');
 
   useEffect(() => {
+    // Detect iOS devices
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(iOS);
+    
+    // Detect Android devices
+    const android = /Android/.test(navigator.userAgent);
+    setIsAndroid(android);
+    
+    // Check if app is already installed
+    const standalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    setIsStandalone(standalone);
+    
+    // Detect browser
+    const getBrowserInfo = () => {
+      const ua = navigator.userAgent;
+      if (/CriOS/i.test(ua)) return 'Chrome on iOS';
+      if (/FxiOS/i.test(ua)) return 'Firefox on iOS';
+      if (/EdgiOS/i.test(ua)) return 'Edge on iOS';
+      if (/OPiOS/i.test(ua)) return 'Opera on iOS';
+      if (/SamsungBrowser/i.test(ua)) return 'Samsung Browser';
+      if (/Chrome/i.test(ua)) return 'Chrome';
+      if (/Firefox/i.test(ua)) return 'Firefox';
+      if (/Safari/i.test(ua)) return 'Safari';
+      if (/Edge/i.test(ua)) return 'Edge';
+      if (/Opera/i.test(ua)) return 'Opera';
+      return 'Unknown Browser';
+    };
+    
+    setBrowserInfo(getBrowserInfo());
+
     const handleBeforeInstallPrompt = (e) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
@@ -17,7 +51,26 @@ export const PWAInstallPrompt = () => {
       }, 3000);
     };
 
+    // Only add event listener for browsers that support it (mainly Chromium-based)
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // Only show custom prompt if:
+    // 1. Not already in standalone mode
+    // 2. iOS device (since they don't support beforeinstallprompt) OR
+    // 3. For Android/desktop specific browsers that need special handling
+    setTimeout(() => {
+      if (!standalone) {
+        // For iOS Safari (which doesn't support beforeinstallprompt)
+        if (iOS && /Safari/i.test(navigator.userAgent) && !(/CriOS/i.test(navigator.userAgent))) {
+          setShowPrompt(true);
+        }
+        
+        // For Samsung Browser (which has inconsistent beforeinstallprompt support)
+        if (android && /SamsungBrowser/i.test(navigator.userAgent)) {
+          setShowPrompt(true);
+        }
+      }
+    }, 5000);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -25,32 +78,52 @@ export const PWAInstallPrompt = () => {
   }, []);
 
   const handleInstallClick = () => {
-    if (!installPromptEvent) return;
+    if (installPromptEvent) {
+      // Show the install prompt for browsers that support it
+      installPromptEvent.prompt();
 
-    // Show the install prompt
-    installPromptEvent.prompt();
-
-    // Wait for the user to respond to the prompt
-    installPromptEvent.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-      } else {
-        console.log('User dismissed the install prompt');
-      }
-      // Clear the saved prompt since it can't be used again
-      setInstallPromptEvent(null);
-      setShowPrompt(false);
-    });
+      // Wait for the user to respond to the prompt
+      installPromptEvent.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('User accepted the install prompt');
+        } else {
+          console.log('User dismissed the install prompt');
+        }
+        // Clear the saved prompt since it can't be used again
+        setInstallPromptEvent(null);
+        setShowPrompt(false);
+      });
+    } else if (isIOS) {
+      // Show iOS specific instructions
+      alert('To install this app on your iPhone: tap the Share button below, then "Add to Home Screen"');
+    } else if (isAndroid) {
+      // For non-Chrome Android browsers
+      alert('To install this app, tap the menu button and select "Add to Home screen" or "Install App"');
+    }
   };
 
   const handleDismissClick = () => {
     setShowPrompt(false);
+    
+    // Save user preference to not show for a while
+    localStorage.setItem('pwaPromptDismissed', Date.now().toString());
   };
 
-  if (!showPrompt) return null;
+  // Don't show if already in standalone mode or if recently dismissed
+  if (isStandalone || !showPrompt) return null;
+  
+  // Check if user recently dismissed
+  const lastDismissed = localStorage.getItem('pwaPromptDismissed');
+  if (lastDismissed) {
+    const dismissedTime = parseInt(lastDismissed, 10);
+    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+    if (dismissedTime > oneDayAgo) {
+      return null;
+    }
+  }
 
   return (
-    <div className="pwa-install-prompt">
+    <div className={`pwa-install-prompt ${isIOS ? 'ios-prompt' : ''} ${isAndroid ? 'android-prompt' : ''}`}>
       <div className="pwa-prompt-content">
         <div className="pwa-prompt-icon">
           <img src="/images/icon-192x192.png" alt="Bonded App Icon" />
@@ -67,12 +140,17 @@ export const PWAInstallPrompt = () => {
             <li>Private, encrypted storage</li>
           </ul>
         </div>
+        {isIOS && (
+          <div className="pwa-ios-instructions">
+            <p>Tap <span className="ios-share-icon">⎙</span> then "Add to Home Screen"</p>
+          </div>
+        )}
         <div className="pwa-prompt-actions">
           <button className="pwa-dismiss-btn" onClick={handleDismissClick}>
             Not Now
           </button>
           <button className="pwa-install-btn" onClick={handleInstallClick}>
-            Install
+            {isIOS ? 'Show Me How' : 'Install'}
           </button>
         </div>
       </div>

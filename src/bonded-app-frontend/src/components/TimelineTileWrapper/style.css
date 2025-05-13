@@ -3,6 +3,7 @@
     width: 285px;
     cursor: pointer;
     transition: transform 0.2s ease;
+    box-sizing: border-box;
   }
   
   .timeline-tile-wrapper:hover {
@@ -12,12 +13,15 @@
   .timeline-tile-wrapper .overlap-3 {
     height: 156px;
     position: relative;
+    width: 100%;
   }
   
   .timeline-tile-wrapper .timeline-tile-instance {
     left: 0 !important;
     position: absolute !important;
     top: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
   }
   
   .timeline-tile-wrapper .rectangle-2 {
@@ -34,5 +38,56 @@
     height: 24px !important;
     position: relative !important;
     width: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
   }
+  
+/* Media queries for timeline tile wrapper responsiveness */
+@media (max-width: 320px) {
+  .timeline-tile-wrapper {
+    width: 100%;
+    height: auto;
+    min-height: 140px;
+  }
+  
+  .timeline-tile-wrapper .overlap-3 {
+    height: auto;
+    min-height: 140px;
+  }
+  
+  .timeline-tile-wrapper .rectangle-2 {
+    width: 100%;
+    top: auto;
+    bottom: 0;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 480px) {
+  .timeline-tile-wrapper {
+    width: 100%;
+    height: auto;
+    min-height: 155px;
+  }
+  
+  .timeline-tile-wrapper .overlap-3 {
+    height: auto;
+    min-height: 155px;
+  }
+  
+  .timeline-tile-wrapper .rectangle-2 {
+    width: 100%;
+    top: auto;
+    bottom: 0;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .timeline-tile-wrapper {
+    width: calc(50% - 12px);
+  }
+  
+  .timeline-tile-wrapper .rectangle-2 {
+    width: 100%;
+  }
+}
   

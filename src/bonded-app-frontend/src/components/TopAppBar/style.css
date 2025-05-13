@@ -31,6 +31,7 @@
   position: relative;
   width: 32px;
   cursor: pointer;
+  min-width: 32px;
 }
 
 .top-app-bar .headline {
@@ -42,6 +43,9 @@
   letter-spacing: 0;
   line-height: 1.3em;
   position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .top-app-bar .actions-container {
@@ -61,6 +65,8 @@
   width: 24px;
   cursor: pointer;
   flex-shrink: 0;
+  min-width: 24px;
+  min-height: 24px;
 }
 
 .top-app-bar .upload {
@@ -112,5 +118,44 @@
   position: relative;
   text-align: center;
   white-space: nowrap;
+}
+
+/* Media queries for top app bar responsiveness */
+@media (max-width: 320px) {
+  .top-app-bar {
+    padding: 4px;
+    gap: 6px;
+  }
+
+  .top-app-bar .headline {
+    font-size: 18px;
+  }
+
+  .top-app-bar .btn {
+    min-width: auto;
+    padding: 0 12px;
+  }
+
+  .top-app-bar .label {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 480px) {
+  .top-app-bar .headline {
+    font-size: 20px;
+  }
+
+  .top-app-bar .btn {
+    min-width: 80px;
+  }
+}
+
+/* Support for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .top-app-bar {
+    padding-top: calc(8px + env(safe-area-inset-top));
+    height: calc(56px + env(safe-area-inset-top));
+  }
 }
   

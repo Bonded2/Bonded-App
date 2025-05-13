@@ -18,6 +18,23 @@ const urlsToCache = [
   '/images/apple-touch-icon-120x120.png',
   '/images/apple-touch-icon-152x152.png',
   '/images/apple-touch-icon-167x167.png',
+  // Add iOS splash screens
+  '/images/splash/apple-splash-2048-2732.png',
+  '/images/splash/apple-splash-1668-2388.png',
+  '/images/splash/apple-splash-1536-2048.png',
+  '/images/splash/apple-splash-1125-2436.png',
+  '/images/splash/apple-splash-1242-2688.png',
+  '/images/splash/apple-splash-828-1792.png',
+  '/images/splash/apple-splash-750-1334.png',
+  '/images/splash/apple-splash-640-1136.png',
+  // Add Microsoft tile images
+  '/images/ms-tile-70x70.png',
+  '/images/ms-tile-144x144.png',
+  '/images/ms-tile-150x150.png',
+  '/images/ms-tile-310x150.png',
+  '/images/ms-tile-310x310.png',
+  '/browserconfig.xml',
+  // Main app scripts and styles
   '/src/main.jsx',
   '/src/index.scss'
 ];
@@ -30,6 +47,9 @@ self.addEventListener('install', event => {
         console.log('Bonded service worker installed');
         return cache.addAll(urlsToCache);
       })
+      .catch(error => {
+        console.error('Failed to cache assets during install:', error);
+      })
   );
   // Force the waiting service worker to become the active service worker
   self.skipWaiting();
@@ -37,6 +57,21 @@ self.addEventListener('install', event => {
 
 // Cache and return requests with specialized handling for relationship evidence
 self.addEventListener('fetch', event => {
+  // Don't attempt to handle non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  // Handle cross-origin requests differently
+  const isSameOrigin = event.request.url.startsWith(self.location.origin);
+  
+  // Skip analytics and tracking requests
+  if (event.request.url.includes('/analytics') || 
+      event.request.url.includes('/tracking') ||
+      event.request.url.includes('/gtm.js')) {
+    return;
+  }
+  
   // Handle navigation requests (HTML pages)
   if (event.request.mode === 'navigate') {
     event.respondWith(
@@ -81,6 +116,19 @@ self.addEventListener('fetch', event => {
             return response;
           }
           
+          // For non-same-origin requests, try network only
+          if (!isSameOrigin) {
+            return fetch(event.request)
+              .catch(error => {
+                console.error('Failed to fetch cross-origin resource:', error);
+                // Return a generic fallback for cross-origin resources
+                return new Response('Network error', {
+                  status: 408,
+                  headers: { 'Content-Type': 'text/plain' }
+                });
+              });
+          }
+          
           // Clone the request because it's a one-time use stream
           const fetchRequest = event.request.clone();
 
@@ -100,10 +148,36 @@ self.addEventListener('fetch', event => {
                 caches.open(CACHE_NAME)
                   .then(cache => {
                     cache.put(event.request, responseToCache);
+                  })
+                  .catch(error => {
+                    console.error('Failed to cache resource:', error);
                   });
               }
 
               return response;
+            })
+            .catch(error => {
+              console.error('Network fetch failed:', error);
+              
+              // For images, try returning a generic placeholder
+              if (event.request.destination === 'image') {
+                return caches.match('/images/placeholder-image.png')
+                  .catch(() => {
+                    // If placeholder not found, return transparent image
+                    return new Response(
+                      'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                      {
+                        headers: { 'Content-Type': 'image/gif' }
+                      }
+                    );
+                  });
+              }
+              
+              // For other resources, just show error
+              return new Response('Network error occurred', {
+                status: 408,
+                headers: { 'Content-Type': 'text/plain' }
+              });
             });
         })
     );
@@ -130,10 +204,55 @@ self.addEventListener('activate', event => {
   );
 });
 
+// Handle messages from the main app
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    caches.delete(CACHE_NAME)
+      .then(() => {
+        event.ports[0].postMessage({ result: 'Cache cleared successfully' });
+      })
+      .catch(error => {
+        event.ports[0].postMessage({ error: error.toString() });
+      });
+  }
+});
+
 // Handle background sync for pending relationship evidence uploads
 self.addEventListener('sync', event => {
   if (event.tag === 'relationship-evidence-sync') {
     event.waitUntil(syncRelationshipEvidence());
+  }
+});
+
+// Handle push notifications for collaboration invites
+self.addEventListener('push', event => {
+  const data = event.data.json();
+  const options = {
+    body: data.body,
+    icon: '/images/icon-192x192.png',
+    badge: '/images/notification-badge.png',
+    data: {
+      url: data.url
+    }
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  
+  if (event.notification.data && event.notification.data.url) {
+    event.waitUntil(
+      clients.openWindow(event.notification.data.url)
+    );
   }
 });
 

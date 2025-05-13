@@ -1,6 +1,7 @@
 .timeline-tile {
     height: 155px;
     width: 285px;
+    box-sizing: border-box;
   }
   
   .timeline-tile .overlap-group {
@@ -13,6 +14,7 @@
     position: relative;
     top: -1px;
     width: 287px;
+    box-sizing: border-box;
   }
   
   .timeline-tile .overlap {
@@ -48,6 +50,8 @@
     margin-left: -12.00px !important;
     position: relative !important;
     width: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
   }
   
   .timeline-tile .element-photos {
@@ -63,6 +67,8 @@
     position: relative;
     white-space: nowrap;
     width: 94px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .timeline-tile .overlap-2 {
@@ -94,6 +100,8 @@
     margin-top: -1.00px;
     position: relative;
     width: 127px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .timeline-tile .frame-2 {
@@ -111,6 +119,8 @@
     height: 24px !important;
     position: relative !important;
     width: 24px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
   }
   
   .timeline-tile .thailand {
@@ -127,6 +137,8 @@
     margin-top: -1.00px;
     position: relative;
     width: 107px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .timeline-tile .rectangle {
@@ -163,6 +175,8 @@
     position: relative;
     white-space: nowrap;
     width: 94px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .timeline-tile .mask-group {
@@ -172,4 +186,68 @@
     top: 0;
     width: 117px;
   }
+
+/* Media queries for timeline tile responsiveness */
+@media (max-width: 320px) {
+  .timeline-tile {
+    width: 100%;
+    height: auto;
+    min-height: 140px;
+  }
+  
+  .timeline-tile .overlap-group {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .timeline-tile .overlap,
+  .timeline-tile .overlap-2 {
+    width: 50%;
+    left: 50%;
+  }
+  
+  .timeline-tile .overlap-2 {
+    left: 0;
+  }
+  
+  .timeline-tile .rectangle {
+    left: 50%;
+  }
+  
+  .timeline-tile .element-photos,
+  .timeline-tile .element-messages,
+  .timeline-tile .thailand,
+  .timeline-tile .text-wrapper-2 {
+    font-size: 14px;
+    width: auto;
+    max-width: 90%;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 480px) {
+  .timeline-tile {
+    width: 100%;
+    height: auto;
+    min-height: 155px;
+  }
+  
+  .timeline-tile .overlap-group {
+    width: 100%;
+    height: 100%;
+  }
+  
+  .timeline-tile .overlap,
+  .timeline-tile .overlap-2 {
+    width: 50%;
+    left: 50%;
+  }
+  
+  .timeline-tile .overlap-2 {
+    left: 0;
+  }
+  
+  .timeline-tile .rectangle {
+    left: 50%;
+  }
+}
   

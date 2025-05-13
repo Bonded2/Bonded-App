@@ -10,6 +10,7 @@
   overflow: hidden;
   position: relative;
   transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  box-sizing: border-box;
 }
 
 .splash-screen.fade-out {
@@ -122,39 +123,32 @@
 @keyframes entrance {
   0% {
     opacity: 0;
-    transform: scale(0.5) translateY(20px);
+    transform: scale(0.5);
   }
-  70% {
-    opacity: 1;
-    transform: scale(1.1) translateY(-10px);
+  60% {
+    transform: scale(1.1);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: scale(1);
   }
 }
 
 @keyframes float {
-  0% {
+  0%, 100% {
     transform: translateY(0);
   }
   50% {
     transform: translateY(-10px);
   }
-  100% {
-    transform: translateY(0);
-  }
 }
 
 @keyframes float-circle {
-  0% {
-    transform: translateY(0) translateX(0);
+  0%, 100% {
+    transform: translateY(0);
   }
   50% {
-    transform: translateY(-20px) translateX(10px);
-  }
-  100% {
-    transform: translateY(0) translateX(0);
+    transform: translateY(-15px);
   }
 }
 
@@ -168,13 +162,11 @@
 }
 
 @keyframes shimmer {
-  0% {
-    opacity: 0.3;
-    transform: translateX(-100%);
+  0%, 100% {
+    opacity: 0.6;
   }
-  100% {
-    opacity: 0;
-    transform: translateX(100%);
+  50% {
+    opacity: 0.8;
   }
 }
 
@@ -186,5 +178,43 @@
   100% {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Media queries for responsive design */
+@media (max-width: 320px) {
+  .splash-logo-container {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .circle-1 {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .circle-2 {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .circle-3 {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 480px) {
+  .splash-logo-container {
+    width: 160px;
+    height: 160px;
+  }
+}
+
+/* Support for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .splash-screen {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 } 
