@@ -1,0 +1,24 @@
+{
+  "canisters": {
+    "bonded-app-backend": {
+      "candid": "src/bonded-app-backend/bonded-app-backend.did",
+      "package": "bonded-app-backend",
+      "type": "rust"
+    },
+    "bonded-app-frontend": {
+      "source": [
+        "src/bonded-app-frontend/dist"
+      ],
+      "type": "assets",
+      "workspace": "bonded-app-frontend"
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

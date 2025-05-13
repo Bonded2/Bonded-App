@@ -1,0 +1,135 @@
+.export-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(46, 46, 46, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+
+.export-modal-container {
+  width: 320px;
+  background-color: #2C4CDF;
+  border-radius: 12px;
+  overflow: hidden;
+  animation: modal-fade-in 0.3s ease-in-out;
+}
+
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.export-modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  gap: 15px;
+}
+
+.export-modal-header {
+  width: 100%;
+  position: relative;
+}
+
+.trailing-icon {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.close-icon {
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+}
+
+.export-modal-title {
+  text-align: center;
+  width: 100%;
+}
+
+.export-modal-title h2 {
+  color: #FFFFFF;
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+  margin: 0;
+}
+
+.export-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 16px;
+}
+
+.export-text {
+  color: #FFFFFF;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.2px;
+  margin: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.export-options {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.export-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  gap: 16px;
+  cursor: pointer;
+  border-top: 1px solid #1E8CFC;
+  height: 70px;
+  transition: background-color 0.2s ease;
+}
+
+.export-row:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.export-row:last-child {
+  border-bottom: 1px solid #1E8CFC;
+}
+
+.export-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 32px;
+  height: 32px;
+}
+
+.export-option-text {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.2px;
+  color: #B9FF46;
+  flex: 1;
+} 

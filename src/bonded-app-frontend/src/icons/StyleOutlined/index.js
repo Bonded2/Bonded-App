@@ -1,0 +1,1 @@
+export { StyleOutlined } from "./StyleOutlined";

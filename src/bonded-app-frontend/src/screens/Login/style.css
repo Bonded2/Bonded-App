@@ -1,0 +1,179 @@
+.login-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  height: 100%;
+  width: 100vw;
+  max-width: 100%;
+  background-color: #FF704D;
+  margin: 0;
+  padding: 0;
+  border: none;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+.login-container {
+  background-color: #FF704D;
+  position: relative;
+  width: 360px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0;
+  border: none;
+}
+
+.bonded-logo-blue {
+  height: 70px;
+  width: 173px;
+  margin-bottom: 20px;
+}
+
+.login-title {
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+  color: #2C4CDF;
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.login-options {
+  width: 328px;
+  padding: 0 16px;
+}
+
+.icp-login-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: auto;
+  height: auto;
+  padding: 8px 16px;
+  background-color: #2C4CDF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 auto 24px;
+}
+
+.icp-login-button:hover {
+  background-color: #2342C8;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.icp-logo {
+  width: auto;
+  height: 28px;
+  display: block;
+}
+
+.button-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: 24px 0;
+  color: #FFFFFF;
+  font-size: 14px;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.divider span {
+  padding: 0 10px;
+}
+
+.form-field {
+  margin-bottom: 24px;
+  width: 100%;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.email-login-button {
+  all: unset;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 48px;
+  background-color: #2C4CDF;
+  color: white;
+  border: none;
+  border-radius: 19px;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 16px;
+  box-sizing: border-box;
+}
+
+.email-login-button:hover {
+  background-color: #2342C8;
+}
+
+.button-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.button-label {
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.714em;
+  letter-spacing: 0.007em;
+  text-align: center;
+  color: #FFFFFF;
+}
+
+.login-footer {
+  margin-top: 32px;
+  text-align: center;
+}
+
+.signup-text {
+  font-size: 14px;
+  color: #666;
+}
+
+.signup-link {
+  color: #2C4CDF;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+} 

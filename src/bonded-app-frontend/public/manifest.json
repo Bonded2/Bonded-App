@@ -1,0 +1,46 @@
+{
+  "name": "Bonded - Relationship Verification",
+  "short_name": "Bonded",
+  "description": "AI and blockchain-based relationship verification app for visa, residency and citizenship applications",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FF704D",
+  "theme_color": "#2C4CDF",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshot-timeline.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/images/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["productivity", "utilities", "social"],
+  "prefer_related_applications": false
+} 

@@ -1,0 +1,38 @@
+.timeline-tile-wrapper {
+    height: 156px;
+    width: 285px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  
+  .timeline-tile-wrapper:hover {
+    transform: translateY(-2px);
+  }
+  
+  .timeline-tile-wrapper .overlap-3 {
+    height: 156px;
+    position: relative;
+  }
+  
+  .timeline-tile-wrapper .timeline-tile-instance {
+    left: 0 !important;
+    position: absolute !important;
+    top: 0 !important;
+  }
+  
+  .timeline-tile-wrapper .rectangle-2 {
+    background-color: var(--variable-collection-red-screen-friendly);
+    border-radius: 0px 0px 10px 10px;
+    height: 6px;
+    left: 0;
+    position: absolute;
+    top: 150px;
+    width: 285px;
+  }
+  
+  .timeline-tile-wrapper .chat {
+    height: 24px !important;
+    position: relative !important;
+    width: 24px !important;
+  }
+  

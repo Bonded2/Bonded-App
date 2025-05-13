@@ -1,0 +1,175 @@
+.timeline-tile {
+    height: 155px;
+    width: 285px;
+  }
+  
+  .timeline-tile .overlap-group {
+    background-color: var(--variable-collection-white);
+    border: 1px solid;
+    border-color: var(--variable-collection-red-screen-friendly);
+    border-radius: 8px;
+    height: 156px;
+    left: -1px;
+    position: relative;
+    top: -1px;
+    width: 287px;
+  }
+  
+  .timeline-tile .overlap {
+    height: 154px;
+    left: 133px;
+    position: absolute;
+    top: 1px;
+    width: 127px;
+  }
+  
+  .timeline-tile .frame {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    left: 0;
+    position: absolute;
+    top: 41px;
+    width: 122px;
+  }
+  
+  .timeline-tile .div {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 0px 10px;
+    position: relative;
+    width: 122px;
+  }
+  
+  .timeline-tile .photo {
+    height: 24px !important;
+    margin-left: -12.00px !important;
+    position: relative !important;
+    width: 24px !important;
+  }
+  
+  .timeline-tile .element-photos {
+    color: var(--variable-collection-deep-blue);
+    font-family: var(--h5-font-family);
+    font-size: var(--h5-font-size);
+    font-style: var(--h5-font-style);
+    font-weight: var(--h5-font-weight);
+    height: 21px;
+    letter-spacing: var(--h5-letter-spacing);
+    line-height: var(--h5-line-height);
+    margin-right: -12.00px;
+    position: relative;
+    white-space: nowrap;
+    width: 94px;
+  }
+  
+  .timeline-tile .overlap-2 {
+    height: 154px;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 127px;
+  }
+  
+  .timeline-tile .div-wrapper {
+    align-items: center;
+    display: inline-flex;
+    gap: 4px;
+    left: 0;
+    position: absolute;
+    top: 9px;
+  }
+  
+  .timeline-tile .text-wrapper-2 {
+    color: var(--variable-collection-red-screen-friendly);
+    font-family: var(--h4-font-family);
+    font-size: var(--h4-font-size);
+    font-style: var(--h4-font-style);
+    font-weight: var(--h4-font-weight);
+    height: 21px;
+    letter-spacing: var(--h4-letter-spacing);
+    line-height: var(--h4-line-height);
+    margin-top: -1.00px;
+    position: relative;
+    width: 127px;
+  }
+  
+  .timeline-tile .frame-2 {
+    align-items: flex-start;
+    display: flex;
+    gap: 6px;
+    height: 24px;
+    left: 0;
+    position: absolute;
+    top: 113px;
+    width: 123px;
+  }
+  
+  .timeline-tile .icon-instance-node {
+    height: 24px !important;
+    position: relative !important;
+    width: 24px !important;
+  }
+  
+  .timeline-tile .thailand {
+    color: var(--variable-collection-deep-blue);
+    font-family: var(--h5-font-family);
+    font-size: var(--h5-font-size);
+    font-style: var(--h5-font-style);
+    font-weight: var(--h5-font-weight);
+    height: 29px;
+    letter-spacing: var(--h5-letter-spacing);
+    line-height: var(--h5-line-height);
+    margin-bottom: -4.00px;
+    margin-right: -14.00px;
+    margin-top: -1.00px;
+    position: relative;
+    width: 107px;
+  }
+  
+  .timeline-tile .rectangle {
+    background-color: #e9e5e5;
+    border-radius: 0px 10px 10px 0px;
+    height: 154px;
+    left: 122px;
+    position: absolute;
+    top: 0;
+    width: 1px;
+  }
+  
+  .timeline-tile .frame-3 {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    height: 24px;
+    left: 0;
+    position: absolute;
+    top: 76px;
+    width: 122px;
+  }
+  
+  .timeline-tile .element-messages {
+    color: var(--variable-collection-deep-blue);
+    font-family: var(--h5-font-family);
+    font-size: var(--h5-font-size);
+    font-style: var(--h5-font-style);
+    font-weight: var(--h5-font-weight);
+    height: 21px;
+    letter-spacing: var(--h5-letter-spacing);
+    line-height: var(--h5-line-height);
+    margin-right: -4.00px;
+    position: relative;
+    white-space: nowrap;
+    width: 94px;
+  }
+  
+  .timeline-tile .mask-group {
+    height: 154px;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 117px;
+  }
+  

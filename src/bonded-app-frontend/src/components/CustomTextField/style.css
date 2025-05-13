@@ -1,0 +1,72 @@
+.custom-text-field {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.custom-text-field .input-container {
+  position: relative;
+  width: 100%;
+}
+
+.custom-text-field .input-label {
+  display: block;
+  font-family: "Roboto", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #2C4CDF;
+  margin-bottom: 8px;
+  transition: color 0.2s ease;
+}
+
+.custom-text-field .required {
+  color: #FF704D;
+  margin-left: 2px;
+}
+
+.custom-text-field .input-field {
+  width: 100%;
+  height: 48px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 4px;
+  padding: 0 16px;
+  font-family: "Roboto", sans-serif;
+  font-size: 16px;
+  color: #2C4CDF;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.custom-text-field .input-field::placeholder {
+  color: rgba(44, 76, 223, 0.6);
+}
+
+.custom-text-field .input-underline {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: rgba(44, 76, 223, 0.5);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+  transform-origin: center;
+}
+
+.custom-text-field.focused .input-underline {
+  transform: scaleX(1);
+}
+
+.custom-text-field.focused .input-label {
+  color: #2C4CDF;
+}
+
+.custom-text-field .supporting-text {
+  font-family: "Roboto", sans-serif;
+  font-size: 12px;
+  color: white;
+  margin-top: 4px;
+  padding-left: 16px;
+} 

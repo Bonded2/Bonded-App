@@ -1,0 +1,221 @@
+.export-timeline-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #2c4cdf;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  overflow: auto;
+  z-index: 2000;
+}
+
+.export-timeline-container {
+  width: 100%;
+  max-width: 360px;
+  height: 100vh;
+  position: relative;
+  background-color: #2c4cdf;
+  overflow-y: auto;
+  padding-top: 24px;
+  margin: 0;
+  box-sizing: border-box;
+  border-radius: 12px;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  width: fit-content;
+  transition: opacity 0.2s ease;
+}
+
+.back-button:hover {
+  opacity: 0.8;
+}
+
+.back-button svg {
+  width: 24px;
+  height: 24px;
+}
+
+.back-text {
+  color: #ffffff;
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.3em;
+}
+
+.export-timeline-title {
+  color: #ffffff;
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+  margin: 0 0 16px 16px;
+  padding: 0;
+}
+
+.export-timeline-content {
+  padding: 0 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dates-heading {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.2px;
+  color: #ffffff;
+  margin: 0;
+  margin-bottom: 16px;
+}
+
+.content-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  min-height: 64px;
+  border-top: 1px solid #1E8CFC;
+  border-bottom: 1px solid #1E8CFC;
+  margin-bottom: 2px;
+}
+
+.row-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.date-image {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.date-text {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.2px;
+  color: #B9FF46;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.edit-icon, .select-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.edit-icon:hover, .select-icon:hover {
+  opacity: 0.8;
+}
+
+.remove-option {
+  opacity: 0.8;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.remove-option:hover {
+  opacity: 1;
+}
+
+.remove-text {
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #ffffff;
+  text-align: right;
+}
+
+.export-card {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.card-text {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.3em;
+  color: #ffffff;
+}
+
+.secondary-export {
+  cursor: pointer;
+  margin-top: 12px;
+  transition: opacity 0.2s ease;
+}
+
+.secondary-export:hover {
+  opacity: 0.8;
+}
+
+.secondary-export-text {
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #B9FF46;
+  text-align: center;
+}
+
+.export-primary-btn {
+  background-color: #FF704D;
+  border: none;
+  border-radius: 19px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-top: 24px;
+  align-self: center;
+  transition: background-color 0.2s ease;
+}
+
+.export-primary-btn:hover {
+  background-color: #ff8b6d;
+}
+
+.export-primary-btn:active {
+  background-color: #e55f3d;
+}
+
+.btn-text {
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #ffffff;
+  text-align: center;
+  white-space: nowrap;
+} 

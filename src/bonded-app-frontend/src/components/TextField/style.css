@@ -1,0 +1,112 @@
+.text-field {
+    align-items: flex-start;
+    border-radius: 4px 4px 0px 0px;
+    display: flex;
+    flex-direction: column;
+    height: 56px;
+    position: relative;
+    width: 210px;
+  }
+  
+  .text-field .state-layer-wrapper {
+    align-items: flex-start;
+    align-self: stretch;
+    background-color: #e6e0e9;
+    border-radius: 4px 4px 0px 0px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 10px;
+    position: relative;
+    width: 100%;
+  }
+  
+  .text-field .state-layer {
+    align-items: flex-start;
+    align-self: stretch;
+    border-radius: 4px 4px 0px 0px;
+    display: flex;
+    flex: 1;
+    flex-grow: 1;
+    gap: 4px;
+    padding: 4px 16px;
+    position: relative;
+    width: 100%;
+  }
+  
+  .text-field .content {
+    align-items: flex-start;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 48px;
+    justify-content: center;
+    padding: 4px 0px;
+    position: relative;
+  }
+  
+  .text-field .label-text-container {
+    align-items: center;
+    display: flex;
+    flex: 0 0 auto;
+    position: relative;
+    width: 31px;
+  }
+  
+  .text-field .text-wrapper {
+    color: #49454f;
+    flex: 1;
+    font-family: var(--m3-body-small-font-family);
+    font-size: var(--m3-body-small-font-size);
+    font-style: var(--m3-body-small-font-style);
+    font-weight: var(--m3-body-small-font-weight);
+    letter-spacing: var(--m3-body-small-letter-spacing);
+    line-height: var(--m3-body-small-line-height);
+    margin-top: -1.00px;
+    position: relative;
+  }
+  
+  .text-field .input-text-container {
+    align-self: stretch;
+    background: none;
+    border: none;
+    color: #1d1b20;
+    flex: 1;
+    font-family: var(--m3-body-large-font-family);
+    font-size: var(--m3-body-large-font-size);
+    font-style: var(--m3-body-large-font-style);
+    font-weight: var(--m3-body-large-font-weight);
+    letter-spacing: var(--m3-body-large-letter-spacing);
+    line-height: var(--m3-body-large-line-height);
+    margin-top: -1.00px;
+    padding: 0;
+    position: relative;
+    width: 100%;
+  }
+  
+  .text-field .active-indicator {
+    align-self: stretch;
+    height: 1px;
+    object-fit: cover;
+    position: relative;
+    width: 100%;
+  }
+  
+  .text-field .supporting-text {
+    align-items: flex-start;
+    display: flex;
+    gap: 10px;
+    height: 20px;
+    left: 0;
+    padding: 4px 16px 0px;
+    position: absolute;
+    top: 56px;
+    width: 210px;
+  }
+  
+  .text-field .hovered {
+    background-color: #1d1b2014;
+  }
+  

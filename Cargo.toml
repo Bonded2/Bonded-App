@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/bonded-app-backend"
+]
+resolver = "2"

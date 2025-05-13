@@ -1,0 +1,131 @@
+.delete-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(46, 46, 46, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+
+.delete-modal-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+}
+
+.delete-modal {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  width: 280px;
+  max-width: 90%;
+  padding: 16px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.delete-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.delete-modal-title {
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+  color: #2C4CDF;
+  text-align: center;
+  flex: 1;
+}
+
+.delete-modal-close {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.delete-modal-close:hover {
+  opacity: 0.8;
+}
+
+.delete-modal-content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 0;
+}
+
+.delete-message {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.2px;
+  color: #2C4CDF;
+  text-align: left;
+}
+
+.delete-modal-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 8px;
+}
+
+.delete-confirm-btn {
+  background-color: #FF704D;
+  border: none;
+  border-radius: 19px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #FFFFFF;
+  transition: background-color 0.2s ease;
+}
+
+.delete-confirm-btn:hover {
+  background-color: #ff8b6d;
+}
+
+.delete-confirm-btn:active {
+  background-color: #e55f3d;
+}
+
+.delete-cancel-btn {
+  background-color: transparent;
+  border: 2px solid #FF704D;
+  border-radius: 19px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #FF704D;
+  transition: background-color 0.2s ease;
+}
+
+.delete-cancel-btn:hover {
+  background-color: rgba(255, 112, 77, 0.1);
+}
+
+.delete-cancel-btn:active {
+  background-color: rgba(255, 112, 77, 0.2);
+} 

@@ -1,0 +1,261 @@
+.getting-started {
+  background-color: #2c4cdf;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  box-shadow: 0px 0.85px 3px 0px rgba(0, 0, 0, 0.19), 0px 0.25px 1px 0px rgba(0, 0, 0, 0.04);
+}
+
+.getting-started .getting-started-container {
+  background-color: #2c4cdf;
+  position: relative;
+  width: 360px;
+  height: 720px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.getting-started .icon {
+  background-color: #ff704d;
+  border-radius: 10px;
+  height: 46px;
+  width: 46px;
+  margin-top: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.getting-started .people {
+  height: 23px;
+  width: 20px;
+  position: relative;
+}
+
+.getting-started .vector {
+  height: 12px;
+  width: 9px;
+  position: absolute;
+  top: 11px;
+  left: 11px;
+}
+
+.getting-started .img {
+  height: 12px;
+  width: 9px;
+  position: absolute;
+  top: 11px;
+  left: 0;
+}
+
+.getting-started .ellipse {
+  background-color: #2c4cdf;
+  border-radius: 4.26px;
+  height: 9px;
+  width: 9px;
+  position: absolute;
+  top: 0;
+  left: 11px;
+}
+
+.getting-started .ellipse-2 {
+  background-color: #2c4cdf;
+  border-radius: 4.26px;
+  height: 9px;
+  width: 9px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.getting-started .title {
+  color: #ff704d;
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+  text-align: center;
+  margin-top: 17px;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.getting-started .subtitle {
+  color: #ff704d;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.013em;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.getting-started .options-container {
+  display: flex;
+  flex-direction: column;
+  width: 312px;
+  margin-top: 30px;
+  gap: 26px;
+}
+
+.getting-started .option-item {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 10px;
+}
+
+.getting-started .radio-button {
+  width: 28px;
+  height: 28px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.getting-started .radio-inner {
+  width: 14px;
+  height: 14px;
+  background-color: #ffffff;
+  border-radius: 50%;
+}
+
+.getting-started .option-text {
+  color: #ffffff;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.013em;
+}
+
+.getting-started .next-link {
+  text-decoration: none;
+  margin-top: 40px;
+}
+
+.getting-started .next-button {
+  all: unset;
+  background-color: #ff704d;
+  border-radius: 19px;
+  height: 40px;
+  width: 312px;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.getting-started .next-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.getting-started .button-layout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.getting-started .button-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.getting-started .button-label {
+  color: #ffffff;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.007em;
+}
+
+.getting-started .status-bar {
+  background-color: #2c4cdf;
+  height: 24px;
+  width: 100%;
+  position: relative;
+}
+
+.getting-started .status-bar-contents {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+
+.getting-started .time {
+  height: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.getting-started .time-text {
+  color: #ffffff;
+  font-family: "Roboto", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2em;
+  opacity: 0.9;
+}
+
+.getting-started .top-app-bar {
+  height: 64px;
+  width: 100%;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  position: sticky;
+  top: 0;
+  background-color: #2c4cdf;
+  z-index: 10;
+}
+
+.getting-started .menu-button {
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 12px;
+  touch-action: manipulation;
+}
+
+.getting-started .menu-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 3px 0;
+}
+
+.getting-started .menu-line {
+  width: 100%;
+  height: 2px;
+  background-color: #ffffff;
+  border-radius: 10px;
+}
+
+.getting-started .headline {
+  color: #ffffff;
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+}
+  

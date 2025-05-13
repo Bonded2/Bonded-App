@@ -1,0 +1,173 @@
+.export-email-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(46, 46, 46, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 4000;
+}
+
+.export-email-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 16px;
+}
+
+.export-email-content {
+  background-color: #FFFFFF;
+  border-radius: 12px;
+  width: 320px;
+  max-width: 90%;
+  padding: 24px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.export-email-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.export-email-title {
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+  color: #2C4CDF;
+}
+
+.export-email-close {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.export-email-close:hover {
+  opacity: 0.8;
+}
+
+.export-email-desc {
+  margin: 0;
+}
+
+.export-email-desc p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.2px;
+  color: #333333;
+  margin: 0;
+}
+
+.export-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.email-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.email-form-group label {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2C4CDF;
+}
+
+.email-form-group input {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #DEDEDE;
+  border-radius: 4px;
+  padding: 0 12px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  color: #333333;
+  box-sizing: border-box;
+}
+
+.email-form-group input:focus {
+  outline: none;
+  border-color: #2C4CDF;
+}
+
+.email-form-group input::placeholder {
+  color: #999999;
+}
+
+.email-error {
+  color: #FF704D;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.export-email-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.export-email-cancel {
+  background-color: transparent;
+  border: 2px solid #2C4CDF;
+  border-radius: 19px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #2C4CDF;
+  transition: background-color 0.2s ease;
+}
+
+.export-email-cancel:hover {
+  background-color: rgba(44, 76, 223, 0.1);
+}
+
+.export-email-cancel:active {
+  background-color: rgba(44, 76, 223, 0.2);
+}
+
+.export-email-confirm {
+  background-color: #2C4CDF;
+  border: none;
+  border-radius: 19px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #FFFFFF;
+  transition: background-color 0.2s ease;
+}
+
+.export-email-confirm:hover {
+  background-color: #3a5bef;
+}
+
+.export-email-confirm:active {
+  background-color: #2541bc;
+} 

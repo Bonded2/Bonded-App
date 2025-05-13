@@ -1,0 +1,116 @@
+.top-app-bar {
+  align-items: center;
+  background-color: #2C4CDF;
+  display: flex;
+  gap: 12px;
+  height: 56px;
+  padding: 8px;
+  position: relative;
+  width: 100%;
+  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.top-app-bar .frame-14 {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  flex-grow: 1;
+  gap: 10px;
+  position: relative;
+}
+
+.top-app-bar .icn-wrapper {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+  height: 32px;
+  justify-content: center;
+  padding: 4px;
+  position: relative;
+  width: 32px;
+  cursor: pointer;
+}
+
+.top-app-bar .headline {
+  color: #FFFFFF;
+  flex: 1;
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.3em;
+  position: relative;
+}
+
+.top-app-bar .actions-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.top-app-bar .trailing-icon {
+  align-items: center;
+  display: flex;
+  height: 24px;
+  justify-content: space-between;
+  padding: 0px;
+  position: relative;
+  width: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.top-app-bar .upload {
+  height: 24px;
+  position: relative;
+  width: 24px;
+}
+
+.top-app-bar .btn {
+  align-items: center;
+  background-color: #FF704D;
+  border-radius: 19px;
+  display: flex;
+  height: 36px;
+  justify-content: center;
+  padding: 0 16px;
+  position: relative;
+  cursor: pointer;
+  min-width: 90px;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.top-app-bar .layout {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+}
+
+.top-app-bar .label-wrapper {
+  align-items: center;
+  display: inline-flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.top-app-bar .label {
+  color: #FFFFFF;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.1px;
+  line-height: 1.71em;
+  position: relative;
+  text-align: center;
+  white-space: nowrap;
+}
+  

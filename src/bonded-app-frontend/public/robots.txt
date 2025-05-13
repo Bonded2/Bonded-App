@@ -1,0 +1,21 @@
+# Robots.txt for Bonded App
+# This is a private application handling sensitive relationship verification data
+# We restrict crawling to protect user privacy
+
+User-agent: *
+Disallow: /timeline/
+Disallow: /account/
+Disallow: /evidence/
+Disallow: /user/
+Disallow: /api/
+Disallow: /settings/
+
+# Allow crawling of informational pages
+Allow: /
+Allow: /about
+Allow: /faq
+Allow: /privacy
+Allow: /terms
+Allow: /contact
+
+Sitemap: https://bondedapp.io/sitemap.xml 

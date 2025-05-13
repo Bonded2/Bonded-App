@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Offline - Bonded App</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #FF704D;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    
+    .container {
+      max-width: 85%;
+      padding: 20px;
+    }
+    
+    .logo {
+      width: 150px;
+      margin-bottom: 24px;
+    }
+    
+    h1 {
+      font-family: "Trocchi", serif;
+      font-size: 24px;
+      font-weight: 400;
+      color: #2C4CDF;
+      margin-bottom: 16px;
+    }
+    
+    p {
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    
+    .reload-btn {
+      background-color: #2C4CDF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .reload-btn:hover {
+      background-color: #3D5CEF;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <img src="/images/app-icon.svg" alt="Bonded Logo" class="logo">
+    <h1>You're currently offline</h1>
+    <p>Bonded requires an internet connection to securely timestamp and verify your relationship evidence. Please reconnect to continue using all features.</p>
+    <p>Your data is safe and will sync once you're back online.</p>
+    <button class="reload-btn" onclick="window.location.reload()">Try Again</button>
+  </div>
+  <script>
+    // Check if the user comes back online
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
+</body>
+</html> 

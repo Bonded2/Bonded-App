@@ -1,0 +1,270 @@
+.timestamp-folder-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #2c4cdf;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  overflow: auto;
+  z-index: 2000;
+}
+
+.timestamp-folder-container {
+  width: 100%;
+  max-width: 360px;
+  min-height: 100vh;
+  position: relative;
+  background-color: #2c4cdf;
+  overflow-y: auto;
+  margin: 0;
+  box-sizing: border-box;
+  box-shadow: 0px 0.85px 3px 0px rgba(0, 0, 0, 0.19), 0px 0.25px 1px 0px rgba(0, 0, 0, 0.04);
+}
+
+/* Status bar */
+.status-bar {
+  background-color: #2c4cdf;
+  height: 24px;
+  width: 100%;
+  position: relative;
+}
+
+.status-bar-contents {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 12px;
+}
+
+.time {
+  height: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.time-text {
+  color: #ffffff;
+  font-family: "Roboto", sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2em;
+  opacity: 0.9;
+}
+
+/* Top app bar */
+.top-app-bar {
+  height: 64px;
+  width: 100%;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  background-color: #2c4cdf;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.frame-14 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.back-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.header-title {
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.3em;
+  color: #ffffff;
+  flex: 1;
+}
+
+.timestamp-content {
+  padding: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  min-height: 64px;
+  border-bottom: 1px solid #1E8CFC;
+}
+
+.content-row:first-child {
+  border-top: 1px solid #1E8CFC;
+}
+
+.row-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.item-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.item-name {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.44em;
+  letter-spacing: 0.2px;
+  color: #FFFFFF;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.action-icon:hover {
+  opacity: 0.8;
+}
+
+.card {
+  margin: 16px;
+  padding: 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.card:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.card-text {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.3em;
+  color: #ffffff;
+  text-align: center;
+}
+
+.upload-btn {
+  background-color: #FF704D;
+  border: none;
+  border-radius: 19px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin: 24px auto;
+  display: block;
+  transition: background-color 0.2s ease;
+  min-width: 160px;
+}
+
+.upload-btn:hover {
+  background-color: #ff8b6d;
+}
+
+.upload-btn:active {
+  background-color: #e55f3d;
+}
+
+.btn-text {
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.71em;
+  letter-spacing: 0.1px;
+  color: #ffffff;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Secondary top app bar (shown in Figma but hidden) */
+.hidden-elements {
+  display: none; /* Hidden but included for completeness */
+}
+
+.secondary-bar {
+  position: relative;
+  top: auto;
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+  border-bottom: none;
+}
+
+.menu-button {
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.menu-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  padding: 3px 0;
+}
+
+.menu-line {
+  width: 100%;
+  height: 2px;
+  background-color: #ffffff;
+}
+
+.trailing-icon {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.export-btn {
+  all: unset;
+  background-color: #FF704D;
+  border-radius: 19px;
+  box-sizing: border-box;
+  height: 24px;
+  width: 76px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 8px;
+  transition: background-color 0.2s ease;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.2);
+} 

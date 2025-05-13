@@ -1,0 +1,161 @@
+.timeline-created {
+    background-color: #2c4cdf;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    min-height: 100vh;
+    box-shadow: 0px 0.85px 3px 0px rgba(0, 0, 0, 0.19), 0px 0.25px 1px 0px rgba(0, 0, 0, 0.04);
+  }
+  
+  .timeline-created .timeline-container {
+    background-color: #2c4cdf;
+    height: 100vh;
+    position: relative;
+    width: 360px;
+    overflow: hidden;
+  }
+  
+  .timeline-created .overlap-section {
+    height: calc(100vh - 66px);
+    left: 16px;
+    position: absolute;
+    top: 76px;
+    width: 328px;
+    overflow-y: auto;
+    padding-bottom: 20px;
+  }
+  
+  .timeline-created .timeline-line {
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 23px;
+  }
+  
+  .timeline-created .timeline-vertical-line {
+    background-color: #ffffff;
+    border-radius: 8px;
+    height: 100%;
+    left: 11px;
+    position: absolute;
+    top: 0;
+    width: 2px;
+  }
+  
+  .timeline-created .timeline-header {
+    height: 21px;
+    left: 20px;
+    position: absolute;
+    top: 10px;
+    width: 308px;
+  }
+  
+  .timeline-created .frame-header {
+    align-items: center;
+    display: flex;
+    gap: 4px;
+    position: relative;
+    width: 308px;
+  }
+  
+  .timeline-created .capture-title {
+    color: #ffffff;
+    font-family: "Trocchi", serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.3em;
+    height: 21px;
+    margin-top: -1px;
+    position: relative;
+    width: 308px;
+  }
+  
+  .timeline-created .date-badge {
+    background-color: #ff704d;
+    border: 1px solid #ff704d;
+    border-radius: 8px;
+    height: 38px;
+    position: absolute;
+    width: 105px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  
+  .timeline-created .first-date {
+    left: 35px;
+    top: 74px;
+  }
+  
+  .timeline-created .second-date {
+    left: 35px;
+    top: 293px;
+  }
+  
+  .timeline-created .third-date {
+    left: 35px;
+    top: 516px;
+  }
+  
+  .timeline-created .date-text {
+    color: #ffffff;
+    font-family: "Trocchi", serif;
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.3em;
+    text-align: center;
+    width: 90px;
+  }
+  
+  .timeline-created .first-timeline-tile {
+    left: 20px !important;
+    position: absolute !important;
+    top: 122px !important;
+    width: 308px !important;
+  }
+  
+  .timeline-created .second-timeline-tile {
+    left: 20px !important;
+    position: absolute !important;
+    top: 341px !important;
+    width: 308px !important;
+  }
+  
+  .timeline-created .third-timeline-tile {
+    left: 20px !important;
+    position: absolute !important;
+    top: 564px !important;
+    width: 308px !important;
+  }
+  
+  .timeline-created .chat-icon-svg {
+    height: 9px !important;
+    position: relative !important;
+    width: 24px !important;
+  }
+  
+  .timeline-created .timeline-tile-image {
+    height: 85px !important;
+  }
+  
+  .timeline-created .chat-icon {
+    height: 21px !important;
+    position: absolute !important;
+    width: 26px !important;
+  }
+  
+  .timeline-created .top-app-bar {
+    left: 0;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 10;
+  }
+  
+  .timeline-created .app-bar-red {
+    background-color: #ff704d !important;
+  }
+  
