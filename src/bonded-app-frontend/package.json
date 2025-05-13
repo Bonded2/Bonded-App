@@ -6,7 +6,7 @@
   "scripts": {
     "setup": "npm i && dfx canister create bonded-app-backend && dfx generate bonded-app-backend && dfx deploy",
     "start": "vite --port 3000",
-    "prebuild": "dfx generate",
+    "prebuild": "",
     "build": "tsc && vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
     "generate-pwa-assets": "pwa-asset-generator public/images/app-icon.svg public/images --icon-only --favicon --opaque false --padding 0"
