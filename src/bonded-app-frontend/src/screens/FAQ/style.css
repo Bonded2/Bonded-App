@@ -54,20 +54,151 @@
   overflow-y: auto;
 }
 
-.faq-item {
-  margin-bottom: 24px;
+/* Introduction section */
+.faq-intro {
+  text-align: center;
+  margin-bottom: 32px;
+  padding: 16px;
+  background-color: rgba(185, 255, 70, 0.1);
+  border-radius: 12px;
 }
 
-.faq-question {
+.faq-intro-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.faq-intro-title {
   color: #2c4cdf;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 600;
   margin-bottom: 12px;
 }
 
+.faq-intro-text {
+  font-size: 16px;
+  line-height: 1.5;
+  color: #555;
+}
+
+/* FAQ item styles */
+.faq-item {
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background-color: #f9f9f9;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.faq-item.expanded {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+}
+
+.faq-question-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  cursor: pointer;
+}
+
+.faq-question {
+  color: #2c4cdf;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.faq-toggle {
+  color: #FF704D;
+  font-size: 24px;
+  font-weight: bold;
+  margin-left: 16px;
+}
+
 .faq-answer {
-  font-size: 14px;
+  padding: 0 16px 16px 16px;
+  font-size: 15px;
   line-height: 1.5;
   color: #333;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.faq-answer p {
+  margin-bottom: 12px;
+}
+
+.faq-answer p:last-child {
+  margin-bottom: 0;
+}
+
+/* Lists in FAQ answers */
+.faq-list {
+  margin: 8px 0 16px 16px;
+  padding-left: 8px;
+}
+
+.faq-list li {
   margin-bottom: 8px;
+  position: relative;
+  padding-left: 8px;
+}
+
+.faq-list-numbered {
+  margin: 8px 0 16px 16px;
+  padding-left: 8px;
+}
+
+.faq-list-numbered li {
+  margin-bottom: 8px;
+}
+
+/* Support section */
+.faq-support {
+  margin-top: 32px;
+  padding: 16px;
+  text-align: center;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.faq-support h3 {
+  color: #2c4cdf;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.faq-support p {
+  font-size: 15px;
+  color: #333;
+}
+
+.faq-support a {
+  color: #FF704D;
+  text-decoration: none;
+}
+
+.faq-support a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .faq-question {
+    font-size: 15px;
+  }
+  
+  .faq-answer {
+    font-size: 14px;
+  }
+  
+  .faq-intro-title {
+    font-size: 22px;
+  }
+  
+  .faq-intro-text {
+    font-size: 14px;
+  }
 } 

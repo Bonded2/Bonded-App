@@ -54,17 +54,150 @@
   overflow-y: auto;
 }
 
+/* Header Section */
+.privacy-header {
+  text-align: center;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.privacy-header-icon {
+  font-size: 42px;
+  margin-bottom: 16px;
+}
+
+.privacy-title {
+  color: #2c4cdf;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.privacy-subtitle {
+  color: #666;
+  font-size: 14px;
+  margin: 0;
+}
+
+.privacy-intro {
+  background-color: rgba(44, 76, 223, 0.05);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.privacy-intro p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+  margin: 0;
+}
+
 .privacy-heading {
   color: #2c4cdf;
   font-size: 18px;
   font-weight: 600;
-  margin-top: 24px;
-  margin-bottom: 12px;
+  margin-top: 28px;
+  margin-bottom: 16px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(44, 76, 223, 0.2);
 }
 
 .privacy-paragraph {
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
   color: #333;
   margin-bottom: 16px;
+}
+
+/* List formatting */
+.privacy-list {
+  margin: 0 0 24px 20px;
+  padding: 0;
+}
+
+.privacy-list li {
+  margin-bottom: 10px;
+  line-height: 1.5;
+  font-size: 15px;
+  position: relative;
+}
+
+/* Highlight boxes */
+.privacy-highlight {
+  background-color: #f9f9f9;
+  border-left: 4px solid #FF704D;
+  border-radius: 4px;
+  padding: 16px;
+  margin: 24px 0;
+  display: flex;
+  align-items: flex-start;
+}
+
+.privacy-highlight-icon {
+  font-size: 24px;
+  margin-right: 16px;
+}
+
+.privacy-highlight-content {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Contact information */
+.privacy-contact {
+  background-color: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0 24px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.privacy-contact a {
+  color: #FF704D;
+  text-decoration: none;
+}
+
+.privacy-contact a:hover {
+  text-decoration: underline;
+}
+
+/* Footer */
+.privacy-footer {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .privacy-title {
+    font-size: 22px;
+  }
+  
+  .privacy-heading {
+    font-size: 17px;
+  }
+  
+  .privacy-paragraph, 
+  .privacy-list li, 
+  .privacy-highlight-content,
+  .privacy-contact {
+    font-size: 14px;
+  }
+  
+  .privacy-highlight {
+    padding: 12px;
+  }
+  
+  .privacy-highlight-icon {
+    font-size: 20px;
+    margin-right: 12px;
+  }
 } 
