@@ -18,7 +18,7 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
       type: "photo",
       source: "User's Device",
       location: "Home",
-      date: "12 Nov 2023",
+      date: "12 Nov 2025",
       imageUrl: "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
     },
     {
@@ -27,7 +27,7 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
       type: "photo",
       source: "User's Device",
       location: "Work",
-      date: "12 Nov 2023",
+      date: "12 Nov 2025",
       imageUrl: "https://images.unsplash.com/photo-1589553416260-110229331345?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
     },
     {
@@ -36,7 +36,7 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
       type: "photo",
       source: "User's Device",
       location: "Coffee Shop",
-      date: "12 Nov 2023",
+      date: "12 Nov 2025",
       imageUrl: "https://images.unsplash.com/photo-1620207418302-439b387441b0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
     }
   ];
