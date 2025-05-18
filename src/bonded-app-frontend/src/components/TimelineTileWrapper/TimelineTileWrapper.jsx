@@ -15,11 +15,19 @@ export const TimelineTileWrapper = ({
   timelineTileText = "2 Messages",
   timelineTileText1 = "3 Photos",
   timelineTileText2 = "Thailand",
-  timelineTileIcon = <StyleOutlined className="chat" color="#2C4CDF" />,
+  timelineTileIcon = <StyleOutlined className="chat" />,
   timelineTileMaskGroupClassName,
   icn4StyleOverrideClassName,
   onClick,
   date,
+  source,
+  uploadStatus,
+  // Immigration verification specific props
+  evidenceCategory = "relationship", // relationship, financial, language
+  evidenceType = "media", // media, messages, document, language
+  aiVerified = true,
+  processTimestamp, // When the document was processed for blockchain
+  blockchainTimestamp, // When the document was added to the blockchain
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isTouched, setIsTouched] = useState(false);
@@ -48,16 +56,24 @@ export const TimelineTileWrapper = ({
     setIsTouched(false);
   };
   
+  // Determine the evidence type based on the content
+  const determineEvidenceType = () => {
+    if (timelineTileText1.includes("Photo")) return "photos";
+    if (timelineTileText.includes("Message")) return "messages";
+    if (timelineTileText.includes("Document")) return "document";
+    return evidenceType; // Use the provided default
+  };
+  
   return (
     <div 
-      className={`timeline-tile-wrapper ${className} ${isHovered || isTouched ? 'shimmer-effect' : ''}`} 
+      className={`timeline-tile-wrapper ${className || ''} ${isHovered || isTouched ? 'shimmer-effect' : ''}`} 
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       role="button"
-      aria-label={`View timeline entry for ${date}`}
+      aria-label={`View timeline entry for ${date || 'timeline item'}`}
       tabIndex={0}
     >
       <div className="overlap-3">
@@ -69,10 +85,18 @@ export const TimelineTileWrapper = ({
           text={timelineTileText1}
           text1={timelineTileText2}
           text2={timelineTileText}
+          date={date}
+          source={source}
+          uploadStatus={uploadStatus}
+          category={evidenceCategory}
+          aiVerified={aiVerified}
+          evidenceType={determineEvidenceType()}
+          processTimestamp={processTimestamp}
         />
         <div className="rectangle-2" />
         <div className={`shimmer-overlay ${isHovered || isTouched ? 'active' : ''}`}></div>
-        <Icn4 className={icn4StyleOverrideClassName} />
+        {/* Icn4 positioned as an indicator */}
+        {icn4StyleOverrideClassName && <Icn4 className={icn4StyleOverrideClassName} />}
       </div>
     </div>
   );

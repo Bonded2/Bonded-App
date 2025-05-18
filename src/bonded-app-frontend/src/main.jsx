@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import "./index.css"; // Import global styles
 
 // Make sure the DOM is fully loaded before trying to access the element
 document.addEventListener("DOMContentLoaded", () => {

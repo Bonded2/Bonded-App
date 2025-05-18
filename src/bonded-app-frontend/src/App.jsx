@@ -16,6 +16,8 @@ import { TimestampFolder } from "./screens/TimestampFolder";
 import { ImagePreview } from "./screens/ImagePreview";
 import { ExportAllData } from "./screens/ExportAllData";
 import { MediaScannerDemo } from "./screens/MediaScannerDemo";
+import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
+import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
 
 export class ErrorBoundary extends React.Component {
@@ -55,6 +57,16 @@ const router = createBrowserRouter([
   {
     path: "/register",
     element: <Register />,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/partner-invite",
+    element: <PartnerInvite />,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/profile-setup",
+    element: <ProfileSetup />,
     errorElement: <ErrorBoundary />,
   },
   {
@@ -125,6 +137,32 @@ const router = createBrowserRouter([
   {
     path: "/media-scanner",
     element: <MediaScannerDemo />,
+    errorElement: <ErrorBoundary />,
+  },
+  // Advanced AI Tools routes (placeholders for future implementation)
+  {
+    path: "/advanced-tools",
+    element: <div>Advanced AI Tools</div>,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/story-maker",
+    element: <div>StoryMaker Tool</div>,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/application-maker",
+    element: <div>ApplicationMaker Tool</div>,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/status-assessor",
+    element: <div>Status Assessor Tool</div>,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/impermanent-access",
+    element: <div>Impermanent Access Tool</div>,
     errorElement: <ErrorBoundary />,
   }
 ]);

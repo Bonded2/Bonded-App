@@ -1,10 +1,10 @@
 .timeline-tile-wrapper {
-    height: 156px;
-    width: 285px;
+    width: 100%;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
     box-sizing: border-box;
     position: relative;
+    margin-bottom: 16px;
   }
   
   .timeline-tile-wrapper:hover {
@@ -22,7 +22,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    border-radius: 8px;
+    border-radius: 12px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     opacity: 0;
     transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
@@ -34,40 +34,36 @@
   }
   
   .timeline-tile-wrapper .overlap-3 {
-    height: 156px;
     position: relative;
     width: 100%;
     transition: all 0.3s ease;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 12px;
   }
   
   .timeline-tile-wrapper .timeline-tile-instance {
-    left: 0 !important;
-    position: absolute !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
+    width: 100%;
     transition: transform 0.3s ease;
   }
   
   .timeline-tile-wrapper:hover .timeline-tile-instance {
-    transform: scale(1.02);
+    /* Transform is now handled by the tile component itself */
   }
   
   .timeline-tile-wrapper .rectangle-2 {
-    background-color: var(--variable-collection-red-screen-friendly);
+    background-color: var(--variable-collection-red-screen-friendly, #FF704D);
     border-radius: 0px 0px 10px 10px;
-    height: 6px;
+    height: 4px;
     left: 0;
     position: absolute;
-    top: 150px;
+    bottom: 0;
     width: 100%;
     transition: height 0.3s ease, background-color 0.3s ease;
+    z-index: 3;
   }
   
   .timeline-tile-wrapper:hover .rectangle-2 {
-    height: 8px;
+    height: 6px;
     background-color: #FF8066;
   }
   
@@ -94,7 +90,7 @@
     background: linear-gradient(
       to right,
       rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0.2) 50%,
       rgba(255, 255, 255, 0) 100%
     );
     pointer-events: none;
@@ -134,51 +130,17 @@
   }
   
 /* Media queries for timeline tile wrapper responsiveness */
-@media (max-width: 320px) {
+@media (max-width: 480px) {
   .timeline-tile-wrapper {
-    width: 100%;
-    height: auto;
-    min-height: 140px;
-  }
-  
-  .timeline-tile-wrapper .overlap-3 {
-    height: auto;
-    min-height: 140px;
+    margin-bottom: 12px;
   }
   
   .timeline-tile-wrapper .rectangle-2 {
-    width: 100%;
-    top: auto;
-    bottom: 0;
-  }
-}
-
-@media (min-width: 321px) and (max-width: 480px) {
-  .timeline-tile-wrapper {
-    width: 100%;
-    height: auto;
-    min-height: 155px;
+    height: 3px;
   }
   
-  .timeline-tile-wrapper .overlap-3 {
-    height: auto;
-    min-height: 155px;
-  }
-  
-  .timeline-tile-wrapper .rectangle-2 {
-    width: 100%;
-    top: auto;
-    bottom: 0;
-  }
-}
-
-@media (min-width: 481px) and (max-width: 768px) {
-  .timeline-tile-wrapper {
-    width: calc(100% - 40px);
-  }
-  
-  .timeline-tile-wrapper .rectangle-2 {
-    width: 100%;
+  .timeline-tile-wrapper:hover .rectangle-2 {
+    height: 4px;
   }
 }
   

@@ -1,0 +1,174 @@
+.profile-setup-screen {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Align to top for scrolling */
+  min-height: 100vh;
+  width: 100%;
+  /* background-color: #FF704D; */ /* Covered by global body */
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto; /* Allow scrolling for long forms */
+}
+
+.profile-setup-container {
+  /* background-color: #FF704D; */ /* Covered by global body */
+  width: 100%;
+  max-width: 480px; /* Wider for more form content */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 20px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.bonded-logo-blue {
+  height: 60px;
+  margin-bottom: 20px;
+}
+
+.setup-title {
+  font-family: "Trocchi", serif; /* Aligns with global h1-h6 */
+  font-size: 22px;
+  font-weight: 400;
+  /* color: #2C4CDF; */ /* Covered by global h1-h6 */
+  margin-bottom: 10px;
+}
+
+.setup-subtitle {
+  font-family: "Rethink Sans", sans-serif; /* Changed from Roboto */
+  font-size: 14px;
+  /* color: #FFFFFF; */ /* Covered by global body */
+  margin-bottom: 24px;
+  max-width: 350px;
+}
+
+.profile-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch; /* Stretch form elements */
+}
+
+.form-field-group {
+  margin-bottom: 18px;
+  text-align: left;
+  position: relative; /* For tooltip positioning */
+}
+
+/* Styling for CustomTextField error state (assuming CustomTextField applies .input-error) */
+.form-input.input-error .custom-text-field-input, /* Target specific inner input if needed */
+.select-control.input-error .react-select__control {
+  border-color: #D32F2F !important; /* Red border for error */
+}
+
+.form-input .custom-text-field-label.label-error, /* Target label if it exists within CustomTextField */
+.select-label.label-error {
+    color: #D32F2F !important; /* Red label for error */
+}
+
+.error-tooltip {
+  color: #D32F2F;
+  font-size: 0.75rem; /* 12px */
+  margin-top: 4px;
+  display: block; /* Ensure it takes space */
+}
+
+/* General label styling (if not handled by CustomTextField) */
+.form-field-group label,
+.select-label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: "Rethink Sans", sans-serif; /* Changed from Roboto */
+  font-size: 14px;
+  /* color: #FFFFFF; */ /* Covered by global body (labels are white on orange bg) */
+  font-weight: 500;
+}
+
+.required-asterisk {
+    color: #D32F2F; /* Red asterisk */
+    margin-left: 2px;
+}
+
+/* React Select specific styling */
+.select-control .react-select__control {
+  background-color: #FFFFFF;
+  border: 1px solid #D1D5DB; /* Light grey border */
+  border-radius: 8px;
+  min-height: 48px;
+  box-shadow: none;
+}
+
+.select-control .react-select__control--is-focused {
+  border-color: #2C4CDF;
+  box-shadow: 0 0 0 1px #2C4CDF;
+}
+
+.select-control .react-select__placeholder {
+  color: #6B7280; /* Placeholder text color */
+  font-family: "Rethink Sans", sans-serif; /* Changed from Roboto */
+}
+
+.select-control .react-select__single-value {
+  color: #1F2937; /* Selected value text color */
+  font-family: "Rethink Sans", sans-serif; /* Changed from Roboto */
+}
+
+.select-control .react-select__menu {
+  margin-top: 4px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.select-control .react-select__option {
+  font-family: "Rethink Sans", sans-serif; /* Changed from Roboto */
+  padding: 10px 12px;
+}
+
+.select-control .react-select__option--is-focused {
+  background-color: #E0E7FF; /* Light blue for focused option */
+}
+
+.select-control .react-select__option--is-selected {
+  background-color: #2C4CDF;
+  color: white;
+}
+
+/* Hint tooltips for incomplete fields (can be simple text below or more complex) */
+/* Supporting text from CustomTextField is used for this for now. */
+/* If specific tooltips are needed: */
+/*
+.form-field-group .input-error + .tooltip-hint {
+  display: block;
+  position: absolute;
+  background-color: #D32F2F;
+  color: white;
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-top: 2px;
+  z-index: 1;
+}
+*/
+
+.submit-profile-button {
+  all: unset;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 48px;
+  background-color: #2C4CDF;
+  color: white;
+  border-radius: 19px;
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 24px;
+  box-sizing: border-box;
+}
+
+.submit-profile-button:hover {
+  background-color: #2342C8;
+} 

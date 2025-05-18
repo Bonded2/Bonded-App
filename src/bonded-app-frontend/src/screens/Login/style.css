@@ -6,7 +6,6 @@
   height: 100%;
   width: 100vw;
   max-width: 100%;
-  background-color: #FF704D;
   margin: 0;
   padding: 0;
   border: none;
@@ -19,14 +18,14 @@
 }
 
 .login-container {
-  background-color: #FF704D;
   position: relative;
-  width: 360px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 380px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 40px 0;
+  padding: 40px 20px;
+  box-sizing: border-box;
   border: none;
 }
 
@@ -42,13 +41,44 @@
   font-weight: 400;
   line-height: 1.3em;
   color: #2C4CDF;
-  margin-bottom: 32px;
+  margin-bottom: 20px;
   text-align: center;
 }
 
+.login-method-toggle {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+  border: 1px solid #2C4CDF;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.toggle-button {
+  flex: 1;
+  padding: 10px 12px;
+  background-color: transparent;
+  color: #2C4CDF;
+  border: none;
+  cursor: pointer;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  text-align: center;
+}
+
+.toggle-button.active {
+  background-color: #2C4CDF;
+  color: white;
+}
+
+.toggle-button:not(:last-child) {
+  border-right: 1px solid #2C4CDF;
+}
+
 .login-options {
-  width: 328px;
-  padding: 0 16px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .icp-login-button {
@@ -176,4 +206,68 @@
 
 .signup-link:hover {
   text-decoration: underline;
+}
+
+/* Animation containers */
+.form-container,
+.ii-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.form-container.animate-form,
+.ii-container.animate-ii {
+  animation: slideInFromRight 0.5s ease-out forwards;
+}
+
+/* Slide in from right animation */
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Specific styling for II login button when in its container */
+.ii-container .icp-login-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 48px;
+  padding: 8px 16px;
+  background-color: #2C4CDF;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 0 16px 0;
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+}
+
+.ii-container .icp-login-button:hover {
+  background-color: #2342C8;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.ii-container .icp-logo {
+  width: auto;
+  height: 24px;
+}
+
+.ii-info-text {
+  font-size: 12px;
+  color: #FFFFFF;
+  text-align: center;
+  margin-top: 8px;
 } 

@@ -1,6 +1,6 @@
 .top-app-bar {
   align-items: center;
-  background-color: #2C4CDF;
+  background-color: #4C2CDF;
   display: flex;
   gap: 12px;
   height: 56px;
@@ -10,7 +10,7 @@
   left: 0;
   right: 0;
   width: 100%;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.2);
   box-sizing: border-box;
   overflow: visible;
   z-index: 100;
@@ -36,6 +36,13 @@
   width: 32px;
   cursor: pointer;
   min-width: 32px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.top-app-bar .icn-wrapper:hover {
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 .top-app-bar .headline {
@@ -50,27 +57,34 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .top-app-bar .actions-container {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .top-app-bar .trailing-icon {
   align-items: center;
   display: flex;
-  height: 24px;
-  justify-content: space-between;
-  padding: 0px;
+  height: 36px;
+  width: 36px;
+  justify-content: center;
   position: relative;
-  width: 24px;
   cursor: pointer;
   flex-shrink: 0;
-  min-width: 24px;
-  min-height: 24px;
+  min-width: 36px;
+  min-height: 36px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.top-app-bar .trailing-icon:hover {
+  background-color: rgba(255, 255, 255, 0.25);
 }
 
 .top-app-bar .upload {
@@ -82,9 +96,9 @@
 .top-app-bar .btn {
   align-items: center;
   background-color: #FF704D;
-  border-radius: 19px;
+  border-radius: 12px;
   display: flex;
-  height: 36px;
+  height: 40px;
   justify-content: center;
   padding: 0 16px;
   position: relative;
@@ -94,6 +108,19 @@
   border: none;
   outline: none;
   flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(255, 112, 77, 0.3);
+  transition: all 0.2s ease;
+}
+
+.top-app-bar .btn:hover {
+  background-color: #FF8566;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(255, 112, 77, 0.4);
+}
+
+.top-app-bar .btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(255, 112, 77, 0.3);
 }
 
 .top-app-bar .layout {
@@ -115,8 +142,8 @@
 .top-app-bar .label {
   color: #FFFFFF;
   font-family: "Trocchi", serif;
-  font-size: 14px;
-  font-weight: 400;
+  font-size: 15px;
+  font-weight: 500;
   letter-spacing: 0.1px;
   line-height: 1.71em;
   position: relative;

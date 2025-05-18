@@ -6,6 +6,7 @@ import "./style.css";
 export const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loginMethod, setLoginMethod] = useState("email"); // "email" or "ii"
   const navigate = useNavigate();
 
   const handleEmailChange = (e) => {
@@ -45,19 +46,24 @@ export const Login = () => {
 
         <h1 className="login-title">Welcome back</h1>
 
-        <div className="login-options">
-          <button className="icp-login-button" onClick={handleICPLogin} aria-label="Login with Internet Identity">
-            <img 
-              src="/images/icp-logo-button.svg" 
-              alt="Internet Computer" 
-              className="icp-logo"
-            />
+        <div className="login-method-toggle">
+          <button
+            className={`toggle-button ${loginMethod === "email" ? "active" : ""}`}
+            onClick={() => setLoginMethod("email")}
+          >
+            Email & Password
           </button>
-
-          <div className="divider">
-            <span>or login with email</span>
+          <button
+            className={`toggle-button ${loginMethod === "ii" ? "active" : ""}`}
+            onClick={() => setLoginMethod("ii")}
+          >
+            Internet Identity
+          </button>
           </div>
 
+        <div className="login-options">
+          {loginMethod === "email" && (
+            <div className="form-container animate-form">
           <form onSubmit={handleEmailLogin} className="login-form">
             <CustomTextField
               label="Email"
@@ -87,6 +93,22 @@ export const Login = () => {
               </div>
             </button>
           </form>
+            </div>
+          )}
+
+          {loginMethod === "ii" && (
+            <div className="ii-container animate-ii">
+              <button className="icp-login-button" onClick={handleICPLogin} aria-label="Login with Internet Identity">
+                <img
+                  src="/images/icp-logo-button.svg"
+                  alt="Internet Computer"
+                  className="icp-logo"
+                />
+                 Login with Internet Identity
+              </button>
+              <p className="ii-info-text">You will be redirected to the Internet Identity service to authenticate.</p>
+            </div>
+          )}
         </div>
 
         <div className="login-footer">

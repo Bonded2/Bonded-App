@@ -1,7 +1,20 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowBack } from "../../../icons/ArrowBack";
+import { SettingsContentRow } from "./SettingsContentRow"; // Assuming this is for individual rows if needed
 import "./capture.css";
+
+// Example file types for manual override - this could be more extensive
+const COMMON_FILE_TYPES = [
+  { id: "jpg", label: "JPG Images", type: "image" },
+  { id: "png", label: "PNG Images", type: "image" },
+  { id: "heic", label: "HEIC Images (Apple)", type: "image" },
+  { id: "pdf", label: "PDF Documents", type: "document" },
+  { id: "docx", label: "Word Documents", type: "document" },
+  { id: "txt", label: "Text Files", type: "document" },
+  { id: "mov", label: "MOV Videos", type: "video" },
+  { id: "mp4", label: "MP4 Videos", type: "video" },
+];
 
 const CaptureTopBar = ({ onBackClick }) => {
   return (
@@ -23,6 +36,17 @@ export const Capture = () => {
     geolocation: "full",
     telegram: "full"
   });
+  
+  // State for manual file type overrides
+  // Initial state could be all true or based on some defaults
+  const [fileTypeOverrides, setFileTypeOverrides] = useState(
+    COMMON_FILE_TYPES.reduce((acc, ft) => ({ ...acc, [ft.id]: true }), {})
+  );
+
+  // State for managing which override section is open
+  const [openOverrides, setOpenOverrides] = useState(null); // e.g., 'photos', 'documents'
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewContent, setPreviewContent] = useState({ allowed: [], blocked: [] });
   
   const sliderRefs = {
     photos: useRef(null),
@@ -58,14 +82,44 @@ export const Capture = () => {
   };
 
   const handleToggleSetting = (setting, level) => {
-    setCaptureSettings({
-      ...captureSettings,
+    setCaptureSettings((prev) => ({
+      ...prev,
       [setting]: level
-    });
+    }));
+  };
+  
+  const handleFileTypeOverrideChange = (fileTypeId) => {
+    setFileTypeOverrides((prev) => ({
+      ...prev,
+      [fileTypeId]: !prev[fileTypeId],
+    }));
+  };
+
+  const toggleOverrideSection = (section) => {
+    setOpenOverrides(openOverrides === section ? null : section);
+  };
+
+  const handleShowPreview = (settingType) => {
+    // This is a simplified preview. A real implementation would be more complex.
+    let allowed = ["example_photo_allowed.jpg", "travel_doc_allowed.pdf"];
+    let blocked = ["work_document_blocked.docx", "screenshot_blocked.png"];
+
+    // Customize based on settingType and current levels/overrides
+    if (settingType === "photos") {
+      allowed = COMMON_FILE_TYPES.filter(ft => ft.type === "image" && fileTypeOverrides[ft.id]).map(ft => `photo_example.${ft.id}`);
+      blocked = COMMON_FILE_TYPES.filter(ft => ft.type === "image" && !fileTypeOverrides[ft.id]).map(ft => `photo_blocked_example.${ft.id}`);
+      if (captureSettings.photos === "light") {
+        blocked.push("high_resolution_photo.jpg (blocked by 'light' setting)");
+      }
+    }
+    // Add more logic for other setting types (documents, videos, telegram etc.)
+
+    setPreviewContent({ allowed, blocked });
+    setShowPreviewModal(true);
   };
   
   const handleBackClick = () => {
-    navigate('/timeline');
+    navigate(-1);
   };
   
   // Mouse events
@@ -165,10 +219,10 @@ export const Capture = () => {
   
   // Handle save button click
   const handleSave = () => {
-    // Add logic to save settings to backend/storage
-    console.log("Saving settings:", captureSettings);
+    console.log("Saving settings:", captureSettings, "Overrides:", fileTypeOverrides);
+    localStorage.setItem("captureSettings", JSON.stringify(captureSettings));
+    localStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
     
-    // For demo purposes, show a success toast
     const toast = document.createElement("div");
     toast.className = "toast success";
     toast.textContent = "Settings saved successfully!";
@@ -193,6 +247,43 @@ export const Capture = () => {
     });
   }, [captureSettings]);
 
+  // Placeholder: useEffect for smart-configuration on first run
+  useEffect(() => {
+    const isFirstRun = !localStorage.getItem("settings_configured");
+    if (isFirstRun) {
+      // TODO: Fetch user nationality/region (e.g., from profile data)
+      const userNationality = "US"; // Example
+      const userRegion = "North America"; // Example
+
+      let initialSettings = { ...captureSettings };
+      let initialOverrides = { ...fileTypeOverrides };
+
+      // Example Logic (replace with actual smart-configuration)
+      if (userNationality === "DE") {
+        initialSettings.telegram = "medium";
+        initialOverrides.pdf = true; // Germans love PDFs :)
+      } else if (userRegion === "Asia") {
+        // Different defaults for Asia
+        initialSettings.photos = "medium";
+      }
+      
+      setCaptureSettings(initialSettings);
+      setFileTypeOverrides(initialOverrides);
+      localStorage.setItem("settings_configured", "true");
+      console.log("Smart-configured default settings based on (mocked) nationality/region.");
+    }
+    // Load saved settings if not first run
+    const savedCaptureSettings = localStorage.getItem("captureSettings");
+    if (savedCaptureSettings) {
+      setCaptureSettings(JSON.parse(savedCaptureSettings));
+    }
+    const savedFileTypeOverrides = localStorage.getItem("fileTypeOverrides");
+    if (savedFileTypeOverrides) {
+      setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
+    }
+
+  }, []); // Empty dependency array means this runs once on mount
+
   return (
     <div className="capture-screen">
       <CaptureTopBar onBackClick={handleBackClick} />
@@ -200,10 +291,8 @@ export const Capture = () => {
       <div className="capture-content">
         <div className="capture-description">
           <p>
-            Define how much the Bonded app should capture.
-            <br /><br />
-            You can always change your preferences later. No-one but you and your
-            partner can access your information.
+            Define how much information Bonded captures to build your relationship timeline. 
+            You can adjust these settings anytime. Your data is private and only accessible by you and your partner.
           </p>
         </div>
         
@@ -218,143 +307,93 @@ export const Capture = () => {
         </div>
         
         <div className="capture-settings-list">
-          <div className="capture-setting-item">
+          {Object.keys(captureSettings).map((settingKey) => (
+            <div className="capture-setting-item" key={settingKey}>
             <div className="setting-header">
-              <h2>Photos</h2>
+                <h2>{settingKey.charAt(0).toUpperCase() + settingKey.slice(1)}</h2>
+                {/* Add description for each setting type if needed */}
             </div>
             <div className="setting-slider-container">
               <div 
                 className="slider-track" 
-                ref={sliderRefs.photos}
-                onClick={(e) => handleSliderClick('photos', e)}
+                  ref={sliderRefs[settingKey]}
+                  onClick={(e) => handleSliderClick(settingKey, e)}
               >
                 <div 
-                  className={`slider-fill ${captureSettings.photos}`}
+                    className={`slider-fill ${captureSettings[settingKey]}`}
+                    style={{width: `${getPositionFromLevel(captureSettings[settingKey])}%`}} // Dynamic width
                 ></div>
                 <div 
                   className="slider-thumb" 
-                  ref={thumbRefs.photos}
-                  onMouseDown={(e) => startDrag('photos', e)}
-                  onTouchStart={(e) => startTouch('photos', e)}
-                  style={{left: `${getPositionFromLevel(captureSettings.photos)}%`}}
+                    ref={thumbRefs[settingKey]}
+                    onMouseDown={(e) => startDrag(settingKey, e)}
+                    onTouchStart={(e) => startTouch(settingKey, e)}
+                    style={{left: `${getPositionFromLevel(captureSettings[settingKey])}%`}}
                 ></div>
               </div>
               <div className="slider-labels">
+                  {["none", "light", "medium", "full"].map(level => (
                 <button 
-                  className={`slider-option ${captureSettings.photos === 'light' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('photos', 'light')}
+                        key={level}
+                        className={`slider-option ${captureSettings[settingKey] === level ? 'active' : ''}`}
+                        onClick={() => handleToggleSetting(settingKey, level)}
                 >
-                  Light
+                        {level.charAt(0).toUpperCase() + level.slice(1)}
                 </button>
-                <button 
-                  className={`slider-option ${captureSettings.photos === 'medium' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('photos', 'medium')}
-                >
-                  Medium
-                </button>
-                <button 
-                  className={`slider-option ${captureSettings.photos === 'full' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('photos', 'full')}
-                >
-                  Full
-                </button>
-              </div>
+                  ))}
             </div>
-          </div>
+              </div>
 
-          <div className="capture-setting-item">
-            <div className="setting-header">
-              <h2>Geolocation</h2>
-            </div>
-            <div className="setting-slider-container">
-              <div 
-                className="slider-track" 
-                ref={sliderRefs.geolocation}
-                onClick={(e) => handleSliderClick('geolocation', e)}
-              >
-                <div 
-                  className={`slider-fill ${captureSettings.geolocation}`}
-                ></div>
-                <div 
-                  className="slider-thumb" 
-                  ref={thumbRefs.geolocation}
-                  onMouseDown={(e) => startDrag('geolocation', e)}
-                  onTouchStart={(e) => startTouch('geolocation', e)}
-                  style={{left: `${getPositionFromLevel(captureSettings.geolocation)}%`}}
-                ></div>
+              {/* Filter Preview and Manual Override Section */} 
+              {(settingKey === 'photos' || settingKey === 'documents' || settingKey === 'videos') && (
+                <div className="filter-controls">
+                  <button onClick={() => handleShowPreview(settingKey)} className="preview-button">
+                    Test Filters for {settingKey}
+                </button>
+                  <button onClick={() => toggleOverrideSection(settingKey)} className="override-button">
+                    {openOverrides === settingKey ? "Hide" : "Show"} Manual File Overrides
+                </button>
+                  {openOverrides === settingKey && (
+                    <div className="overrides-list">
+                      <p>Select file types to {captureSettings[settingKey] !== 'none' ? 'allow' : 'disallow (even if allowed by level)'}:</p>
+                      {COMMON_FILE_TYPES.filter(ft => ft.type === settingKey.slice(0, -1)) // photos -> photo
+                        .map(fileType => (
+                        <label key={fileType.id} className="override-checkbox-label">
+                          <input 
+                            type="checkbox" 
+                            checked={fileTypeOverrides[fileType.id] || false}
+                            onChange={() => handleFileTypeOverrideChange(fileType.id)}
+                          />
+                          {fileType.label}
+                        </label>
+                      ))}
+                    </div>
+                  )}
               </div>
-              <div className="slider-labels">
-                <button 
-                  className={`slider-option ${captureSettings.geolocation === 'light' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('geolocation', 'light')}
-                >
-                  Light
-                </button>
-                <button 
-                  className={`slider-option ${captureSettings.geolocation === 'medium' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('geolocation', 'medium')}
-                >
-                  Medium
-                </button>
-                <button 
-                  className={`slider-option ${captureSettings.geolocation === 'full' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('geolocation', 'full')}
-                >
-                  Full
-                </button>
-              </div>
+              )}
             </div>
-          </div>
-
-          <div className="capture-setting-item">
-            <div className="setting-header">
-              <h2>Telegram</h2>
-            </div>
-            <div className="setting-slider-container">
-              <div 
-                className="slider-track" 
-                ref={sliderRefs.telegram}
-                onClick={(e) => handleSliderClick('telegram', e)}
-              >
-                <div 
-                  className={`slider-fill ${captureSettings.telegram}`}
-                ></div>
-                <div 
-                  className="slider-thumb" 
-                  ref={thumbRefs.telegram}
-                  onMouseDown={(e) => startDrag('telegram', e)}
-                  onTouchStart={(e) => startTouch('telegram', e)}
-                  style={{left: `${getPositionFromLevel(captureSettings.telegram)}%`}}
-                ></div>
-              </div>
-              <div className="slider-labels">
-                <button 
-                  className={`slider-option ${captureSettings.telegram === 'light' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('telegram', 'light')}
-                >
-                  Light
-                </button>
-                <button 
-                  className={`slider-option ${captureSettings.telegram === 'medium' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('telegram', 'medium')}
-                >
-                  Medium
-                </button>
-                <button 
-                  className={`slider-option ${captureSettings.telegram === 'full' ? 'active' : ''}`}
-                  onClick={() => handleToggleSetting('telegram', 'full')}
-                >
-                  Full
-                </button>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
         
         <div className="capture-save-section">
           <button className="save-button" onClick={handleSave}>Save settings</button>
         </div>
       </div>
+
+      {showPreviewModal && (
+        <div className="preview-modal">
+          <div className="preview-modal-content">
+            <button onClick={() => setShowPreviewModal(false)} className="close-modal-button">×</button>
+            <h3>Filter Preview</h3>
+            <h4>Allowed Examples:</h4>
+            <ul>{previewContent.allowed.map((item, i) => <li key={`allowed-${i}`}>{item}</li>)}</ul>
+            {previewContent.allowed.length === 0 && <p>No files would be allowed with current settings.</p>}
+            <h4>Blocked Examples:</h4>
+            <ul>{previewContent.blocked.map((item, i) => <li key={`blocked-${i}`}>{item}</li>)}</ul>
+            {previewContent.blocked.length === 0 && <p>No files would be blocked with current settings.</p>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -4,116 +4,338 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(46, 46, 46, 0.8);
+  background-color: rgba(0, 0, 0, 0.7); /* Darker overlay for better focus */
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 100;
+  z-index: 1050; /* Ensure it's above other content */
+  padding: 15px; /* Padding for smaller screens */
+  box-sizing: border-box;
 }
 
 .upload-modal-container {
-  width: 280px;
-  background-color: #2C4CDF;
+  background-color: #2C4CDF; /* Primary blue background */
+  color: #FFFFFF; /* White text */
   border-radius: 12px;
-  overflow: hidden;
-  animation: modal-fade-in 0.3s ease-in-out;
-}
-
-@keyframes modal-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 600px; /* Wider modal for file list */
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Prevent content from spilling */
 }
 
 .upload-modal-content {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 16px;
-  gap: 15px;
+  height: 100%; /* Allow content to take full height of container */
 }
 
 .upload-modal-header {
-  width: 100%;
-  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.upload-modal-title {
+  flex-grow: 1;
+  text-align: center;
+}
+
+.upload-modal-title h2 {
+  font-family: "Trocchi", serif;
+  font-size: 20px;
+  margin: 0;
+  color: #FFFFFF;
 }
 
 .trailing-icon {
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-  margin-bottom: 8px;
+  /* position: absolute; */ /* If needed for specific alignment */
+  /* right: 16px; */
+  /* top: 16px; */
 }
 
 .close-icon {
   cursor: pointer;
-  width: 24px;
-  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.upload-modal-title {
-  text-align: center;
-  width: 100%;
-}
-
-.upload-modal-title h2 {
-  color: #FFFFFF;
-  font-family: "Trocchi", serif;
-  font-size: 24px;
-  font-weight: 400;
-  line-height: 1.3em;
-  margin: 0;
+.close-icon svg path {
+  fill: #FFFFFF; /* Ensure close icon is white */
 }
 
 .upload-modal-body {
+  padding: 20px;
+  text-align: center;
+  flex-grow: 1; /* Allow body to take available space */
+  overflow-y: auto; /* Scroll if content exceeds height */
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
 }
 
 .upload-text {
-  color: #FFFFFF;
   font-family: "Rethink Sans", sans-serif;
-  font-size: 16px;
-  font-weight: 400;
-  line-height: 1.44em;
-  letter-spacing: 0.2px;
-  margin: 0;
-  text-align: center;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 20px 0;
 }
 
-.upload-icon {
+.upload-icon-container {
+  margin-bottom: 24px;
+}
+
+.main-upload-icon svg {
+  width: 64px;
+  height: 64px;
+  fill: #B9FF46; /* Accent color for icon */
+}
+
+.select-files-btn,
+.upload-checked-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+  width: auto; /* Fit content */
+}
+
+.select-files-btn.primary,
+.upload-checked-btn.primary {
+  background-color: #B9FF46; /* Accent color for primary buttons */
+  color: #2C4CDF; /* Dark text on light button */
+}
+
+.select-files-btn.primary:hover,
+.upload-checked-btn.primary:hover {
+  background-color: #a8e63f; /* Slightly darker on hover */
+}
+
+.select-files-btn.secondary {
+  background-color: transparent;
+  color: #B9FF46;
+  border: 1px solid #B9FF46;
+  margin-right: 10px;
+}
+
+.select-files-btn.secondary:hover {
+  background-color: rgba(185, 255, 70, 0.1);
+}
+
+.upload-checked-btn:disabled {
+  background-color: #5a6aac; /* Muted blue when disabled */
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* File Filters */
+.file-filters {
   display: flex;
   justify-content: center;
-  align-items: center;
-  width: 80px;
-  height: 80px;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.select-files-btn {
-  background-color: #FF704D;
-  border: none;
-  border-radius: 19px;
-  padding: 8px 16px;
+.file-filters button {
+  background-color: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 13px;
   cursor: pointer;
-  margin-top: 10px;
+  transition: all 0.2s ease;
 }
 
-.btn-label {
-  color: #FFFFFF;
-  font-family: "Trocchi", serif;
+.file-filters button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #B9FF46;
+  color: #B9FF46;
+}
+
+.file-filters button.active {
+  background-color: #B9FF46;
+  color: #2C4CDF;
+  border-color: #B9FF46;
+}
+
+/* File List */
+.file-list-container {
+  flex-grow: 1; /* Allow list to take space */
+  overflow-y: auto; /* Scroll for long lists */
+  background-color: rgba(0, 0, 0, 0.15); /* Slightly darker background for list area */
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 16px;
+  min-height: 150px; /* Ensure it has some height even when empty */
+}
+
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.file-list-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  margin-bottom: 8px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.file-list-header input[type="checkbox"] {
+  margin-right: 10px;
+  vertical-align: middle;
+  accent-color: #B9FF46;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background-color 0.1s ease;
+  position: relative; /* For tooltip positioning */
+}
+
+.file-item.excluded {
+  opacity: 0.6;
+  background-color: rgba(80, 80, 80, 0.1);
+}
+
+.file-item.excluded .file-name,
+.file-item.excluded .file-meta {
+  text-decoration: line-through;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Style for items that are checked AND excluded, if they need to look different */
+.file-item.checked-excluded {
+  /* Example: Maybe a slightly different background or border */
+  /* background-color: rgba(255, 100, 100, 0.1); */
+}
+
+.file-item input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+}
+
+.file-item:last-child {
+  border-bottom: none;
+}
+
+.file-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.file-item input[type="checkbox"] {
+  margin-right: 10px;
+  vertical-align: middle;
+  accent-color: #B9FF46; /* Accent color for checkboxes */
+}
+
+.file-item-icon {
+  margin-right: 8px;
+  color: #B9FF46; /* Accent color for icons */
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.file-item-icon svg, /* For SVG icons like Photo1 */
+.file-item-icon.generic-icon /* For text-based generic icon */
+{
+  width: 20px; /* Uniform icon size */
+  height: 20px;
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden; /* To prevent long names from breaking layout */
+    margin-right: 8px;
+}
+
+.file-name {
+  font-family: "Rethink Sans", sans-serif;
   font-size: 14px;
-  font-weight: 400;
-  line-height: 1.71em;
-  letter-spacing: 0.1px;
-  text-align: center;
+  color: #FFFFFF;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* margin-right: 8px; */ /* Moved to file-details */
+}
+
+.file-meta {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.exclusion-indicator {
+    margin-left: 5px;
+    cursor: help;
+    font-style: normal; /* Reset italic if applied by parent */
+}
+
+.exclusion-tooltip {
+  position: absolute;
+  bottom: 100%; /* Position above the item */
+  left: 30px; /* Align with file name area */
+  transform: translateY(-5px); /* Small gap */
+  background-color: #1a1a2e; /* Dark background for tooltip */
+  color: #e0e0e0; /* Light text */
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: "Rethink Sans", sans-serif;
+  white-space: normal; /* Allow wrapping */
+  word-wrap: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 10; /* Ensure it's above other items */
+  width: auto;
+  max-width: 250px; /* Limit width */
+  text-align: left;
+}
+
+.no-files-text {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 20px;
+}
+
+.upload-actions {
+  display: flex;
+  justify-content: space-between; /* Align buttons */
+  align-items: center;
+  margin-top: auto; /* Push to bottom if space allows */
+  padding-top: 16px; /* Space above buttons */
+  border-top: 1px solid rgba(255,255,255,0.2); /* Optional separator */
+}
+
+
+/* Ensure original btn-label class (if used by other components) doesn't conflict */
+.select-files-btn .btn-label,
+.upload-checked-btn .btn-label {
+  /* Styles specific to button labels if needed */
 } 

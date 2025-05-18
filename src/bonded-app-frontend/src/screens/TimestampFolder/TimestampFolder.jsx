@@ -9,6 +9,16 @@ import "./style.css";
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';
 const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
 
+// Evidence categories for immigration verification
+const EVIDENCE_CATEGORIES = {
+  RELATIONSHIP: "relationship",
+  FINANCIAL: "financial",
+  LANGUAGE: "language",
+  RESIDENCY: "residency",
+  TRAVEL: "travel",
+  DOCUMENT: "document"
+};
+
 export const TimestampFolder = ({ onClose, date: propDate }) => {
   const navigate = useNavigate();
   const { date: paramDate } = useParams();
@@ -20,6 +30,7 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
   const [loading, setLoading] = useState(true);
   const [showImportSuccess, setShowImportSuccess] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   
   // Use date from props or URL params, make sure to decode URL encoded date
   const date = propDate || (paramDate ? decodeURIComponent(paramDate) : null);
@@ -125,6 +136,15 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         entry.photos = photoCount;
         entry.messages = messageCount;
         
+        // Update the evidence category based on majority content type
+        if (documentCount > messageCount && documentCount > photoCount) {
+          entry.evidenceCategory = EVIDENCE_CATEGORIES.DOCUMENT;
+        } else if (messageCount > documentCount && messageCount > photoCount) {
+          entry.evidenceCategory = EVIDENCE_CATEGORIES.LANGUAGE;
+        } else {
+          entry.evidenceCategory = EVIDENCE_CATEGORIES.RELATIONSHIP;
+        }
+        
         // Update the image if we have at least one photo
         if (photoCount > 0 && !entry.image) {
           const firstPhoto = contentItems.find(item => item.type === 'photo' || item.type === 'image');
@@ -172,7 +192,15 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
       imageUrl: URL.createObjectURL(file.file),
       timestamp: file.timestamp,
       size: file.size,
-      path: file.path
+      path: file.path,
+      // Immigration verification specific fields
+      evidenceCategory: determineEvidenceCategory(file.file.type, file.name),
+      verified: false, // Default to unverified until processed
+      officialDocument: isLikelyOfficialDocument(file.name),
+      metadata: {
+        importDate: new Date().toISOString(),
+        fileType: file.file.type
+      }
     }));
 
     // Add new content items to the existing ones
@@ -191,6 +219,40 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
     }, 3000);
   };
 
+  // Determine evidence category based on file type and name
+  const determineEvidenceCategory = (mimeType, fileName) => {
+    // Logic to determine category based on file name and type
+    const lowerFileName = fileName.toLowerCase();
+    
+    if (lowerFileName.includes('passport') || lowerFileName.includes('visa') || 
+        lowerFileName.includes('document') || lowerFileName.includes('certificate')) {
+      return EVIDENCE_CATEGORIES.DOCUMENT;
+    } else if (lowerFileName.includes('bank') || lowerFileName.includes('statement') || 
+               lowerFileName.includes('invoice') || lowerFileName.includes('receipt')) {
+      return EVIDENCE_CATEGORIES.FINANCIAL;
+    } else if (lowerFileName.includes('chat') || lowerFileName.includes('message') || 
+               lowerFileName.includes('letter') || lowerFileName.includes('email')) {
+      return EVIDENCE_CATEGORIES.LANGUAGE;
+    } else if (lowerFileName.includes('ticket') || lowerFileName.includes('boarding') || 
+               lowerFileName.includes('travel')) {
+      return EVIDENCE_CATEGORIES.TRAVEL;
+    } else if (lowerFileName.includes('lease') || lowerFileName.includes('utility') || 
+               lowerFileName.includes('address')) {
+      return EVIDENCE_CATEGORIES.RESIDENCY;
+    } else {
+      return EVIDENCE_CATEGORIES.RELATIONSHIP;
+    }
+  };
+
+  // Check if a file name suggests it's an official document
+  const isLikelyOfficialDocument = (fileName) => {
+    const officialTerms = ['passport', 'visa', 'certificate', 'license', 'official', 'government', 
+                           'id', 'document', 'statement', 'record'];
+    
+    const lowerFileName = fileName.toLowerCase();
+    return officialTerms.some(term => lowerFileName.includes(term));
+  };
+
   const getFileType = (mimeType) => {
     if (mimeType.startsWith('image/')) {
       return 'photo';
@@ -205,16 +267,31 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
 
   const handleViewAllMedia = () => {
     // Show all media items
-    console.log("View all media clicked");
-    
-    // For now, we'll just show what's already loaded
-    // In a complete implementation, this would open a gallery view
+    setSelectedCategory('all');
   };
 
   const handleAddMedia = () => {
     // Open the media scanner
     setShowMediaScannerModal(true);
   };
+
+  const handleFilterByCategory = (category) => {
+    setSelectedCategory(category);
+  };
+
+  // Filter content items based on selected category
+  const filteredItems = selectedCategory === 'all' 
+    ? contentItems 
+    : contentItems.filter(item => {
+        if (selectedCategory === 'photos') return item.type === 'photo';
+        if (selectedCategory === 'videos') return item.type === 'video';
+        if (selectedCategory === 'documents') return item.type === 'document';
+        if (selectedCategory === 'messages') return item.type === 'message';
+        if (Object.values(EVIDENCE_CATEGORIES).includes(selectedCategory)) {
+          return item.evidenceCategory === selectedCategory;
+        }
+        return true;
+      });
 
   const renderIcon = (type) => {
     switch (type) {
@@ -264,6 +341,12 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
   const messageCount = contentItems.filter(item => item.type === 'message').length;
   const totalCount = contentItems.length;
 
+  // Count by evidence category
+  const evidenceCounts = Object.values(EVIDENCE_CATEGORIES).reduce((acc, category) => {
+    acc[category] = contentItems.filter(item => item.evidenceCategory === category).length;
+    return acc;
+  }, {});
+
   return (
     <div className="timestamp-folder-screen">
       <div className="timestamp-folder-container">
@@ -277,6 +360,14 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             </div>
             <div className="header-title">{date || "Date not specified"}</div>
           </div>
+          
+          {/* Immigration verification status badge */}
+          {contentItems.some(item => item.officialDocument) && (
+            <div className="verification-status">
+              <span className="status-indicator"></span>
+              Official Documents Present
+            </div>
+          )}
         </div>
 
         {/* Import success notification */}
@@ -286,12 +377,73 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
           </div>
         )}
 
+        {/* Evidence category filter chips */}
+        {contentItems.length > 0 && (
+          <div className="filter-chips">
+            <div 
+              className={`filter-chip ${selectedCategory === 'all' ? 'active' : ''}`}
+              onClick={() => handleFilterByCategory('all')}
+            >
+              All ({totalCount})
+            </div>
+            
+            {photoCount > 0 && (
+              <div 
+                className={`filter-chip ${selectedCategory === 'photos' ? 'active' : ''}`}
+                onClick={() => handleFilterByCategory('photos')}
+              >
+                Photos ({photoCount})
+              </div>
+            )}
+            
+            {documentCount > 0 && (
+              <div 
+                className={`filter-chip ${selectedCategory === 'documents' ? 'active' : ''}`}
+                onClick={() => handleFilterByCategory('documents')}
+              >
+                Documents ({documentCount})
+              </div>
+            )}
+            
+            {messageCount > 0 && (
+              <div 
+                className={`filter-chip ${selectedCategory === 'messages' ? 'active' : ''}`}
+                onClick={() => handleFilterByCategory('messages')}
+              >
+                Messages ({messageCount})
+              </div>
+            )}
+            
+            {videoCount > 0 && (
+              <div 
+                className={`filter-chip ${selectedCategory === 'videos' ? 'active' : ''}`}
+                onClick={() => handleFilterByCategory('videos')}
+              >
+                Videos ({videoCount})
+              </div>
+            )}
+            
+            {/* Evidence category filters */}
+            {Object.entries(evidenceCounts).map(([category, count]) => (
+              count > 0 && (
+                <div 
+                  key={category}
+                  className={`filter-chip category-${category} ${selectedCategory === category ? 'active' : ''}`}
+                  onClick={() => handleFilterByCategory(category)}
+                >
+                  {category} ({count})
+                </div>
+              )
+            ))}
+          </div>
+        )}
+
         {/* Content rows */}
         <div className="timestamp-content">
           {/* Media count summary card */}
           {contentItems.length > 0 && (
             <div className="media-summary-card">
-              <h3>Media for {date}</h3>
+              <h3>Immigration Evidence for {date}</h3>
               <div className="media-counts">
                 {photoCount > 0 && (
                   <div className="count-item">
@@ -326,21 +478,39 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
               <div className="loading-spinner"></div>
               <p>Loading content...</p>
             </div>
-          ) : contentItems.length === 0 ? (
+          ) : filteredItems.length === 0 ? (
             <div className="empty-content">
-              <p>No content available for this date</p>
+              <p>No content {selectedCategory !== 'all' ? `for category "${selectedCategory}"` : 'available'} for this date</p>
               <p className="hint-text">Scan your media to add content</p>
             </div>
           ) : (
-            contentItems.map((item) => (
-              <div className="content-row" key={item.id}>
+            filteredItems.map((item) => (
+              <div className={`content-row ${item.officialDocument ? 'official-document' : ''}`} key={item.id}>
                 <div className="row-content">
                   <div className="item-icon">
                     {renderIcon(item.type)}
                   </div>
                   <div className="item-details">
                     <div className="item-name">{item.name}</div>
-                    {item.size && <div className="item-size">{formatFileSize(item.size)}</div>}
+                    <div className="item-meta">
+                      {item.size && <span className="item-size">{formatFileSize(item.size)}</span>}
+                      <span className="item-source">{item.source}</span>
+                      {item.location && <span className="item-location">{item.location}</span>}
+                    </div>
+                    
+                    {/* Evidence category badge */}
+                    {item.evidenceCategory && (
+                      <div className={`evidence-badge ${item.evidenceCategory}`}>
+                        {item.evidenceCategory}
+                      </div>
+                    )}
+                    
+                    {/* Official document indicator */}
+                    {item.officialDocument && (
+                      <div className="official-badge">
+                        Official Document
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="row-actions">
@@ -364,18 +534,9 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             ))
           )}
 
-          {/* Action Cards */}
-          <div className="card" onClick={handleViewAllMedia}>
-            <div className="card-text">View, see info or delete all media</div>
-          </div>
-
-          <div className="card" onClick={handleAddMedia}>
-            <div className="card-text">View, add or delete media for this date</div>
-          </div>
-
           {/* Scan Media button */}
           <button className="upload-btn" onClick={handleScanMedia}>
-            <div className="btn-text">Scan Media</div>
+            <div className="btn-text">Add Immigration Evidence</div>
           </button>
         </div>
 
@@ -384,7 +545,7 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
           <div className="media-scanner-modal">
             <div className="media-scanner-container">
               <div className="media-scanner-header">
-                <h2>Scan Media for {date}</h2>
+                <h2>Add Immigration Evidence for {date}</h2>
                 <button className="close-button" onClick={() => setShowMediaScannerModal(false)}>×</button>
               </div>
               <MediaScanner onMediaSelected={handleMediaSelected} />

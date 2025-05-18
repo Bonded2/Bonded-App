@@ -5,7 +5,6 @@
   flex-direction: column;
   width: 100%;
   color: #ffffff;
-  font-family: 'Roboto', sans-serif;
   position: relative;
 }
 
@@ -51,6 +50,7 @@
 }
 
 .top-bar-title {
+  font-family: "Trocchi", serif;
   font-size: 24px;
   font-weight: 600;
   color: #ffffff;
@@ -118,136 +118,243 @@
 .capture-settings-list {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: 24px;
+  margin-bottom: 24px;
 }
 
 .capture-setting-item {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.setting-header {
-  margin-bottom: 20px;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .setting-header h2 {
-  font-size: 20px;
-  font-weight: 500;
-  margin: 0;
-  color: #ffffff;
+  font-family: "Trocchi", serif;
+  font-size: 18px;
+  color: #FFFFFF;
+  margin: 0 0 12px 0;
 }
 
 .setting-slider-container {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  margin-bottom: 12px;
 }
 
 .slider-track {
-  height: 6px;
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
   position: relative;
+  width: 100%;
+  height: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
   cursor: pointer;
+  margin-bottom: 8px;
 }
 
 .slider-fill {
-  height: 100%;
-  border-radius: 3px;
-  background-color: #b9ff46;
   position: absolute;
-  top: 0;
-  left: 0;
-  transition: width 0.3s ease;
-}
-
-.slider-fill.light {
-  width: 33%;
-}
-
-.slider-fill.medium {
-  width: 66%;
-}
-
-.slider-fill.full {
-  width: 100%;
+  height: 100%;
+  background-color: #2C4CDF;
+  border-radius: 4px;
 }
 
 .slider-thumb {
   position: absolute;
-  width: 22px;
-  height: 22px;
-  background-color: #b9ff46;
+  width: 20px;
+  height: 20px;
+  background-color: #FFFFFF;
+  border: 2px solid #2C4CDF;
   border-radius: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   cursor: grab;
-  border: 3px solid #2c4cdf;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
-  transition: transform 0.1s ease;
-  z-index: 2;
-}
-
-.slider-thumb:hover {
-  transform: translate(-50%, -50%) scale(1.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .slider-thumb:active {
   cursor: grabbing;
-  transform: translate(-50%, -50%) scale(1.1);
 }
 
 .slider-labels {
   display: flex;
   justify-content: space-between;
+  margin-top: 8px;
 }
 
 .slider-option {
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.slider-option.active {
-  color: #b9ff46;
-  font-weight: 700;
+.slider-option.active,
+.slider-option:hover {
+  color: #FFFFFF;
+  background-color: rgba(44, 76, 223, 0.5);
+  border-color: #2C4CDF;
 }
 
-.capture-save-section {
+/* Filter Controls Styling */
+.filter-controls {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.preview-button,
+.override-button {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  margin-right: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #2C4CDF;
+  background-color: transparent;
+  color: #2C4CDF;
+}
+
+.preview-button:hover,
+.override-button:hover {
+  background-color: rgba(44, 76, 223, 0.1);
+}
+
+.overrides-list {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+}
+
+.overrides-list p {
+  font-size: 13px;
+  color: #FFFFFF;
+  margin: 0 0 10px 0;
+}
+
+.override-checkbox-label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: #E0E0E0;
+  cursor: pointer;
+}
+
+.override-checkbox-label input[type="checkbox"] {
+  margin-right: 8px;
+  accent-color: #2C4CDF;
+  vertical-align: middle;
+}
+
+/* Preview Modal Styling */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
-  margin-top: 40px;
-  margin-bottom: 20px;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
 }
 
-.save-button {
+.preview-modal-content {
   background-color: #FF704D;
-  color: #ffffff;
-  border: none;
-  padding: 12px 32px;
-  border-radius: 6px;
+  padding: 25px;
+  border-radius: 12px;
+  border: 1px solid #2C4CDF;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  color: #FFFFFF;
+}
+
+.preview-modal-content h3 {
+  font-family: "Trocchi", serif;
+  color: #2C4CDF;
+  margin: 0 0 15px 0;
+  font-size: 20px;
+}
+
+.preview-modal-content h4 {
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 500;
+  margin: 15px 0 5px 0;
   font-size: 16px;
-  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.preview-modal-content ul {
+  list-style-type: disc;
+  padding-left: 20px;
+  margin-bottom: 15px;
+}
+
+.preview-modal-content li {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  margin-bottom: 5px;
+  word-break: break-all;
+}
+
+.preview-modal-content p {
+    font-family: "Rethink Sans", sans-serif;
+    font-style: italic;
+    font-size: 13px;
+}
+
+.close-modal-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #FFFFFF;
   cursor: pointer;
-  transition: background-color 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.save-button:hover {
-  background-color: #ff8566;
+.save-settings-button {
+  display: block;
+  margin: 24px auto 0 auto;
+  width: fit-content;
+  padding: 12px 24px;
+  font-size: 16px;
 }
 
-.save-button:active {
-  background-color: #e65c3e;
-  transform: translateY(1px);
+/* Added style for the main save button */
+.capture-save-section .save-button {
+  font-family: "Trocchi", serif;
+  background-color: #FF704D; 
+  color: #FFFFFF;
+  padding: 12px 24px;
+  border-radius: 25px; 
+  border: none;
+  font-size: 16px;
+  font-weight: 500; 
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: block; 
+  margin: 20px auto; 
+  min-width: 200px;
+  text-align: center;
+}
+
+.capture-save-section .save-button:hover {
+  background-color: #fa5a35; 
 }
 
 /* Toast notifications */

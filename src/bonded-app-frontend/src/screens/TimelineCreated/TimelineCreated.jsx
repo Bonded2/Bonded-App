@@ -42,10 +42,16 @@ export const TimelineCreated = () => {
           
           // Convert serialized icon back to JSX if needed
           const processedData = parsedData.map(item => {
+            // Add default source and uploadStatus if not present for older items
+            const newItem = {
+              ...item,
+              source: item.source || 'manual', // Default source
+              uploadStatus: item.uploadStatus || 'completed', // Default status
+            };
             if (item.hasMessageIcon) {
-              return { ...item, icon: <Chat4 className="chat-icon-svg" /> };
+              return { ...newItem, icon: <Chat4 className="chat-icon-svg" /> };
             }
-            return { ...item, icon: null };
+            return { ...newItem, icon: null };
           });
           
           // Ensure all entries have timestamps
@@ -84,6 +90,7 @@ export const TimelineCreated = () => {
         // Convert icon JSX to a serializable flag
         const serializableData = timelineData.map(item => ({
           ...item,
+          // source and uploadStatus are already part of item, no need to redefine here unless transforming
           hasMessageIcon: item.icon !== null,
           icon: undefined // Remove non-serializable JSX element
         }));
@@ -136,6 +143,8 @@ export const TimelineCreated = () => {
       if (existingEntry) {
         // Update existing entry with new files
         existingEntry.photos = (existingEntry.photos || 0) + files.length;
+        existingEntry.source = existingEntry.source || 'device media'; // Preserve existing or set
+        existingEntry.uploadStatus = 'completed'; // Assume completion for now
         
         // Update image if it doesn't exist
         if (!existingEntry.image) {
@@ -154,7 +163,9 @@ export const TimelineCreated = () => {
           location: getLocationFromFiles(files) || "Imported Media",
           icon: null,
           image: URL.createObjectURL(files[0].file), // Use the first file as thumbnail
-          timestamp: new Date(date).getTime()
+          timestamp: new Date(date).getTime(),
+          source: 'device media', // Set source for new media
+          uploadStatus: 'completed', // Assume completion for now
         };
         
         newTimelineEntries.push(newEntry);
@@ -249,6 +260,37 @@ export const TimelineCreated = () => {
   const formatDateForDisplay = (date) => {
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('en-GB', options);
+  };
+
+  /**
+   * Determine evidence category based on content
+   * Immigration authorities need clear categorization of evidence
+   */
+  const determineEvidenceCategory = (item) => {
+    // Basic logic - could be expanded based on actual content
+    if (item.messages > 0 && item.photos > 0) {
+      return "relationship"; // Communication + photos = relationship evidence
+    } else if (item.location?.toLowerCase().includes("bank") || 
+              item.location?.toLowerCase().includes("financial")) {
+      return "financial"; // Financial evidence
+    } else if (item.messages > 10) {
+      return "relationship"; // Lots of messages = relationship communication
+    }
+    return "relationship"; // Default category
+  };
+
+  /**
+   * Determine evidence type based on content
+   */
+  const determineEvidenceType = (item) => {
+    if (item.photos > 0 && item.messages === 0) {
+      return "photos";
+    } else if (item.messages > 0 && item.photos === 0) {
+      return "messages";
+    } else if (item.photos > 0 && item.messages > 0) {
+      return "media"; // Mixed content
+    }
+    return "media"; // Default
   };
 
   /**
@@ -411,6 +453,13 @@ export const TimelineCreated = () => {
               timelineTileMaskGroupClassName="timeline-brand-image"
               onClick={handleTimelineTileClick}
               date={item.date}
+              source={item.source}
+              uploadStatus={item.uploadStatus}
+              evidenceCategory={determineEvidenceCategory(item)}
+              evidenceType={determineEvidenceType(item)}
+              aiVerified={true} // Assuming all content is AI-verified for immigration
+              processTimestamp={`Processed: ${new Date(item.timestamp).toLocaleString()}`}
+              blockchainTimestamp={item.blockchainTimestamp}
             />
           </div>
         ))}
@@ -465,7 +514,7 @@ export const TimelineCreated = () => {
         <div className="timeline-content-container">
           <div className="timeline-header">
             <div className="frame-header">
-              <p className="capture-title">What we've captured so far</p>
+              <p className="capture-title">Immigration Timeline Evidence</p>
             </div>
           </div>
           

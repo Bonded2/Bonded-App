@@ -46,22 +46,7 @@
       "purpose": "any"
     }
   ],
-  "screenshots": [
-    {
-      "src": "/images/screenshot-timeline.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Timeline view showing relationship evidence"
-    },
-    {
-      "src": "/images/screenshot-mobile.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mobile view of the Bonded app"
-    }
-  ],
+  "screenshots": [],
   "shortcuts": [
     {
       "name": "Add Evidence",

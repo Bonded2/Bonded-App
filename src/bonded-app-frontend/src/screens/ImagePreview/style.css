@@ -80,20 +80,40 @@
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 100vh;
+  height: auto;
   padding: 0;
   box-sizing: border-box;
   background-color: #121212;
   position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.5);
+  margin: 64px auto 64px;
+  min-height: 200px;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Professional watermark to denote official status */
+.image-container::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+  z-index: 2;
+  pointer-events: none;
 }
 
 .preview-image {
   max-width: 100%;
-  max-height: 100%;
+  max-height: calc(100vh - 128px);
   object-fit: contain;
-  width: auto;
-  height: auto;
-  padding: 64px 0; /* Space for navigation bars */
+  z-index: 1;
+  display: block;
+  margin: 0 auto;
 }
 
 /* Bottom action bar */
@@ -144,6 +164,99 @@
 
 .delete-button svg path {
   fill: #FF704D;
+}
+
+/* Add styles for verification badge */
+.verification-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background-color: rgba(24, 28, 47, 0.9);
+  color: #4CAF50;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.verification-badge::before {
+  content: "✓";
+  font-size: 16px;
+  display: inline-block;
+}
+
+/* Add styles for date indicator - position closer to image */
+.date-indicator {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background-color: rgba(24, 28, 47, 0.9);
+  color: #FFFFFF;
+  font-family: "Rethink Sans", monospace;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 10;
+  letter-spacing: 0.5px;
+}
+
+/* Loading container styles */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #B9FF46;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(185, 255, 70, 0.3);
+  border-radius: 50%;
+  border-top-color: #B9FF46;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error container styles */
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #FF704D;
+  gap: 16px;
+}
+
+.error-container button {
+  background-color: rgba(255, 112, 77, 0.2);
+  color: #FF704D;
+  border: 1px solid rgba(255, 112, 77, 0.5);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.error-container button:hover {
+  background-color: rgba(255, 112, 77, 0.3);
 }
 
 /* Media queries for responsive design */
@@ -213,5 +326,22 @@
   
   .preview-image {
     padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Responsive styles for smaller screens */
+@media (max-width: 480px) {
+  .verification-badge {
+    top: 8px;
+    right: 8px;
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  
+  .date-indicator {
+    bottom: 8px;
+    left: 8px;
+    font-size: 10px;
+    padding: 4px 8px;
   }
 } 

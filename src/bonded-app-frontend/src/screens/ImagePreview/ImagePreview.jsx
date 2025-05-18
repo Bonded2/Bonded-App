@@ -1,55 +1,82 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { InfoModal } from "../../components/InfoModal";
 import { DeleteModal } from "../../components/DeleteModal";
 import "./style.css";
+
+// LocalStorage key for timestamp content - same as in TimestampFolder
+const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
 
 export const ImagePreview = ({ onClose, item: propItem }) => {
   const navigate = useNavigate();
   const { itemId } = useParams();
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
   
-  // Sample images that would typically come from your data store
-  const sampleImages = [
-    {
-      id: "1",
-      name: "Img 455",
-      type: "photo",
-      source: "User's Device",
-      location: "Home",
-      date: "12 Nov 2025",
-      imageUrl: "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
-    },
-    {
-      id: "2",
-      name: "Img 1209",
-      type: "photo",
-      source: "User's Device",
-      location: "Work",
-      date: "12 Nov 2025",
-      imageUrl: "https://images.unsplash.com/photo-1589553416260-110229331345?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-    },
-    {
-      id: "3",
-      name: "Img 1209",
-      type: "photo",
-      source: "User's Device",
-      location: "Coffee Shop",
-      date: "12 Nov 2025",
-      imageUrl: "https://images.unsplash.com/photo-1620207418302-439b387441b0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-    }
-  ];
-  
-  // Find the relevant image from the sample data
-  const findImage = () => {
-    if (propItem) return propItem;
-    const found = sampleImages.find(img => img.id === itemId);
-    return found || sampleImages[0]; // Default to first image if not found
-  };
-  
-  // Use item from props or fetch based on itemId from URL params
-  const item = findImage();
+  // Find the correct item either from props or localStorage
+  useEffect(() => {
+    const loadItem = () => {
+      setLoading(true);
+      
+      // If item was passed directly via props, use it
+      if (propItem) {
+        setItem(propItem);
+        setLoading(false);
+        return;
+      }
+      
+      // Otherwise find the item in localStorage by ID
+      try {
+        // Get all content from localStorage
+        const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
+        
+        // Search for the item with matching ID across all dates
+        let foundItem = null;
+        
+        // Iterate through all dates
+        Object.values(allContent).forEach(dateItems => {
+          // Check each item in this date
+          const matchingItem = dateItems.find(item => item.id === itemId);
+          if (matchingItem) {
+            foundItem = matchingItem;
+          }
+        });
+        
+        if (foundItem) {
+          setItem(foundItem);
+        } else {
+          // If not found, use a placeholder
+          setItem({
+            id: "not-found",
+            name: "Image not found",
+            type: "photo",
+            source: "Unknown",
+            location: "Unknown",
+            date: new Date().toLocaleDateString(),
+            imageUrl: "/images/placeholder-image.jpg"
+          });
+        }
+      } catch (err) {
+        console.error("Error loading item:", err);
+        // Set a default placeholder on error
+        setItem({
+          id: "error",
+          name: "Error loading image",
+          type: "photo", 
+          source: "Error",
+          location: "Unknown",
+          date: new Date().toLocaleDateString(),
+          imageUrl: "/images/error-image.jpg"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadItem();
+  }, [propItem, itemId]);
 
   const handleClose = () => {
     if (onClose) {
@@ -68,11 +95,50 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
   };
   
   const handleConfirmDelete = () => {
-    console.log(`Confirming delete for item ${item.id}`);
-    // Here you would implement the actual delete functionality
-    // After deletion, navigate back
-    handleClose();
+    if (!item) return;
+    
+    try {
+      // Get all content from localStorage
+      const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
+      
+      // Find which date contains this item
+      Object.keys(allContent).forEach(date => {
+        // Filter out the deleted item
+        allContent[date] = allContent[date].filter(i => i.id !== item.id);
+      });
+      
+      // Save back to localStorage
+      localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
+      
+      // Navigate back
+      handleClose();
+    } catch (err) {
+      console.error("Error deleting item:", err);
+      alert("Failed to delete item. Please try again.");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="image-preview-screen">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading image...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!item) {
+    return (
+      <div className="image-preview-screen">
+        <div className="error-container">
+          <p>Image not found</p>
+          <button onClick={handleClose}>Go Back</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="image-preview-screen">
@@ -90,6 +156,14 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
         {/* Main image container */}
         <div className="image-container">
           <img src={item.imageUrl} alt={item.name} className="preview-image" />
+          
+          {/* Verification indicators for immigration documents */}
+          {item.source === "Immigration Document" && (
+            <div className="verification-badge">Official Document</div>
+          )}
+          
+          {/* Date indicator for evidence timeline */}
+          <div className="date-indicator">{item.date}</div>
         </div>
         
         {/* Bottom action bar */}

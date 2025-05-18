@@ -63,6 +63,7 @@
   .timeline-created .media-scanner-header h2 {
     color: #B9FF46;
     margin: 0;
+    font-family: "Trocchi", serif;
     font-size: 22px;
     font-weight: 600;
     letter-spacing: 0.5px;
@@ -147,6 +148,7 @@
     scrollbar-width: thin;
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
     will-change: transform; /* Performance optimization */
+    max-width: 100%; /* Ensure it doesn't exceed screen width */
   }
   
   /* Custom scrollbar styling */
@@ -304,17 +306,18 @@
   
   .timeline-created .timeline-line {
     height: 100%;
-    left: 0;
+    left: 8px; /* Adjust to position properly with new tile margins */
     position: absolute;
     top: 0;
     width: 24px;
+    z-index: 1; /* Ensure it's below the tiles */
   }
   
   .timeline-created .timeline-vertical-line {
     background-color: rgba(255, 255, 255, 0.3);
     border-radius: 8px;
     height: 100%;
-    left: 12px;
+    left: 2px; /* Center it within the timeline-line */
     position: absolute;
     top: 0;
     width: 2px;
@@ -332,22 +335,19 @@
   .timeline-created .frame-header {
     align-items: center;
     display: flex;
-    gap: 4px;
+    gap: 8px;
     position: relative;
-    width: 100%;
   }
   
   .timeline-created .capture-title {
     color: #ffffff;
     font-family: "Trocchi", serif;
-    font-size: 22px;
-    font-weight: 500;
-    line-height: 1.3em;
-    margin-top: -1px;
-    position: relative;
-    width: 100%;
-    letter-spacing: 0.5px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    font-size: 1rem;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+    line-height: 1.4;
+    margin: 0;
+    text-align: left;
   }
   
   /* Timeline item styling */
@@ -368,11 +368,11 @@
   /* Timeline dots */
   .timeline-created .timeline-dot {
     position: absolute;
-    width: 16px;
-    height: 16px;
+    width: 12px; /* Slightly smaller */
+    height: 12px;
     background-color: #FF704D;
     border-radius: 50%;
-    left: -7px;
+    left: -3px; /* Adjust to center on the line */
     transform: scale(0);
     transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     z-index: 2;
@@ -395,7 +395,7 @@
     align-items: center;
     justify-content: center;
     z-index: 2;
-    margin-left: 32px;
+    margin-left: 24px; /* Align with timeline-line */
     margin-bottom: 16px;
     box-shadow: 0 8px 16px rgba(255, 112, 77, 0.4);
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -427,8 +427,7 @@
     width: calc(100% - 32px) !important;
     margin-left: 32px;
     transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    border-radius: 16px;
+    border-radius: 12px;
     overflow: hidden;
   }
   
@@ -448,12 +447,11 @@
   
   /* Brand image styling */
   .timeline-brand-image {
-    height: 154px !important;
-    width: 117px !important;
+    width: 100% !important;
+    height: 100% !important;
     object-fit: cover !important;
     object-position: center !important;
     transition: transform 0.5s ease-out !important;
-    filter: brightness(1.05) !important;
   }
   
   .timeline-tile-wrapper:hover .timeline-brand-image {
