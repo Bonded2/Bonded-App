@@ -1,23 +1,83 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { UploadModal } from "../../components/UploadModal";
+import { MediaScanner } from "../../components/MediaScanner";
 import { InfoModal } from "../../components/InfoModal";
 import { DeleteModal } from "../../components/DeleteModal";
 import "./style.css";
 
+// LocalStorage keys - same as in TimelineCreated
+const TIMELINE_DATA_KEY = 'bonded_timeline_data';
+const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
+
 export const TimestampFolder = ({ onClose, date: propDate }) => {
   const navigate = useNavigate();
   const { date: paramDate } = useParams();
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showMediaScannerModal, setShowMediaScannerModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [contentItems, setContentItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showImportSuccess, setShowImportSuccess] = useState(false);
+  const [importedCount, setImportedCount] = useState(0);
   
   // Use date from props or URL params, make sure to decode URL encoded date
   const date = propDate || (paramDate ? decodeURIComponent(paramDate) : null);
 
+  // Load content items for this date from localStorage
+  useEffect(() => {
+    const loadContentItems = () => {
+      setLoading(true);
+      try {
+        // Get all content from localStorage
+        const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
+        
+        // Get content specifically for this date
+        if (allContent[date]) {
+          setContentItems(allContent[date]);
+        } else {
+          // If no existing content for this date, create an empty array
+          setContentItems([]);
+        }
+      } catch (err) {
+        console.error("Error loading content:", err);
+        setContentItems([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (date) {
+      loadContentItems();
+    }
+  }, [date]);
+
+  // Save content items whenever they change
+  useEffect(() => {
+    const saveContentItems = () => {
+      if (!date || contentItems.length === 0) return;
+      
+      try {
+        // Get all existing content
+        const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
+        
+        // Update content for this date
+        allContent[date] = contentItems;
+        
+        // Save back to localStorage
+        localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
+        
+        // Update timeline counts after saving
+        updateTimelineItemCount();
+      } catch (err) {
+        console.error("Error saving content:", err);
+      }
+    };
+
+    saveContentItems();
+  }, [contentItems, date]);
+
   const handleBack = () => {
-    console.log("Navigating back from TimestampFolder");
     if (onClose) {
       onClose();
     } else {
@@ -26,104 +86,135 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
   };
 
   const handlePreviewClick = (item) => {
-    console.log(`Preview clicked for item ${item.id}`);
     // Navigate to ImagePreview screen with the selected item ID
     navigate(`/image-preview/${item.id}`);
   };
 
   const handleInfoClick = (item) => {
-    console.log(`Info clicked for item ${item.id}`);
     setSelectedItem(item);
     setShowInfoModal(true);
   };
 
   const handleDeleteClick = (item) => {
-    console.log(`Delete clicked for item ${item.id}`);
     setSelectedItem(item);
     setShowDeleteModal(true);
   };
   
   const handleConfirmDelete = (item) => {
-    console.log(`Confirming delete for item ${item.id}`);
-    // Here you would implement the actual delete functionality
-    // For example, remove the item from the contentItems array
-    // This is just a simulation for now
-    // setContentItems(contentItems.filter(i => i.id !== item.id));
+    // Remove the item from contentItems
+    setContentItems(contentItems.filter(i => i.id !== item.id));
+    setShowDeleteModal(false);
   };
 
-  const handleUploadMedia = () => {
-    console.log("Upload media clicked");
-    setShowUploadModal(true);
-    // Implement upload media functionality
+  const updateTimelineItemCount = () => {
+    try {
+      // Get timeline data
+      const timelineData = JSON.parse(localStorage.getItem(TIMELINE_DATA_KEY) || '[]');
+      
+      // Find the entry for this date
+      const entry = timelineData.find(item => item.date === date);
+      
+      if (entry) {
+        // Update the counts based on content types
+        const photoCount = contentItems.filter(item => item.type === 'photo' || item.type === 'image').length;
+        const messageCount = contentItems.filter(item => item.type === 'message').length;
+        const videoCount = contentItems.filter(item => item.type === 'video').length;
+        const documentCount = contentItems.filter(item => item.type === 'document').length;
+        
+        // Update the counts
+        entry.photos = photoCount;
+        entry.messages = messageCount;
+        
+        // Update the image if we have at least one photo
+        if (photoCount > 0 && !entry.image) {
+          const firstPhoto = contentItems.find(item => item.type === 'photo' || item.type === 'image');
+          if (firstPhoto && firstPhoto.imageUrl) {
+            entry.image = firstPhoto.imageUrl;
+          }
+        }
+        
+        // Save back to localStorage
+        localStorage.setItem(TIMELINE_DATA_KEY, JSON.stringify(timelineData));
+      }
+    } catch (err) {
+      console.error("Error updating timeline item count:", err);
+    }
+  };
+
+  const handleScanMedia = () => {
+    setShowMediaScannerModal(true);
+  };
+
+  const handleMediaSelected = (selectedFiles, groupedByDate) => {
+    // We're only interested in files for this specific date
+    const filesForThisDate = selectedFiles.filter(file => {
+      const fileDate = new Date(file.timestamp).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+      return fileDate === date;
+    });
+    
+    if (filesForThisDate.length === 0) {
+      alert(`No files found for date: ${date}. Please select files from this exact date.`);
+      return;
+    }
+    
+    // Create content items from the selected files
+    const newContentItems = filesForThisDate.map(file => ({
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: getFileType(file.file.type),
+      name: file.name,
+      source: "Device Media",
+      location: "Imported",
+      date: date,
+      imageUrl: URL.createObjectURL(file.file),
+      timestamp: file.timestamp,
+      size: file.size,
+      path: file.path
+    }));
+
+    // Add new content items to the existing ones
+    setContentItems(prevItems => [...prevItems, ...newContentItems]);
+    
+    // Close the scanner modal
+    setShowMediaScannerModal(false);
+    
+    // Show success message
+    setImportedCount(newContentItems.length);
+    setShowImportSuccess(true);
+    
+    // Hide success message after 3 seconds
+    setTimeout(() => {
+      setShowImportSuccess(false);
+    }, 3000);
+  };
+
+  const getFileType = (mimeType) => {
+    if (mimeType.startsWith('image/')) {
+      return 'photo';
+    } else if (mimeType.startsWith('video/')) {
+      return 'video';
+    } else if (mimeType.startsWith('application/pdf')) {
+      return 'document';
+    } else {
+      return 'file';
+    }
   };
 
   const handleViewAllMedia = () => {
+    // Show all media items
     console.log("View all media clicked");
-    // Implement view all media functionality
+    
+    // For now, we'll just show what's already loaded
+    // In a complete implementation, this would open a gallery view
   };
 
   const handleAddMedia = () => {
-    console.log("Add media clicked");
-    setShowUploadModal(true);
-    // Implement add media functionality
+    // Open the media scanner
+    setShowMediaScannerModal(true);
   };
-
-  // Sample content items for this date
-  const contentItems = [
-    { 
-      id: "1", 
-      type: 'photo', 
-      name: 'Img 455',
-      source: "User's Device",
-      location: "Home",
-      date: "12 Nov 2025",
-      imageUrl: "https://images.unsplash.com/photo-1588345921523-c2dcdb7f1dcd?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80"
-    },
-    { 
-      id: "2", 
-      type: 'photo', 
-      name: 'Img 1209',
-      source: "User's Device",
-      location: "Work",
-      date: "12 Nov 2025",
-      imageUrl: "https://images.unsplash.com/photo-1589553416260-110229331345?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-    },
-    { 
-      id: "3", 
-      type: 'photo', 
-      name: 'Img 1209',
-      source: "User's Device",
-      location: "Coffee Shop",
-      date: "12 Nov 2025",
-      imageUrl: "https://images.unsplash.com/photo-1620207418302-439b387441b0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-    },
-    { 
-      id: "4", 
-      type: 'message', 
-      name: 'Message: 10:00 am',
-      source: "Message App",
-      location: "Home",
-      date: "12 Nov 2025"
-    },
-    { 
-      id: "5", 
-      type: 'message', 
-      name: 'Message: 11:59 am',
-      source: "Message App",
-      location: "Work",
-      date: "12 Nov 2025" 
-    },
-    { 
-      id: "6", 
-      type: 'location', 
-      name: 'Location: Home',
-      source: "Map App",
-      location: "Home",
-      date: "12 Nov 2025"
-    },
-  ];
-
-  const formattedDate = date || "12 Nov 2025";
 
   const renderIcon = (type) => {
     switch (type) {
@@ -145,6 +236,18 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             <path d="M12 2C8.13 2 5 5.13 5 9C5 14.25 12 22 12 22C12 22 19 14.25 19 9C19 5.13 15.87 2 12 2ZM12 11.5C10.62 11.5 9.5 10.38 9.5 9C9.5 7.62 10.62 6.5 12 6.5C13.38 6.5 14.5 7.62 14.5 9C14.5 10.38 13.38 11.5 12 11.5Z" fill="#FFFFFF"/>
           </svg>
         );
+      case 'document':
+        return (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6C4.9 2 4.01 2.9 4.01 4L4 20C4 21.1 4.89 22 5.99 22H18C19.1 22 20 21.1 20 20V8L14 2ZM16 18H8V16H16V18ZM16 14H8V12H16V14ZM13 9V3.5L18.5 9H13Z" fill="#FFFFFF"/>
+          </svg>
+        );
+      case 'video':
+        return (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17 10.5V7C17 6.45 16.55 6 16 6H4C3.45 6 3 6.45 3 7V17C3 17.55 3.45 18 4 18H16C16.55 18 17 17.55 17 17V13.5L21 17.5V6.5L17 10.5Z" fill="#FFFFFF"/>
+          </svg>
+        );
       default:
         return (
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -153,6 +256,13 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         );
     }
   };
+
+  // Get item counts for display
+  const photoCount = contentItems.filter(item => item.type === 'photo').length;
+  const videoCount = contentItems.filter(item => item.type === 'video').length;
+  const documentCount = contentItems.filter(item => item.type === 'document').length;
+  const messageCount = contentItems.filter(item => item.type === 'message').length;
+  const totalCount = contentItems.length;
 
   return (
     <div className="timestamp-folder-screen">
@@ -165,39 +275,94 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
                 <path d="M15.41 7.41L14 6L8 12L14 18L15.41 16.59L10.83 12L15.41 7.41Z" fill="#FF704D"/>
               </svg>
             </div>
-            <div className="header-title">{formattedDate}</div>
+            <div className="header-title">{date || "Date not specified"}</div>
           </div>
         </div>
 
+        {/* Import success notification */}
+        {showImportSuccess && (
+          <div className="import-success-notification">
+            <p>✅ Successfully imported {importedCount} items for {date}</p>
+          </div>
+        )}
+
         {/* Content rows */}
         <div className="timestamp-content">
-          {contentItems.map((item) => (
-            <div className="content-row" key={item.id}>
-              <div className="row-content">
-                <div className="item-icon">
-                  {renderIcon(item.type)}
-                </div>
-                <div className="item-name">{item.name}</div>
-              </div>
-              <div className="row-actions">
-                <div className="action-icon preview" onClick={() => handlePreviewClick(item)}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" fill="#B9FF46"/>
-                  </svg>
-                </div>
-                <div className="action-icon info" onClick={() => handleInfoClick(item)}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 17H13V11H11V17ZM11 9H13V7H11V9Z" fill="#B9FF46"/>
-                  </svg>
-                </div>
-                <div className="action-icon delete" onClick={() => handleDeleteClick(item)}>
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 9V19H8V9H16ZM14.5 3H9.5L8.5 4H5V6H19V4H15.5L14.5 3ZM18 7H6V19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7Z" fill="#FF704D"/>
-                  </svg>
-                </div>
+          {/* Media count summary card */}
+          {contentItems.length > 0 && (
+            <div className="media-summary-card">
+              <h3>Media for {date}</h3>
+              <div className="media-counts">
+                {photoCount > 0 && (
+                  <div className="count-item">
+                    <span className="count-number">{photoCount}</span>
+                    <span className="count-label">Photos</span>
+                  </div>
+                )}
+                {videoCount > 0 && (
+                  <div className="count-item">
+                    <span className="count-number">{videoCount}</span>
+                    <span className="count-label">Videos</span>
+                  </div>
+                )}
+                {documentCount > 0 && (
+                  <div className="count-item">
+                    <span className="count-number">{documentCount}</span>
+                    <span className="count-label">Documents</span>
+                  </div>
+                )}
+                {messageCount > 0 && (
+                  <div className="count-item">
+                    <span className="count-number">{messageCount}</span>
+                    <span className="count-label">Messages</span>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
+          )}
+
+          {loading ? (
+            <div className="loading-indicator">
+              <div className="loading-spinner"></div>
+              <p>Loading content...</p>
+            </div>
+          ) : contentItems.length === 0 ? (
+            <div className="empty-content">
+              <p>No content available for this date</p>
+              <p className="hint-text">Scan your media to add content</p>
+            </div>
+          ) : (
+            contentItems.map((item) => (
+              <div className="content-row" key={item.id}>
+                <div className="row-content">
+                  <div className="item-icon">
+                    {renderIcon(item.type)}
+                  </div>
+                  <div className="item-details">
+                    <div className="item-name">{item.name}</div>
+                    {item.size && <div className="item-size">{formatFileSize(item.size)}</div>}
+                  </div>
+                </div>
+                <div className="row-actions">
+                  <div className="action-icon preview" onClick={() => handlePreviewClick(item)}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z" fill="#B9FF46"/>
+                    </svg>
+                  </div>
+                  <div className="action-icon info" onClick={() => handleInfoClick(item)}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20ZM11 17H13V11H11V17ZM11 9H13V7H11V9Z" fill="#B9FF46"/>
+                    </svg>
+                  </div>
+                  <div className="action-icon delete" onClick={() => handleDeleteClick(item)}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M16 9V19H8V9H16ZM14.5 3H9.5L8.5 4H5V6H19V4H15.5L14.5 3ZM18 7H6V19C6 20.1 6.9 21 8 21H16C17.1 21 18 20.1 18 19V7Z" fill="#FF704D"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
 
           {/* Action Cards */}
           <div className="card" onClick={handleViewAllMedia}>
@@ -208,14 +373,24 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             <div className="card-text">View, add or delete media for this date</div>
           </div>
 
-          {/* Upload button */}
-          <button className="upload-btn" onClick={handleUploadMedia}>
-            <div className="btn-text">Upload Media</div>
+          {/* Scan Media button */}
+          <button className="upload-btn" onClick={handleScanMedia}>
+            <div className="btn-text">Scan Media</div>
           </button>
         </div>
 
-        {/* Upload Modal */}
-        {showUploadModal && <UploadModal onClose={() => setShowUploadModal(false)} />}
+        {/* Media Scanner Modal */}
+        {showMediaScannerModal && (
+          <div className="media-scanner-modal">
+            <div className="media-scanner-container">
+              <div className="media-scanner-header">
+                <h2>Scan Media for {date}</h2>
+                <button className="close-button" onClick={() => setShowMediaScannerModal(false)}>×</button>
+              </div>
+              <MediaScanner onMediaSelected={handleMediaSelected} />
+            </div>
+          </div>
+        )}
         
         {/* Info Modal */}
         {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} item={selectedItem} />}
@@ -224,11 +399,21 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         {showDeleteModal && (
           <DeleteModal 
             onClose={() => setShowDeleteModal(false)} 
-            onConfirm={handleConfirmDelete}
+            onConfirm={() => handleConfirmDelete(selectedItem)}
             item={selectedItem} 
           />
         )}
       </div>
     </div>
   );
+};
+
+// Helper function to format file size
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 }; 

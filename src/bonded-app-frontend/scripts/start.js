@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+
+import { spawnSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '../..');
+
+// Check if dfx is running
+const dfxStatus = spawnSync('dfx', ['ping'], { stdio: 'pipe' });
+if (dfxStatus.status !== 0) {
+  console.log('⚠️  dfx is not running. Starting dfx...');
+  // Start dfx in the background
+  spawnSync('dfx', ['start', '--clean', '--background'], { 
+    stdio: 'inherit',
+    cwd: rootDir
+  });
+  console.log('✅ dfx started in the background');
+}
+
+// Start the Vite dev server
+console.log('Starting Vite development server...');
+spawnSync('vite', ['--port', '3000'], { 
+  stdio: 'inherit',
+  env: {
+    ...process.env,
+    DFX_NETWORK: process.env.DFX_NETWORK || 'local'
+  },
+  cwd: path.resolve(__dirname, '..')
+}); 

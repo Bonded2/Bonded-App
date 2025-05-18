@@ -207,6 +207,16 @@ export const Capture = () => {
           </p>
         </div>
         
+        {/* Media Scanner Demo Link */}
+        <div className="media-scanner-link-container">
+          <button 
+            className="media-scanner-link" 
+            onClick={() => navigate('/media-scanner')}
+          >
+            Try Media Scanner (File System Access API Demo)
+          </button>
+        </div>
+        
         <div className="capture-settings-list">
           <div className="capture-setting-item">
             <div className="setting-header">

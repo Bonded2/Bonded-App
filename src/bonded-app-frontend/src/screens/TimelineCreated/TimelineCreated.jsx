@@ -1,58 +1,287 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { TimelineTileWrapper } from "../../components/TimelineTileWrapper";
 import { TopAppBar } from "../../components/TopAppBar";
 import { Chat4 } from "../../icons/Chat4";
 import { MenuFrame } from "../../components/MenuFrame/MenuFrame";
 import { UploadModal } from "../../components/UploadModal";
 import { ExportModal } from "../../components/ExportModal";
+import { MediaScanner } from "../../components/MediaScanner";
 import "./style.css";
+
+// LocalStorage keys for storing timeline data
+const TIMELINE_DATA_KEY = 'bonded_timeline_data';
+const TIMELINE_LAST_UPDATE_KEY = 'bonded_timeline_last_update';
+const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
 
 export const TimelineCreated = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isMediaScannerOpen, setIsMediaScannerOpen] = useState(false);
   const [animatedItems, setAnimatedItems] = useState([]);
+  const [showImportSuccess, setShowImportSuccess] = useState(false);
+  const [importedMediaInfo, setImportedMediaInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const timelineRef = useRef(null);
 
-  const timelineData = [
-    {
-      id: 1,
-      date: "12 Nov 2025",
-      photos: 3,
-      messages: 2,
-      location: "Thailand",
-      icon: null,
-      image: "/images/Bonded - Brand image 4.jpg"
-    },
-    {
-      id: 2,
-      date: "02 Oct 2025",
-      photos: 4,
-      messages: 10,
-      location: "London",
-      icon: null,
-      image: "/images/Bonded - Brand image 1.jpg"
-    },
-    {
-      id: 3,
-      date: "15 Aug 2025",
-      photos: 19,
-      messages: 8,
-      location: "Wales",
-      icon: <Chat4 className="chat-icon-svg" />,
-      image: "/images/Bonded - Brand image 3.png"
+  // Initialize with empty timeline that will be populated dynamically
+  const [timelineData, setTimelineData] = useState([]);
+
+  // Load timeline data from localStorage on mount
+  useEffect(() => {
+    const loadTimelineData = () => {
+      setLoading(true);
+      try {
+        const savedData = localStorage.getItem(TIMELINE_DATA_KEY);
+        if (savedData) {
+          const parsedData = JSON.parse(savedData);
+          
+          // Convert serialized icon back to JSX if needed
+          const processedData = parsedData.map(item => {
+            if (item.hasMessageIcon) {
+              return { ...item, icon: <Chat4 className="chat-icon-svg" /> };
+            }
+            return { ...item, icon: null };
+          });
+          
+          // Ensure all entries have timestamps
+          const dataWithTimestamps = processedData.map(item => {
+            if (!item.timestamp) {
+              // Generate a timestamp from the date if not available
+              item.timestamp = new Date(item.date).getTime();
+            }
+            return item;
+          });
+          
+          // Sort by timestamp, newest first
+          const sortedData = dataWithTimestamps.sort((a, b) => b.timestamp - a.timestamp);
+          
+          setTimelineData(sortedData);
+        } else {
+          // Initialize with empty timeline if no data exists
+          setTimelineData([]);
+        }
+      } catch (err) {
+        console.error("Error loading timeline data:", err);
+        setError("Failed to load timeline data. Please refresh the page.");
+        setTimelineData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTimelineData();
+  }, []);
+
+  // Save timeline data to localStorage whenever it changes
+  useEffect(() => {
+    if (timelineData.length > 0) {
+      try {
+        // Convert icon JSX to a serializable flag
+        const serializableData = timelineData.map(item => ({
+          ...item,
+          hasMessageIcon: item.icon !== null,
+          icon: undefined // Remove non-serializable JSX element
+        }));
+        
+        localStorage.setItem(TIMELINE_DATA_KEY, JSON.stringify(serializableData));
+        localStorage.setItem(TIMELINE_LAST_UPDATE_KEY, new Date().toISOString());
+      } catch (err) {
+        console.error("Error saving timeline data:", err);
+      }
     }
-  ];
+  }, [timelineData]);
+
+  // Check if we're coming from MediaScanner with imported media
+  useEffect(() => {
+    if (location.state?.fromMediaScanner) {
+      const { mediaCount, dateRange } = location.state;
+      setImportedMediaInfo({ mediaCount, dateRange });
+      setShowImportSuccess(true);
+      
+      // Auto-hide success message after 5 seconds
+      const timer = setTimeout(() => {
+        setShowImportSuccess(false);
+      }, 5000);
+      
+      // Clean up location state to prevent showing success on refresh
+      window.history.replaceState({}, document.title);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
+  
+  /**
+   * Handle media files selected from the MediaScanner
+   */
+  const handleMediaSelected = (selectedFiles, groupedByDate) => {
+    // Create appropriate timeline entries from the selected files
+    const newTimelineEntries = [];
+    
+    // Process each date group
+    Object.keys(groupedByDate).forEach(date => {
+      const files = groupedByDate[date];
+      
+      // Check if we already have a timeline entry for this date
+      const existingEntry = timelineData.find(item => {
+        // Convert the date format from the file to match the timeline format
+        const fileDate = formatDateForDisplay(new Date(date));
+        return item.date === fileDate;
+      });
+      
+      if (existingEntry) {
+        // Update existing entry with new files
+        existingEntry.photos = (existingEntry.photos || 0) + files.length;
+        
+        // Update image if it doesn't exist
+        if (!existingEntry.image) {
+          existingEntry.image = URL.createObjectURL(files[0].file);
+        }
+        
+        // Also update the content for this date
+        updateContentForDate(formatDateForDisplay(new Date(date)), files);
+      } else {
+        // Create new timeline entry
+        const newEntry = {
+          id: Date.now() + Math.random(), // Ensure unique ID
+          date: formatDateForDisplay(new Date(date)),
+          photos: files.length,
+          messages: 0,
+          location: getLocationFromFiles(files) || "Imported Media",
+          icon: null,
+          image: URL.createObjectURL(files[0].file), // Use the first file as thumbnail
+          timestamp: new Date(date).getTime()
+        };
+        
+        newTimelineEntries.push(newEntry);
+        
+        // Also create content for this date
+        updateContentForDate(formatDateForDisplay(new Date(date)), files);
+      }
+    });
+
+    // Add new entries to timeline data and sort by date (newest first)
+    setTimelineData(prevData => {
+      const updatedExistingData = [...prevData]; // This already includes updated existing entries
+      const combinedData = [...updatedExistingData, ...newTimelineEntries];
+      return combinedData.sort((a, b) => {
+        // Convert date strings to timestamps if they're not already
+        const timestampA = a.timestamp || new Date(a.date).getTime();
+        const timestampB = b.timestamp || new Date(b.date).getTime();
+        return timestampB - timestampA;
+      });
+    });
+
+    // Show success message
+    const totalFiles = selectedFiles.length;
+    setImportedMediaInfo({
+      mediaCount: totalFiles,
+      dateRange: formatDateRangeForDisplay(groupedByDate)
+    });
+    setShowImportSuccess(true);
+    
+    // Auto-hide success message after 5 seconds
+    setTimeout(() => {
+      setShowImportSuccess(false);
+    }, 5000);
+
+    // Close the MediaScanner modal
+    setIsMediaScannerOpen(false);
+  };
+
+  /**
+   * Update content for a specific date
+   */
+  const updateContentForDate = (date, files) => {
+    try {
+      // Get existing content
+      const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
+      
+      // Get content for this date
+      const dateContent = allContent[date] || [];
+      
+      // Add new files as content items
+      const newContentItems = files.map(file => ({
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: getFileType(file.file.type),
+        name: file.name,
+        source: "Device Media",
+        location: "Imported",
+        date: date,
+        imageUrl: URL.createObjectURL(file.file),
+        timestamp: file.timestamp,
+        size: file.size,
+        path: file.path
+      }));
+      
+      // Update content for this date
+      allContent[date] = [...dateContent, ...newContentItems];
+      
+      // Save back to localStorage
+      localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
+    } catch (err) {
+      console.error("Error updating content for date:", err);
+    }
+  };
+
+  /**
+   * Get file type based on MIME type
+   */
+  const getFileType = (mimeType) => {
+    if (mimeType.startsWith('image/')) {
+      return 'photo';
+    } else if (mimeType.startsWith('video/')) {
+      return 'video';
+    } else if (mimeType.startsWith('application/pdf')) {
+      return 'document';
+    } else {
+      return 'file';
+    }
+  };
+
+  /**
+   * Format a date for display in the timeline
+   */
+  const formatDateForDisplay = (date) => {
+    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options);
+  };
+
+  /**
+   * Format date range for display in success message
+   */
+  const formatDateRangeForDisplay = (groupedByDate) => {
+    const dates = Object.keys(groupedByDate);
+    if (dates.length === 0) return "";
+    if (dates.length === 1) return formatDateForDisplay(new Date(dates[0]));
+    
+    // Sort dates chronologically
+    dates.sort((a, b) => new Date(a) - new Date(b));
+    
+    const firstDate = formatDateForDisplay(new Date(dates[0]));
+    const lastDate = formatDateForDisplay(new Date(dates[dates.length - 1]));
+    
+    return `${firstDate} to ${lastDate}`;
+  };
+
+  /**
+   * Extract location information from files (placeholder for future implementation)
+   */
+  const getLocationFromFiles = (files) => {
+    // In a real implementation, this would extract geolocation from EXIF data
+    // For now we'll return null and use a default value
+    return null;
+  };
 
   const toggleMenu = () => {
-    console.log("TimelineCreated: toggleMenu called, current state:", isMenuOpen);
     setIsMenuOpen(!isMenuOpen);
   };
 
   const handleUploadClick = () => {
-    console.log("Upload icon clicked");
     setIsUploadModalOpen(true);
   };
 
@@ -61,23 +290,29 @@ export const TimelineCreated = () => {
   };
 
   const handleExportClick = () => {
-    console.log("Export button clicked - opening export modal");
     setIsExportModalOpen(true);
   };
 
   const handleCloseExportModal = () => {
-    console.log("Closing export modal");
     setIsExportModalOpen(false);
   };
   
   const handleTimelineTileClick = (date) => {
-    console.log(`TimelineTile clicked for date: ${date}`);
-    // Navigate to the TimestampFolder screen with the corresponding date
     navigate(`/timestamp-folder/${encodeURIComponent(date)}`);
+  };
+  
+  const handleScanMediaClick = () => {
+    setIsMediaScannerOpen(true);
+  };
+
+  const handleCloseMediaScanner = () => {
+    setIsMediaScannerOpen(false);
   };
 
   // Handle scroll animations
   useEffect(() => {
+    if (!timelineData.length) return;
+    
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
@@ -93,50 +328,139 @@ export const TimelineCreated = () => {
     elements.forEach(element => observer.observe(element));
 
     return () => elements.forEach(element => observer.unobserve(element));
-  }, []);
+  }, [timelineData]);
 
   // Handle initial animation on mount
   useEffect(() => {
+    if (!timelineData.length) return;
+    
     const timer = setTimeout(() => {
-      setAnimatedItems([1]);
-      
-      const timers = [
-        setTimeout(() => setAnimatedItems(prev => [...prev, 2]), 300),
-        setTimeout(() => setAnimatedItems(prev => [...prev, 3]), 600)
-      ];
-      
-      return () => timers.forEach(t => clearTimeout(t));
+      // Animate first 3 items or all items if less than 3
+      const itemsToAnimate = Math.min(timelineData.length, 3);
+      const itemIds = timelineData.slice(0, itemsToAnimate).map(item => item.id);
+      setAnimatedItems(itemIds);
     }, 500);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [timelineData]);
 
-  useEffect(() => {
-    console.log("TimelineCreated: Menu state is now:", isMenuOpen);
-  }, [isMenuOpen]);
+  const renderTimelineContent = () => {
+    if (loading) {
+      return (
+        <div className="timeline-loading">
+          <p>Loading your timeline...</p>
+          <div className="timeline-loading-spinner"></div>
+        </div>
+      );
+    }
+    
+    if (error) {
+      return (
+        <div className="timeline-error">
+          <p>{error}</p>
+          <button className="retry-button" onClick={() => window.location.reload()}>
+            Retry
+          </button>
+        </div>
+      );
+    }
+    
+    if (timelineData.length === 0) {
+      return (
+        <div className="empty-timeline">
+          <p>Your timeline is empty</p>
+          <p className="empty-timeline-hint">Scan your device to import media into your timeline</p>
+          <button className="scan-media-button" onClick={handleScanMediaClick}>
+            Scan Device Media
+          </button>
+        </div>
+      );
+    }
+    
+    return (
+      <>
+        <div className="timeline-line">
+          <div className="timeline-vertical-line">
+            {timelineData.map((item, index) => (
+              <div 
+                key={`dot-${item.id}`} 
+                className={`timeline-dot ${animatedItems.includes(item.id) ? 'timeline-dot-animated' : ''}`}
+                style={{ top: `${index * 200 + 100}px` }}
+              />
+            ))}
+          </div>
+        </div>
 
-  useEffect(() => {
-    console.log("TimelineCreated: Export modal state is now:", isExportModalOpen);
-  }, [isExportModalOpen]);
-
-  useEffect(() => {
-    console.log("TimelineCreated: Upload modal state is now:", isUploadModalOpen);
-  }, [isUploadModalOpen]);
+        {timelineData.map((item, index) => (
+          <div 
+            className={`timeline-item ${animatedItems.includes(item.id) ? 'timeline-item-animated' : ''}`}
+            key={item.id}
+            data-id={item.id}
+          >
+            <div className={`date-badge date-badge-${Math.min(index + 1, 3)}`}>
+              <div className="date-text">{item.date}</div>
+            </div>
+            
+            <TimelineTileWrapper 
+              className={`timeline-tile-${Math.min(index + 1, 3)}`}
+              timelineTileText={`${item.messages} Messages`}
+              timelineTileText1={`${item.photos} Photos`}
+              timelineTileText2={item.location}
+              timelineTileIcon={item.icon}
+              timelineTileMaskGroup={item.image}
+              timelineTileMaskGroupClassName="timeline-brand-image"
+              onClick={handleTimelineTileClick}
+              date={item.date}
+            />
+          </div>
+        ))}
+        
+        <div className="timeline-end">
+          <div className="timeline-end-dot" />
+          <p className="timeline-end-text">Keep adding to your timeline</p>
+          <button className="scan-media-button" onClick={handleScanMediaClick}>
+            Scan Device Media
+          </button>
+        </div>
+      </>
+    );
+  };
 
   return (
-    <div className="timeline-created" data-model-id="632:1194">
+    <div className="timeline-created">
       {isMenuOpen && <MenuFrame onClose={toggleMenu} />}
       {isUploadModalOpen && <UploadModal onClose={handleCloseUploadModal} />}
-      {isExportModalOpen && (
-        <ExportModal onClose={handleCloseExportModal} />
+      {isExportModalOpen && <ExportModal onClose={handleCloseExportModal} />}
+      {isMediaScannerOpen && (
+        <div className="media-scanner-modal">
+          <div className="media-scanner-container">
+            <div className="media-scanner-header">
+              <h2>Scan Device Media</h2>
+              <button className="close-button" onClick={handleCloseMediaScanner}>×</button>
+            </div>
+            <MediaScanner onMediaSelected={handleMediaSelected} />
+          </div>
+        </div>
       )}
+      
       <div className="timeline-container">
         <TopAppBar
           onMenuToggle={toggleMenu}
           headline="Your timeline"
-          onUploadClick={handleUploadClick}
+          onScanMediaClick={handleScanMediaClick}
           onExportClick={handleExportClick}
         />
+        
+        {showImportSuccess && importedMediaInfo && (
+          <div className="import-success-banner">
+            <p>
+              <strong>Success!</strong> {importedMediaInfo.mediaCount} media files imported from {importedMediaInfo.dateRange}
+            </p>
+            <button className="scan-more-button" onClick={handleScanMediaClick}>
+              Scan More
+            </button>
+          </div>
+        )}
         
         <div className="timeline-content-container">
           <div className="timeline-header">
@@ -146,46 +470,7 @@ export const TimelineCreated = () => {
           </div>
           
           <div className="timeline-content" ref={timelineRef}>
-            <div className="timeline-line">
-              <div className="timeline-vertical-line">
-                {timelineData.map((item, index) => (
-                  <div 
-                    key={`dot-${item.id}`} 
-                    className={`timeline-dot ${animatedItems.includes(item.id) ? 'timeline-dot-animated' : ''}`}
-                    style={{ top: `${index * 200 + 100}px` }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {timelineData.map((item, index) => (
-              <div 
-                className={`timeline-item ${animatedItems.includes(item.id) ? 'timeline-item-animated' : ''}`}
-                key={item.id}
-                data-id={item.id}
-              >
-                <div className={`date-badge date-badge-${index + 1}`}>
-                  <div className="date-text">{item.date}</div>
-                </div>
-                
-                <TimelineTileWrapper 
-                  className={`timeline-tile-${index + 1}`}
-                  timelineTileText={`${item.messages} Messages`}
-                  timelineTileText1={`${item.photos} Photos`}
-                  timelineTileText2={item.location}
-                  timelineTileIcon={item.icon}
-                  timelineTileMaskGroup={item.image}
-                  timelineTileMaskGroupClassName="timeline-brand-image"
-                  onClick={handleTimelineTileClick}
-                  date={item.date}
-                />
-              </div>
-            ))}
-            
-            <div className="timeline-end">
-              <div className="timeline-end-dot" />
-              <p className="timeline-end-text">Keep adding to your timeline</p>
-            </div>
+            {renderTimelineContent()}
           </div>
         </div>
       </div>

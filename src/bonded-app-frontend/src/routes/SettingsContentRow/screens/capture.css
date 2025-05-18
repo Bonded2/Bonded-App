@@ -83,6 +83,38 @@
   text-align: center;
 }
 
+/* Media Scanner Link Styles */
+.media-scanner-link-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.media-scanner-link {
+  background-color: #6E8CF0;
+  color: #000000;
+  border: none;
+  border-radius: 24px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.media-scanner-link:hover {
+  background-color: #7D98F7;
+}
+
+.media-scanner-link:active {
+  background-color: #5D7BE0;
+  transform: translateY(1px);
+}
+
 .capture-settings-list {
   display: flex;
   flex-direction: column;

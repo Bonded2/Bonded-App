@@ -15,6 +15,7 @@ import { ExportTimeline } from "./screens/ExportTimeline";
 import { TimestampFolder } from "./screens/TimestampFolder";
 import { ImagePreview } from "./screens/ImagePreview";
 import { ExportAllData } from "./screens/ExportAllData";
+import { MediaScannerDemo } from "./screens/MediaScannerDemo";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
 
 export class ErrorBoundary extends React.Component {
@@ -119,6 +120,11 @@ const router = createBrowserRouter([
   {
     path: "/export-all-data",
     element: <ExportAllData />,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/media-scanner",
+    element: <MediaScannerDemo />,
     errorElement: <ErrorBoundary />,
   }
 ]);
