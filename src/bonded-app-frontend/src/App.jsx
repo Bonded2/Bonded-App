@@ -15,11 +15,12 @@ import { ExportTimeline } from "./screens/ExportTimeline";
 import { TimestampFolder } from "./screens/TimestampFolder";
 import { ImagePreview } from "./screens/ImagePreview";
 import { ExportAllData } from "./screens/ExportAllData";
-import { MediaScannerDemo } from "./screens/MediaScannerDemo";
+import { MediaImport } from "./screens/MediaImport";
 import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
 import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
+import GeoMetadataProvider from "./features/geolocation/GeoMetadataProvider";
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -175,8 +176,8 @@ const router = createBrowserRouter([
     loader: enforceFirstTimeUserLoader,
   },
   {
-    path: "/media-scanner",
-    element: <MediaScannerDemo />,
+    path: "/media-import",
+    element: <MediaImport />,
     errorElement: <ErrorBoundary />,
     loader: enforceFirstTimeUserLoader,
   },
@@ -258,9 +259,11 @@ export const App = () => {
   
   return (
     <ErrorBoundary>
-      <OfflineIndicator />
-      <RouterProvider router={router} />
-      <PWAInstallPrompt />
+      <GeoMetadataProvider>
+        <OfflineIndicator />
+        <RouterProvider router={router} />
+        <PWAInstallPrompt />
+      </GeoMetadataProvider>
     </ErrorBoundary>
   );
 };

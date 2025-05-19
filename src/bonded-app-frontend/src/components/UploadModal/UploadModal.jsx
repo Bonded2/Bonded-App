@@ -3,6 +3,7 @@ import { Upload1 } from "../../icons/Upload1";
 import { Photo1 } from "../../icons/Photo1";
 // import { DescriptionIcon } from "../../icons/Description"; // Example for document files - ensure you have such an icon
 import { Today } from "../../icons/Today"; // For date
+import { useGeoMetadata } from "../../features/geolocation/hooks/useGeoMetadata";
 import "./style.css";
 
 // Helper to get a simple file type category
@@ -67,6 +68,10 @@ export const UploadModal = ({
   const [checkedFiles, setCheckedFiles] = useState({});
   const [currentFilter, setCurrentFilter] = useState("all");
   const [hoveredExclusion, setHoveredExclusion] = useState(null); // fileName for tooltip
+  const [isPreparingUpload, setIsPreparingUpload] = useState(false);
+  
+  // Get geolocation metadata hook
+  const { getMetadataForFile, refreshMetadata } = useGeoMetadata();
 
   const handleSelectFilesClick = () => {
     fileInputRef.current.click();
@@ -88,26 +93,50 @@ export const UploadModal = ({
     setCheckedFiles(prev => ({ ...prev, [fileName]: !prev[fileName] }));
   };
 
-  const handleUploadChecked = () => {
-    const filesToUpload = selectedFiles.filter(file => checkedFiles[file.name]);
-    const finalFilesToUpload = filesToUpload.filter(file => !getExclusionReason(file, captureSettings, fileTypeOverrides));
-    
-    if (finalFilesToUpload.length !== filesToUpload.length) {
-        // Optionally confirm with user if some checked files will be excluded
-        const excludedCount = filesToUpload.length - finalFilesToUpload.length;
-        if (!confirm(`${excludedCount} checked file(s) will be excluded by current filter settings. Proceed with upload?`)) {
-            return;
-        }
-    }
-
-    if (finalFilesToUpload.length > 0) {
-      console.log("Uploading checked and allowed files:", finalFilesToUpload);
-      if (onFilesUpload) {
-        onFilesUpload(finalFilesToUpload);
+  const handleUploadChecked = async () => {
+    try {
+      setIsPreparingUpload(true);
+      
+      // Start by refreshing the geolocation metadata to ensure it's up-to-date
+      await refreshMetadata();
+      
+      // Filter selected files
+      const filesToUpload = selectedFiles.filter(file => checkedFiles[file.name]);
+      const finalFilesToUpload = filesToUpload.filter(file => !getExclusionReason(file, captureSettings, fileTypeOverrides));
+      
+      if (finalFilesToUpload.length !== filesToUpload.length) {
+          // Optionally confirm with user if some checked files will be excluded
+          const excludedCount = filesToUpload.length - finalFilesToUpload.length;
+          if (!confirm(`${excludedCount} checked file(s) will be excluded by current filter settings. Proceed with upload?`)) {
+              setIsPreparingUpload(false);
+              return;
+          }
       }
-      onClose();
-    } else {
-      alert("No files selected for upload or all selected files are excluded by filters.");
+
+      if (finalFilesToUpload.length > 0) {
+        console.log("Preparing files with geolocation metadata...");
+        
+        // Attach geolocation metadata to each file
+        const filesWithMetadata = await Promise.all(
+          finalFilesToUpload.map(async (file) => {
+            return await getMetadataForFile(file);
+          })
+        );
+        
+        console.log("Uploading files with metadata:", filesWithMetadata);
+        
+        if (onFilesUpload) {
+          onFilesUpload(filesWithMetadata);
+        }
+        onClose();
+      } else {
+        alert("No files selected for upload or all selected files are excluded by filters.");
+      }
+    } catch (error) {
+      console.error("Error during file upload preparation:", error);
+      alert("There was an error preparing your files for upload.");
+    } finally {
+      setIsPreparingUpload(false);
     }
   };
 
@@ -224,9 +253,13 @@ export const UploadModal = ({
                   <button 
                     className="upload-checked-btn primary" 
                     onClick={handleUploadChecked} 
-                    disabled={countCheckedFiles() === 0}
+                    disabled={countCheckedFiles() === 0 || isPreparingUpload}
                   >
-                    Upload {countCheckedFiles()} Selected
+                    {isPreparingUpload ? (
+                      <span>Preparing Files...</span>
+                    ) : (
+                      <span>Upload {countCheckedFiles()} Selected</span>
+                    )}
                   </button>
             </div>
               </>

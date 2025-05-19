@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TimelineTileWrapper } from "../../components/TimelineTileWrapper";
 import { TopAppBar } from "../../components/TopAppBar";
@@ -31,57 +31,97 @@ export const TimelineCreated = () => {
   // Initialize with empty timeline that will be populated dynamically
   const [timelineData, setTimelineData] = useState([]);
 
-  // Load timeline data from localStorage on mount
-  useEffect(() => {
-    const loadTimelineData = () => {
-      setLoading(true);
-      try {
-        const savedData = localStorage.getItem(TIMELINE_DATA_KEY);
-        if (savedData) {
-          const parsedData = JSON.parse(savedData);
-          
-          // Convert serialized icon back to JSX if needed
-          const processedData = parsedData.map(item => {
-            // Add default source and uploadStatus if not present for older items
-            const newItem = {
-              ...item,
-              source: item.source || 'manual', // Default source
-              uploadStatus: item.uploadStatus || 'completed', // Default status
-            };
-            if (item.hasMessageIcon) {
-              return { ...newItem, icon: <Chat4 className="chat-icon-svg" /> };
-            }
-            return { ...newItem, icon: null };
-          });
-          
-          // Ensure all entries have timestamps
-          const dataWithTimestamps = processedData.map(item => {
-            if (!item.timestamp) {
-              // Generate a timestamp from the date if not available
-              item.timestamp = new Date(item.date).getTime();
-            }
-            return item;
-          });
-          
-          // Sort by timestamp, newest first
-          const sortedData = dataWithTimestamps.sort((a, b) => b.timestamp - a.timestamp);
-          
-          setTimelineData(sortedData);
-        } else {
-          // Initialize with empty timeline if no data exists
+  // Function to load timeline data from localStorage
+  const loadTimelineData = useCallback(() => {
+    setLoading(true);
+    try {
+      const savedData = localStorage.getItem(TIMELINE_DATA_KEY);
+      if (savedData) {
+        let parsedData;
+        try {
+          parsedData = JSON.parse(savedData);
+        } catch (parseError) {
+          console.error("Error parsing timeline data, resetting:", parseError);
+          localStorage.removeItem(TIMELINE_DATA_KEY);
           setTimelineData([]);
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        console.error("Error loading timeline data:", err);
-        setError("Failed to load timeline data. Please refresh the page.");
+        
+        // Validate the data structure
+        if (!Array.isArray(parsedData)) {
+          console.error("Timeline data is not an array, resetting");
+          localStorage.removeItem(TIMELINE_DATA_KEY);
+          setTimelineData([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Filter out any entries with invalid data
+        let validEntries = parsedData.filter(item => {
+          if (!item || typeof item !== 'object') return false;
+          if (!item.date || !item.id) return false;
+          return true;
+        });
+        
+        // Convert serialized icon back to JSX if needed
+        const processedData = validEntries.map(item => {
+          // Add default source and uploadStatus if not present for older items
+          const newItem = {
+            ...item,
+            source: item.source || 'manual', // Default source
+            uploadStatus: item.uploadStatus || 'completed', // Default status
+          };
+          if (item.hasMessageIcon) {
+            return { ...newItem, icon: <Chat4 className="chat-icon-svg" /> };
+          }
+          return { ...newItem, icon: null };
+        });
+        
+        // Ensure all entries have timestamps
+        const dataWithTimestamps = processedData.map(item => {
+          if (!item.timestamp) {
+            // Generate a timestamp from the date if not available
+            try {
+              item.timestamp = new Date(item.date).getTime();
+            } catch (e) {
+              // Use current time as fallback if date parsing fails
+              item.timestamp = Date.now();
+            }
+          }
+          return item;
+        });
+        
+        // Sort by timestamp, newest first
+        const sortedData = dataWithTimestamps.sort((a, b) => {
+          try {
+            return b.timestamp - a.timestamp;
+          } catch (e) {
+            // Fallback sort by ID if timestamps are invalid
+            return 0;
+          }
+        });
+        
+        setTimelineData(sortedData);
+        console.log(`Loaded ${sortedData.length} timeline entries`);
+      } else {
+        // Initialize with empty timeline if no data exists
         setTimelineData([]);
-      } finally {
-        setLoading(false);
+        console.log('No timeline data found, initialized with empty array');
       }
-    };
-
-    loadTimelineData();
+    } catch (err) {
+      console.error("Error loading timeline data:", err);
+      setError("Failed to load timeline data. Please refresh the page.");
+      setTimelineData([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Load timeline data on mount
+  useEffect(() => {
+    loadTimelineData();
+  }, [loadTimelineData]);
 
   // Save timeline data to localStorage whenever it changes
   useEffect(() => {
@@ -103,12 +143,20 @@ export const TimelineCreated = () => {
     }
   }, [timelineData]);
 
-  // Check if we're coming from MediaScanner with imported media
+  // Check if we're coming from MediaScanner or MediaImport with imported media
   useEffect(() => {
-    if (location.state?.fromMediaScanner) {
+    if (location.state?.fromMediaScanner || location.state?.fromMediaImport) {
       const { mediaCount, dateRange } = location.state;
       setImportedMediaInfo({ mediaCount, dateRange });
       setShowImportSuccess(true);
+      
+      // Reload timeline data to reflect newly imported media
+      loadTimelineData();
+      
+      // Scroll to top if we have new media
+      if (timelineRef.current) {
+        timelineRef.current.scrollTo(0, 0);
+      }
       
       // Auto-hide success message after 5 seconds
       const timer = setTimeout(() => {
@@ -120,7 +168,7 @@ export const TimelineCreated = () => {
       
       return () => clearTimeout(timer);
     }
-  }, [location]);
+  }, [location, loadTimelineData]);
   
   /**
    * Handle media files selected from the MediaScanner
@@ -140,20 +188,35 @@ export const TimelineCreated = () => {
         return item.date === fileDate;
       });
       
+      // Find a valid file for thumbnail
+      const validFileForThumbnail = files.find(file => 
+        file && file.file instanceof Blob && 
+        (file.file.type.startsWith('image/') || file.file.type.startsWith('video/'))
+      );
+      
+      let thumbnailUrl = null;
+      if (validFileForThumbnail && validFileForThumbnail.file instanceof Blob) {
+        try {
+          thumbnailUrl = URL.createObjectURL(validFileForThumbnail.file);
+        } catch (err) {
+          console.warn("Error creating thumbnail URL:", err);
+        }
+      }
+      
       if (existingEntry) {
         // Update existing entry with new files
         existingEntry.photos = (existingEntry.photos || 0) + files.length;
         existingEntry.source = existingEntry.source || 'device media'; // Preserve existing or set
         existingEntry.uploadStatus = 'completed'; // Assume completion for now
         
-        // Update image if it doesn't exist
-        if (!existingEntry.image) {
-          existingEntry.image = URL.createObjectURL(files[0].file);
+        // Update image if it doesn't exist and we have a valid new one
+        if (!existingEntry.image && thumbnailUrl) {
+          existingEntry.image = thumbnailUrl;
         }
         
         // Also update the content for this date
         updateContentForDate(formatDateForDisplay(new Date(date)), files);
-      } else {
+      } else if (files.length > 0) {
         // Create new timeline entry
         const newEntry = {
           id: Date.now() + Math.random(), // Ensure unique ID
@@ -162,7 +225,7 @@ export const TimelineCreated = () => {
           messages: 0,
           location: getLocationFromFiles(files) || "Imported Media",
           icon: null,
-          image: URL.createObjectURL(files[0].file), // Use the first file as thumbnail
+          image: thumbnailUrl, // Use validated thumbnail URL
           timestamp: new Date(date).getTime(),
           source: 'device media', // Set source for new media
           uploadStatus: 'completed', // Assume completion for now
@@ -221,7 +284,7 @@ export const TimelineCreated = () => {
         type: getFileType(file.file.type),
         name: file.name,
         source: "Device Media",
-        location: "Imported",
+        location: file.metadata?.resolvedLocation?.city || "Imported",
         date: date,
         imageUrl: URL.createObjectURL(file.file),
         timestamp: file.timestamp,
@@ -258,8 +321,20 @@ export const TimelineCreated = () => {
    * Format a date for display in the timeline
    */
   const formatDateForDisplay = (date) => {
-    const options = { day: 'numeric', month: 'short', year: 'numeric' };
-    return date.toLocaleDateString('en-GB', options);
+    try {
+      // Make sure we have a valid date object
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+        console.warn("Invalid date passed to formatDateForDisplay:", date);
+        // Use current date as fallback
+        date = new Date();
+      }
+      
+      const options = { day: 'numeric', month: 'short', year: 'numeric' };
+      return date.toLocaleDateString('en-GB', options);
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
   };
 
   /**
@@ -311,12 +386,46 @@ export const TimelineCreated = () => {
   };
 
   /**
-   * Extract location information from files (placeholder for future implementation)
+   * Extract location information from files
    */
   const getLocationFromFiles = (files) => {
-    // In a real implementation, this would extract geolocation from EXIF data
-    // For now we'll return null and use a default value
-    return null;
+    try {
+      // Find a file with location data
+      const fileWithLocation = files.find(file => 
+        file.metadata?.resolvedLocation?.city || 
+        file.metadata?.ipLocation?.city
+      );
+      
+      if (fileWithLocation) {
+        const metadata = fileWithLocation.metadata;
+        // Prefer device location over IP location
+        if (metadata.resolvedLocation?.city) {
+          const city = metadata.resolvedLocation.city;
+          const region = metadata.resolvedLocation.region;
+          const country = metadata.resolvedLocation.countryName;
+          
+          // Format as "City, Country" or just "City" if country is not available
+          if (country && country !== city) {
+            return `${city}, ${country}`;
+          }
+          return city;
+        } else if (metadata.ipLocation?.city) {
+          const city = metadata.ipLocation.city;
+          const country = metadata.ipLocation.countryName;
+          
+          if (country && country !== city) {
+            return `${city}, ${country}`;
+          }
+          return city;
+        }
+      }
+      
+      // Default location if none found
+      return "Imported Media";
+    } catch (error) {
+      console.error("Error extracting location from files:", error);
+      return "Imported Media";
+    }
   };
 
   const toggleMenu = () => {

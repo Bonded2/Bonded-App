@@ -1,248 +1,463 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import Select from 'react-select';
+import AsyncSelect from 'react-select/async';
+import { getUserData, updateUserData } from "../../utils/userState";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
-import Select from 'react-select'; // Assuming react-select is installed or you have a similar component
-import { saveProfileData, getUserData } from "../../utils/userState";
+import { 
+  getAllCountries, 
+  getCitiesByCountry, 
+  getCurrentLocation, 
+  reverseGeocode, 
+  detectVPN,
+  validateLocationConsistency 
+} from "../../utils/locationService";
 import "./style.css";
 
-// A basic list of countries for the dropdown. Ideally, use a library for a comprehensive list.
-const countryOptions = [
-  { value: "US", label: "United States" },
-  { value: "CA", label: "Canada" },
-  { value: "GB", label: "United Kingdom" },
-  { value: "AU", label: "Australia" },
-  { value: "DE", label: "Germany" },
-  { value: "FR", label: "France" },
-  // Add more countries as needed
-];
+// Custom styles for react-select with flags
+const customSelectStyles = {
+  option: (provided, state) => ({
+    ...provided,
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 15px',
+  }),
+  singleValue: (provided) => ({
+    ...provided,
+    display: 'flex',
+    alignItems: 'center',
+  }),
+};
+
+// Flag formatter for country options
+const formatOptionLabel = ({ label, flag }) => (
+  <div style={{ display: 'flex', alignItems: 'center' }}>
+    {flag && <img src={flag} alt={label} style={{ marginRight: '10px', width: '20px' }} />}
+    <span>{label}</span>
+  </div>
+);
 
 export const ProfileSetup = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     fullName: "",
+    email: "",
     dateOfBirth: "",
-    nationality: null, // For react-select
-    currentCity: "",
-    currentCountry: null, // For react-select
+    nationality: null,
+    currentCity: null,
+    currentCountry: null
+  });
+  
+  const [formErrors, setFormErrors] = useState({});
+  const [countries, setCountries] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [vpnDetected, setVpnDetected] = useState(false);
+  const [securityStatus, setSecurityStatus] = useState({
+    status: 'pending', // pending, checking, verified, error
+    message: 'Location verification pending'
   });
 
-  const [errors, setErrors] = useState({});
-  const [touched, setTouched] = useState({});
-
-  // Refs for inputs
-  const fullNameRef = useRef(null);
-  const dobRef = useRef(null);
-  const nationalityRef = useRef(null);
-  const cityRef = useRef(null);
-  const countryRef = useRef(null);
-
-  const inputRefs = [fullNameRef, dobRef, nationalityRef, cityRef, countryRef];
-
+  // Load countries and check for VPN on mount
   useEffect(() => {
-    // Load existing user data if available
-    const userData = getUserData();
-    if (userData) {
-      setFormData(prevData => ({
-        ...prevData,
-        fullName: userData.fullName || prevData.fullName,
-      }));
-    }
-    
-    fullNameRef.current?.focus();
+    const loadUserData = async () => {
+      // Try to pre-populate with any existing data
+      const currentUserData = getUserData();
+      if (currentUserData.fullName) {
+        setFormData({
+          fullName: currentUserData.fullName || "",
+          email: currentUserData.email || "",
+          dateOfBirth: currentUserData.dateOfBirth || "",
+          nationality: currentUserData.nationality || null,
+          currentCity: currentUserData.currentCity || null,
+          currentCountry: currentUserData.currentCountry || null
+        });
+      }
+    };
+
+    const loadCountries = async () => {
+      try {
+        setIsLoading(true);
+        const countryList = await getAllCountries();
+        setCountries(countryList);
+      } catch (error) {
+        console.error("Failed to load countries:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Check for VPN
+    const checkVPN = async () => {
+      try {
+        setSecurityStatus({
+          status: 'checking',
+          message: 'Checking your connection security...'
+        });
+        
+        const vpnInfo = await detectVPN();
+        if (vpnInfo.isVPN) {
+          setVpnDetected(true);
+          setLocationError("VPN or proxy detected. Please disable to continue.");
+          setSecurityStatus({
+            status: 'error',
+            message: 'VPN or proxy detected. This app requires your real location for verification purposes.'
+          });
+        } else {
+          setSecurityStatus({
+            status: 'verified',
+            message: 'Connection secure - no VPN detected'
+          });
+        }
+      } catch (error) {
+        console.error("VPN detection error:", error);
+        setSecurityStatus({
+          status: 'error',
+          message: 'Could not verify connection security'
+        });
+      }
+    };
+
+    loadUserData();
+    loadCountries();
+    checkVPN();
   }, []);
 
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (touched[name]) {
-      validateField(name, value);
+    setFormData({ ...formData, [name]: value });
+    
+    // Clear error when user types
+    if (formErrors[name]) {
+      setFormErrors({ ...formErrors, [name]: "" });
     }
   };
 
+  // Handle select changes (country, nationality)
   const handleSelectChange = (name, selectedOption) => {
-    setFormData((prev) => ({ ...prev, [name]: selectedOption }));
-    if (touched[name]) {
-      validateField(name, selectedOption);
+    setFormData({ ...formData, [name]: selectedOption });
+    
+    // Clear error when user selects
+    if (formErrors[name]) {
+      setFormErrors({ ...formErrors, [name]: "" });
+    }
+
+    // If country is selected, reset city
+    if (name === 'currentCountry') {
+      setFormData(prev => ({
+        ...prev,
+        currentCity: null
+      }));
     }
   };
 
-  const handleBlur = (e) => {
-    const { name, value } = e.target;
-    if (!touched[name]) {
-      setTouched((prev) => ({ ...prev, [name]: true }));
+  // Load cities based on country selection
+  const loadCities = async (inputValue) => {
+    if (!formData.currentCountry?.value) {
+      return [];
     }
-    validateField(name, value);
-  };
 
-  const handleSelectBlur = (name) => {
-    if (!touched[name]) {
-      setTouched((prev) => ({ ...prev, [name]: true }));
-    }
-    validateField(name, formData[name]);
-  };
-  
-  const validateField = (name, value) => {
-    let errorMsg = "";
-    if (name === "nationality" || name === "currentCountry") {
-      if (!value) errorMsg = "This field is required.";
-    } else if (!value?.trim()) {
-      errorMsg = "This field is required.";
-    }
-    setErrors((prev) => ({ ...prev, [name]: errorMsg }));
-  };
-
-  const focusNextField = (currentIndex) => {
-    if (currentIndex < inputRefs.length - 1) {
-      inputRefs[currentIndex + 1].current?.focus();
-    }
-  };
-
-  const handleKeyDown = (e, index) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (inputRefs[index].current.name === "currentCity" && !formData.currentCountry) {
-         // If enter on city and country is not selected, focus country
-        countryRef.current?.focus();
-      } else if (errors[inputRefs[index].current.name] || !formData[inputRefs[index].current.name]) {
-        // If current field has error or is empty, don't jump, show error
-        setTouched((prev) => ({ ...prev, [inputRefs[index].current.name]: true }));
-        validateField(inputRefs[index].current.name, formData[inputRefs[index].current.name]);
-      } else {
-        focusNextField(index);
+    try {
+      const cities = await getCitiesByCountry(formData.currentCountry.value);
+      
+      // Filter by input value if provided
+      if (inputValue) {
+        return cities.filter(city => 
+          city.label.toLowerCase().includes(inputValue.toLowerCase())
+        );
       }
+      
+      return cities;
+    } catch (error) {
+      console.error("Error loading cities:", error);
+      return [];
     }
   };
 
+  // Use browser geolocation to get current location
+  const handleUseCurrentLocation = async () => {
+    if (vpnDetected) {
+      setLocationError("Please disable your VPN to use current location.");
+      return;
+    }
+
+    setIsLoadingLocation(true);
+    setLocationError(null);
+
+    try {
+      // Get GPS coordinates
+      const coordinates = await getCurrentLocation();
+      
+      // Verify location consistency
+      const validationResult = await validateLocationConsistency(coordinates);
+      
+      if (!validationResult.isConsistent) {
+        setLocationError(validationResult.message);
+        setIsLoadingLocation(false);
+        return;
+      }
+      
+      // Reverse geocode to get location details
+      const locationData = await reverseGeocode(coordinates);
+      
+      // Find the country in our list
+      const country = countries.find(c => c.value === locationData.country);
+      
+      if (country) {
+        // Update country
+        setFormData(prev => ({
+          ...prev,
+          currentCountry: country
+        }));
+        
+        // Then load cities for that country
+        const cities = await getCitiesByCountry(country.value);
+        const city = cities.find(c => c.label === locationData.city) || {
+          value: 'custom',
+          label: locationData.city,
+          region: locationData.region
+        };
+        
+        setFormData(prev => ({
+          ...prev,
+          currentCity: city
+        }));
+        
+        setSecurityStatus({
+          status: 'verified',
+          message: 'Location verified successfully'
+        });
+      }
+    } catch (error) {
+      console.error("Geolocation error:", error);
+      setLocationError(
+        error.code === 1 
+          ? "Location permission denied. Please enable location access."
+          : "Could not determine your location. Please select manually."
+      );
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
+  // Validate form before submission
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.fullName.trim()) {
+      errors.fullName = "Name is required";
+    }
+    
+    if (!formData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = "Email format is invalid";
+    }
+    
+    if (!formData.dateOfBirth) {
+      errors.dateOfBirth = "Date of birth is required";
+    }
+    
+    if (!formData.nationality) {
+      errors.nationality = "Nationality is required";
+    }
+    
+    if (!formData.currentCountry) {
+      errors.currentCountry = "Current country is required";
+    }
+    
+    if (!formData.currentCity) {
+      errors.currentCity = "Current city is required";
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle form submission
   const handleSubmit = (e) => {
     e.preventDefault();
-    let allValid = true;
-    const newTouched = {};
-    Object.keys(formData).forEach((key) => {
-      newTouched[key] = true;
-      validateField(key, formData[key]);
-      if (!formData[key] || (errors[key] && errors[key] !== "")) {
-        if (errors[key] && errors[key] !== "") allValid = false; 
-        else if (!formData[key]) allValid = false;
-      }
-    });
-    setTouched(newTouched);
-
-    if (allValid) {
-      console.log("Profile Data:", formData);
+    
+    if (validateForm()) {
+      // Create initials from name for avatar
+      const avatar = formData.fullName
+        .split(' ')
+        .map(part => part[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
       
-      // Save profile data to user state
-      saveProfileData(formData);
+      // Save the profile data
+      updateUserData({
+        ...formData,
+        avatar,
+        profileComplete: true
+      });
       
-      // Navigate to the main screen or next step
-      navigate("/timeline"); 
+      // Navigate to the next step
+      navigate("/getting-started");
     }
   };
 
   return (
     <div className="profile-setup-screen">
-      <div className="profile-setup-container">
-        <img
-          className="bonded-logo-blue"
-          alt="Bonded logo blue"
-          src="/images/bonded-logo-blue.svg"
-        />
-        <h1 className="setup-title">Set Up Your Profile</h1>
-        <p className="setup-subtitle">
-          This information helps personalize your Bonded experience.
+      <div className="profile-setup-content">
+        <h1 className="profile-title">Set up your profile</h1>
+        <p className="profile-subtitle">
+          Tell us about yourself to get started with Bonded
         </p>
-
-        <form onSubmit={handleSubmit} className="profile-form" noValidate>
-          <div className="form-field-group">
-            <CustomTextField
-              label="Full Name"
-              name="fullName"
-              placeholder="Enter your full name"
-              value={formData.fullName}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              onKeyDown={(e) => handleKeyDown(e, 0)}
-              inputRef={fullNameRef}
-              required={true}
-              className={`form-input ${touched.fullName && errors.fullName ? "input-error" : ""}`}
-              supportingText={touched.fullName && errors.fullName ? errors.fullName : "As it appears on legal documents."}
-            />
+        
+        {/* Security Status Indicator */}
+        <div className={`security-status ${securityStatus.status}`}>
+          <div className="security-icon">
+            {securityStatus.status === 'checking' && '🔄'}
+            {securityStatus.status === 'verified' && '✅'}
+            {securityStatus.status === 'error' && '⚠️'}
+            {securityStatus.status === 'pending' && '⏳'}
           </div>
+          <div className="security-message">{securityStatus.message}</div>
+        </div>
 
-          <div className="form-field-group">
-            <CustomTextField
-              label="Date of Birth"
-              name="dateOfBirth"
-              type="date"
-              value={formData.dateOfBirth}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              onKeyDown={(e) => handleKeyDown(e, 1)}
-              inputRef={dobRef}
-              required={true}
-              className={`form-input ${touched.dateOfBirth && errors.dateOfBirth ? "input-error" : ""}`}
-              supportingText={touched.dateOfBirth && errors.dateOfBirth ? errors.dateOfBirth : " "}
-            />
-          </div>
-
-          <div className="form-field-group">
-            <label htmlFor="nationality" className={`select-label ${touched.nationality && errors.nationality ? "label-error" : ""}`}>
-                Nationality <span className="required-asterisk">*</span>
-            </label>
-            <Select
-              id="nationality"
-              name="nationality"
-              options={countryOptions}
-              value={formData.nationality}
-              onChange={(option) => handleSelectChange("nationality", option)}
-              onBlur={() => handleSelectBlur("nationality")}
-              ref={nationalityRef}
-              placeholder="Select your nationality"
-              className={`select-control ${touched.nationality && errors.nationality ? "input-error" : ""}`}
-              classNamePrefix="react-select"
-              aria-label="Nationality"
-            />
-            {touched.nationality && errors.nationality && <p className="error-tooltip">{errors.nationality}</p>}
+        <form className="profile-form" onSubmit={handleSubmit}>
+          <div className="form-section">
+            <h2 className="section-title">Personal Information</h2>
+            
+            <div className="form-field">
+              <CustomTextField
+                label="Full Name"
+                name="fullName"
+                placeholder="Enter your full name as it appears on ID"
+                value={formData.fullName}
+                onChange={handleChange}
+                supportingText={formErrors.fullName || ""}
+                error={!!formErrors.fullName}
+                required
+              />
+            </div>
+            
+            <div className="form-field">
+              <CustomTextField
+                label="Email"
+                name="email"
+                type="email"
+                placeholder="Enter your email address"
+                value={formData.email}
+                onChange={handleChange}
+                supportingText={formErrors.email || ""}
+                error={!!formErrors.email}
+                required
+              />
+            </div>
+            
+            <div className="form-field">
+              <CustomTextField
+                label="Date of Birth"
+                name="dateOfBirth"
+                type="date"
+                placeholder=""
+                value={formData.dateOfBirth}
+                onChange={handleChange}
+                supportingText={formErrors.dateOfBirth || "For identity verification"}
+                error={!!formErrors.dateOfBirth}
+                required
+              />
+            </div>
+            
+            <div className="form-field">
+              <label className="select-label">Nationality</label>
+              <Select
+                name="nationality"
+                options={countries}
+                value={formData.nationality}
+                onChange={(option) => handleSelectChange("nationality", option)}
+                placeholder="Select your nationality"
+                className={`select-control ${formErrors.nationality ? 'select-error' : ''}`}
+                classNamePrefix="react-select"
+                isLoading={isLoading}
+                formatOptionLabel={formatOptionLabel}
+                styles={customSelectStyles}
+              />
+              {formErrors.nationality && (
+                <div className="error-message">{formErrors.nationality}</div>
+              )}
+            </div>
           </div>
           
-          <div className="form-field-group">
-            <CustomTextField
-              label="Current City of Residence"
-              name="currentCity"
-              placeholder="Enter your current city"
-              value={formData.currentCity}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              onKeyDown={(e) => handleKeyDown(e, 3)}
-              inputRef={cityRef}
-              required={true}
-              className={`form-input ${touched.currentCity && errors.currentCity ? "input-error" : ""}`}
-              supportingText={touched.currentCity && errors.currentCity ? errors.currentCity : " "}
-            />
+          <div className="form-section location-section">
+            <h2 className="section-title">Current Location</h2>
+            
+            {locationError && (
+              <div className="location-error">
+                <span className="error-icon">⚠️</span>
+                {locationError}
+              </div>
+            )}
+            
+            <div className="form-field">
+              <label className="select-label">Current Country</label>
+              <Select
+                name="currentCountry"
+                options={countries}
+                value={formData.currentCountry}
+                onChange={(option) => handleSelectChange("currentCountry", option)}
+                placeholder="Select your current country"
+                className={`select-control ${formErrors.currentCountry ? 'select-error' : ''}`}
+                classNamePrefix="react-select"
+                isLoading={isLoading}
+                formatOptionLabel={formatOptionLabel}
+                styles={customSelectStyles}
+              />
+              {formErrors.currentCountry && (
+                <div className="error-message">{formErrors.currentCountry}</div>
+              )}
+            </div>
+            
+            <div className="form-field">
+              <label className="select-label">Current City</label>
+              <AsyncSelect
+                cacheOptions
+                defaultOptions
+                loadOptions={loadCities}
+                name="currentCity"
+                value={formData.currentCity}
+                onChange={(option) => handleSelectChange("currentCity", option)}
+                placeholder="Select or type your city"
+                className={`select-control ${formErrors.currentCity ? 'select-error' : ''}`}
+                classNamePrefix="react-select"
+                isDisabled={!formData.currentCountry}
+                noOptionsMessage={() => formData.currentCountry ? "No cities found" : "Select a country first"}
+              />
+              {formErrors.currentCity && (
+                <div className="error-message">{formErrors.currentCity}</div>
+              )}
+            </div>
+            
+            <button
+              type="button"
+              className={`location-button ${isLoadingLocation ? 'loading' : ''} ${vpnDetected ? 'disabled' : ''}`}
+              onClick={handleUseCurrentLocation}
+              disabled={isLoadingLocation || vpnDetected}
+            >
+              {isLoadingLocation ? 'Detecting location...' : '📍 Use Current Location'}
+            </button>
+            
+            {vpnDetected && (
+              <div className="vpn-warning">
+                <p>
+                  <strong>VPN Detected:</strong> The Bonded App requires your real location for verification.
+                  Please disable any VPN, proxy, or location masking tools to continue.
+                </p>
+              </div>
+            )}
           </div>
-
-          <div className="form-field-group">
-            <label htmlFor="currentCountry" className={`select-label ${touched.currentCountry && errors.currentCountry ? "label-error" : ""}`}>
-                Current Country of Residence <span className="required-asterisk">*</span>
-            </label>
-            <Select
-              id="currentCountry"
-              name="currentCountry"
-              options={countryOptions}
-              value={formData.currentCountry}
-              onChange={(option) => handleSelectChange("currentCountry", option)}
-              onBlur={() => handleSelectBlur("currentCountry")}
-              ref={countryRef}
-              placeholder="Select your country of residence"
-              className={`select-control ${touched.currentCountry && errors.currentCountry ? "input-error" : ""}`}
-              classNamePrefix="react-select"
-              aria-label="Current Country of Residence"
-            />
-            {touched.currentCountry && errors.currentCountry && <p className="error-tooltip">{errors.currentCountry}</p>}
+          
+          <div className="form-actions">
+            <button type="submit" className="submit-button" disabled={vpnDetected}>
+              Continue
+            </button>
           </div>
-
-          <button type="submit" className="submit-profile-button">
-            Save & Continue
-          </button>
         </form>
       </div>
     </div>

@@ -182,26 +182,40 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
     }
     
     // Create content items from the selected files
-    const newContentItems = filesForThisDate.map(file => ({
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      type: getFileType(file.file.type),
-      name: file.name,
-      source: "Device Media",
-      location: "Imported",
-      date: date,
-      imageUrl: URL.createObjectURL(file.file),
-      timestamp: file.timestamp,
-      size: file.size,
-      path: file.path,
-      // Immigration verification specific fields
-      evidenceCategory: determineEvidenceCategory(file.file.type, file.name),
-      verified: false, // Default to unverified until processed
-      officialDocument: isLikelyOfficialDocument(file.name),
-      metadata: {
-        importDate: new Date().toISOString(),
-        fileType: file.file.type
+    const newContentItems = filesForThisDate.map(file => {
+      // Create object URL safely
+      let fileImageUrl = null;
+      try {
+        if (file.file instanceof Blob) {
+          fileImageUrl = URL.createObjectURL(file.file);
+        } else {
+          console.warn("Invalid file (not a Blob) detected:", file.name || "unnamed file");
+        }
+      } catch (err) {
+        console.error("Error creating URL for file:", file.name || "unnamed file", err);
       }
-    }));
+      
+      return {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: getFileType(file.file?.type || "unknown"),
+        name: file.name || "Unknown File",
+        source: "Device Media",
+        location: "Imported",
+        date: date,
+        imageUrl: fileImageUrl,
+        timestamp: file.timestamp || Date.now(),
+        size: file.size || 0,
+        path: file.path || "Unknown",
+        // Immigration verification specific fields
+        evidenceCategory: determineEvidenceCategory(file.file?.type || "", file.name || ""),
+        verified: false, // Default to unverified until processed
+        officialDocument: isLikelyOfficialDocument(file.name || ""),
+        metadata: {
+          importDate: new Date().toISOString(),
+          fileType: file.file?.type || "unknown"
+        }
+      };
+    }).filter(item => item.imageUrl !== null); // Filter out items with failed URLs
 
     // Add new content items to the existing ones
     setContentItems(prevItems => [...prevItems, ...newContentItems]);
@@ -217,6 +231,9 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
     setTimeout(() => {
       setShowImportSuccess(false);
     }, 3000);
+    
+    // Also update the timeline item count
+    updateTimelineItemCount(newContentItems.length);
   };
 
   // Determine evidence category based on file type and name

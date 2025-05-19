@@ -24,7 +24,7 @@ export const getUserData = () => {
     avatar: getInitials('John Doe'),
     dateOfBirth: '',
     nationality: null,
-    currentCity: '',
+    currentCity: null,
     currentCountry: null
   };
 };

@@ -29,7 +29,7 @@ export const Account = () => {
     email: "",
     dateOfBirth: "",
     nationality: null,
-    currentCity: "",
+    currentCity: null,
     currentCountry: null
   });
   
@@ -216,7 +216,7 @@ export const Account = () => {
           {userData.currentCity && (
             <div className="profile-info">
               <p className="profile-label">Current City</p>
-              <p className="profile-value">{userData.currentCity}</p>
+              <p className="profile-value">{typeof userData.currentCity === 'object' ? userData.currentCity.label : userData.currentCity}</p>
             </div>
           )}
           {userData.currentCountry && (

@@ -1,1 +1,2 @@
-export { MediaScanner } from './MediaScanner'; 
+export * from './MediaScanner';
+export * from './MediaScannerModal'; 

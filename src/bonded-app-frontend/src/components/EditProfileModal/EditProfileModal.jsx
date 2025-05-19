@@ -2,18 +2,38 @@ import React, { useState, useEffect } from "react";
 import { getUserData, updateUserData } from "../../utils/userState";
 import { CustomTextField } from "../CustomTextField/CustomTextField";
 import Select from 'react-select';
+import AsyncSelect from 'react-select/async';
+import { 
+  getAllCountries, 
+  getCitiesByCountry, 
+  getCurrentLocation, 
+  reverseGeocode, 
+  detectVPN 
+} from "../../utils/locationService";
 import "./style.css";
 
-// A basic list of countries for the dropdown
-const countryOptions = [
-  { value: "US", label: "United States" },
-  { value: "CA", label: "Canada" },
-  { value: "GB", label: "United Kingdom" },
-  { value: "AU", label: "Australia" },
-  { value: "DE", label: "Germany" },
-  { value: "FR", label: "France" },
-  // Add more countries as needed
-];
+// Custom styles for react-select with flags
+const customSelectStyles = {
+  option: (provided, state) => ({
+    ...provided,
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 15px',
+  }),
+  singleValue: (provided) => ({
+    ...provided,
+    display: 'flex',
+    alignItems: 'center',
+  }),
+};
+
+// Flag formatter for country options
+const formatOptionLabel = ({ label, flag }) => (
+  <div style={{ display: 'flex', alignItems: 'center' }}>
+    {flag && <img src={flag} alt={label} style={{ marginRight: '10px', width: '20px' }} />}
+    <span>{label}</span>
+  </div>
+);
 
 export const EditProfileModal = ({ onClose }) => {
   const [userData, setUserData] = useState({
@@ -21,25 +41,58 @@ export const EditProfileModal = ({ onClose }) => {
     email: "",
     dateOfBirth: "",
     nationality: null,
-    currentCity: "",
+    currentCity: null,
     currentCountry: null
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [countries, setCountries] = useState([]);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [vpnDetected, setVpnDetected] = useState(false);
 
-  // Load user data on mount
+  // Load user data and countries on mount
   useEffect(() => {
-    const currentUserData = getUserData();
-    setUserData({
-      fullName: currentUserData.fullName || "",
-      email: currentUserData.email || "",
-      dateOfBirth: currentUserData.dateOfBirth || "",
-      nationality: currentUserData.nationality || null,
-      currentCity: currentUserData.currentCity || "",
-      currentCountry: currentUserData.currentCountry || null
-    });
+    const loadUserData = () => {
+      const currentUserData = getUserData();
+      setUserData({
+        fullName: currentUserData.fullName || "",
+        email: currentUserData.email || "",
+        dateOfBirth: currentUserData.dateOfBirth || "",
+        nationality: currentUserData.nationality || null,
+        currentCity: currentUserData.currentCity || null,
+        currentCountry: currentUserData.currentCountry || null
+      });
+    };
+
+    const loadCountries = async () => {
+      try {
+        const countryList = await getAllCountries();
+        setCountries(countryList);
+      } catch (error) {
+        console.error("Failed to load countries:", error);
+      }
+    };
+
+    // Check for VPN
+    const checkVPN = async () => {
+      try {
+        const vpnInfo = await detectVPN();
+        if (vpnInfo.isVPN) {
+          setVpnDetected(true);
+          setLocationError("VPN or proxy detected. Please disable it to use location features.");
+        }
+      } catch (error) {
+        console.error("VPN detection error:", error);
+        // Don't set VPN detected on error to allow location features
+      }
+    };
+
+    loadUserData();
+    loadCountries();
+    checkVPN();
   }, []);
 
   const handleChange = (e) => {
@@ -70,6 +123,89 @@ export const EditProfileModal = ({ onClose }) => {
         ...prev,
         [name]: ""
       }));
+    }
+
+    // If country is selected, reset the city
+    if (name === 'currentCountry') {
+      setUserData(prev => ({
+        ...prev,
+        currentCity: null
+      }));
+    }
+  };
+
+  // Load cities based on selected country
+  const loadCities = async (inputValue) => {
+    if (!userData.currentCountry?.value) {
+      return [];
+    }
+
+    try {
+      const cities = await getCitiesByCountry(userData.currentCountry.value);
+      
+      // Filter by input value if provided
+      if (inputValue) {
+        return cities.filter(city => 
+          city.label.toLowerCase().includes(inputValue.toLowerCase())
+        );
+      }
+      
+      return cities;
+    } catch (error) {
+      console.error("Error loading cities:", error);
+      return [];
+    }
+  };
+
+  // Use browser geolocation to get current location
+  const handleUseCurrentLocation = async () => {
+    if (vpnDetected) {
+      setLocationError("Please disable your VPN to use current location.");
+      return;
+    }
+
+    setIsLoadingLocation(true);
+    setLocationError(null);
+
+    try {
+      // Get GPS coordinates
+      const coordinates = await getCurrentLocation();
+      
+      // Reverse geocode to get city and country
+      const locationData = await reverseGeocode(coordinates);
+      
+      // Find the country in our list
+      const country = countries.find(c => c.value === locationData.country);
+      
+      if (country) {
+        // Update country first
+        setUserData(prev => ({
+          ...prev,
+          currentCountry: country
+        }));
+        
+        // Then load cities and set the city
+        const cities = await getCitiesByCountry(country.value);
+        const city = cities.find(c => c.label === locationData.city) || {
+          value: 'custom',
+          label: locationData.city,
+          region: locationData.region
+        };
+        
+        setUserData(prev => ({
+          ...prev,
+          currentCity: city
+        }));
+      }
+    } catch (error) {
+      console.error("Geolocation error:", error);
+      setLocationError(
+        error.code === 1 
+          ? "Location permission denied. Please enable location access in your browser settings."
+          : "Could not determine your location. Please select manually."
+      );
+    } finally {
+      setIsLoadingLocation(false);
     }
   };
 
@@ -160,7 +296,7 @@ export const EditProfileModal = ({ onClose }) => {
                 value={userData.fullName}
                 onChange={handleChange}
                 supportingText={errors.fullName || "Name as it appears on legal documents"}
-                className={errors.fullName ? "input-error" : ""}
+                className={errors.fullName ? "error" : ""}
               />
             </div>
             
@@ -173,7 +309,7 @@ export const EditProfileModal = ({ onClose }) => {
                 value={userData.email}
                 onChange={handleChange}
                 supportingText={errors.email || "Your email address"}
-                className={errors.email ? "input-error" : ""}
+                className={errors.email ? "error" : ""}
               />
             </div>
             
@@ -184,8 +320,8 @@ export const EditProfileModal = ({ onClose }) => {
                 type="date"
                 value={userData.dateOfBirth}
                 onChange={handleChange}
-                supportingText="Your date of birth"
-                className={errors.dateOfBirth ? "input-error" : ""}
+                supportingText={errors.dateOfBirth || "Your date of birth"}
+                className={errors.dateOfBirth ? "error" : ""}
               />
             </div>
             
@@ -193,39 +329,77 @@ export const EditProfileModal = ({ onClose }) => {
               <label className="select-label">Nationality</label>
               <Select
                 name="nationality"
-                options={countryOptions}
+                options={countries}
                 value={userData.nationality}
                 onChange={(option) => handleSelectChange("nationality", option)}
                 placeholder="Select your nationality"
                 className="select-control"
                 classNamePrefix="react-select"
+                formatOptionLabel={formatOptionLabel}
+                styles={customSelectStyles}
               />
             </div>
             
-            <div className="form-field">
-              <CustomTextField
-                label="Current City"
-                name="currentCity"
-                placeholder="Enter your current city"
-                value={userData.currentCity}
-                onChange={handleChange}
-                supportingText="Your current city of residence"
-                className={errors.currentCity ? "input-error" : ""}
-              />
+            <div className="location-section">
+              <h3>Current Location</h3>
+              
+              {locationError && (
+                <div className="location-error">
+                  <span className="error-icon">⚠️</span>
+                  {locationError}
+                </div>
+              )}
+              
+              <div className="form-field">
+                <label className="select-label">Current Country</label>
+                <Select
+                  name="currentCountry"
+                  options={countries}
+                  value={userData.currentCountry}
+                  onChange={(option) => handleSelectChange("currentCountry", option)}
+                  placeholder="Select your country of residence"
+                  className="select-control"
+                  classNamePrefix="react-select"
+                  formatOptionLabel={formatOptionLabel}
+                  styles={customSelectStyles}
+                />
+              </div>
+              
+              <div className="form-field">
+                <label className="select-label">Current City</label>
+                <AsyncSelect
+                  cacheOptions
+                  defaultOptions
+                  loadOptions={loadCities}
+                  name="currentCity"
+                  value={userData.currentCity}
+                  onChange={(option) => handleSelectChange("currentCity", option)}
+                  placeholder="Select or type your city"
+                  className="select-control"
+                  classNamePrefix="react-select"
+                  isDisabled={!userData.currentCountry}
+                  noOptionsMessage={() => userData.currentCountry ? "No cities found" : "Select a country first"}
+                />
+              </div>
+              
+              <button
+                type="button"
+                className={`location-button ${isLoadingLocation ? 'loading' : ''} ${vpnDetected ? 'disabled' : ''}`}
+                onClick={handleUseCurrentLocation}
+                disabled={isLoadingLocation || vpnDetected}
+              >
+                {isLoadingLocation ? 'Detecting location...' : '📍 Use Current Location'}
+              </button>
             </div>
             
-            <div className="form-field">
-              <label className="select-label">Current Country</label>
-              <Select
-                name="currentCountry"
-                options={countryOptions}
-                value={userData.currentCountry}
-                onChange={(option) => handleSelectChange("currentCountry", option)}
-                placeholder="Select your country of residence"
-                className="select-control"
-                classNamePrefix="react-select"
-              />
-            </div>
+            {vpnDetected && (
+              <div className="vpn-warning">
+                <p>
+                  <strong>VPN Detected</strong>: Bonded App requires your real location for security purposes. 
+                  Please disable any VPN, proxy, or location masking tools to use all features.
+                </p>
+              </div>
+            )}
             
             <div className="form-actions">
               <button 

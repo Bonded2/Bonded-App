@@ -60,6 +60,13 @@ export const MediaScanner = ({ onMediaSelected }) => {
         // }
       }
       
+      // Validate timestamp - if it's in the future or too far in the past, use current time
+      const now = Date.now();
+      if (timestamp > now || timestamp < now - (10 * 365 * 24 * 60 * 60 * 1000)) { // More than 10 years old
+        console.warn(`Invalid timestamp detected for ${file.name}, using current time instead`);
+        timestamp = now;
+      }
+      
       return timestamp;
     } catch (error) {
       console.error("Error extracting timestamp:", error);
@@ -119,9 +126,11 @@ export const MediaScanner = ({ onMediaSelected }) => {
             try {
               const file = await entry.getFile();
               
-              // Extract accurate timestamp
+              // Extract accurate timestamp - properly handle file date/time
               const timestamp = await extractAccurateTimestamp(file);
+              const fileDate = new Date(timestamp);
               
+              // Format dates consistently
               const fileObj = {
                 name: file.name,
                 path: entryPath,
@@ -129,8 +138,10 @@ export const MediaScanner = ({ onMediaSelected }) => {
                 type: file.type,
                 timestamp: timestamp,
                 file: file,
-                dateFormatted: new Date(timestamp).toLocaleDateString(),
-                timeFormatted: new Date(timestamp).toLocaleTimeString(),
+                dateFormatted: fileDate.toLocaleDateString(),
+                timeFormatted: fileDate.toLocaleTimeString(),
+                // Add ISO string for debugging
+                dateISO: fileDate.toISOString(),
                 selected: false
               };
               
@@ -148,6 +159,14 @@ export const MediaScanner = ({ onMediaSelected }) => {
 
     try {
       await processDirectory(directoryHandle);
+      console.log(`Successfully scanned ${mediaFiles.length} media files`);
+      // Log the date range of files found
+      if (mediaFiles.length > 0) {
+        const sortedByDate = [...mediaFiles].sort((a, b) => a.timestamp - b.timestamp);
+        const oldestFile = sortedByDate[0];
+        const newestFile = sortedByDate[sortedByDate.length - 1];
+        console.log(`Date range of scanned files: ${new Date(oldestFile.timestamp).toLocaleDateString()} to ${new Date(newestFile.timestamp).toLocaleDateString()}`);
+      }
       return mediaFiles;
     } catch (error) {
       throw error;
@@ -158,15 +177,27 @@ export const MediaScanner = ({ onMediaSelected }) => {
    * Organize files by date for better grouping
    */
   const organizeFilesByDate = (files) => {
+    console.log(`Organizing ${files.length} files by date`);
     const groups = {};
     
     files.forEach(file => {
-      const date = file.dateFormatted;
-      if (!groups[date]) {
-        groups[date] = [];
+      // Make sure to use consistent date format that matches timeline
+      // Use local date string to avoid timezone issues
+      const date = new Date(file.timestamp);
+      
+      // Format date in a consistent way - use local date format
+      const dateKey = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
       }
-      groups[date].push(file);
+      
+      groups[dateKey].push(file);
     });
+    
+    // Log the grouped files for debugging
+    console.log(`Files organized into ${Object.keys(groups).length} date groups:`, 
+                Object.keys(groups).map(date => `${date}: ${groups[date].length} files`));
     
     // Sort files within each date group by timestamp
     Object.keys(groups).forEach(date => {
@@ -307,13 +338,21 @@ export const MediaScanner = ({ onMediaSelected }) => {
     
     // Group files by date for better organization in timeline
     const filesByDate = {};
+    
     selectedFiles.forEach(file => {
-      const date = file.dateFormatted;
-      if (!filesByDate[date]) {
-        filesByDate[date] = [];
+      // Use a consistent date format that matches what we'll use in the timeline
+      const date = new Date(file.timestamp);
+      const dateKey = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+      
+      if (!filesByDate[dateKey]) {
+        filesByDate[dateKey] = [];
       }
-      filesByDate[date].push(file);
+      
+      filesByDate[dateKey].push(file);
     });
+    
+    console.log(`Sending ${selectedFiles.length} files grouped into ${Object.keys(filesByDate).length} dates:`, 
+                Object.keys(filesByDate).join(', '));
     
     // If callback prop is provided, send the selected files
     if (onMediaSelected && typeof onMediaSelected === 'function') {

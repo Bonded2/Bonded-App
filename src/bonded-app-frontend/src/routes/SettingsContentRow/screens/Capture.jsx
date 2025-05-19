@@ -353,9 +353,9 @@ export const Capture = () => {
         <div className="media-scanner-link-container">
           <button 
             className="media-scanner-link" 
-            onClick={() => navigate('/media-scanner')}
+            onClick={() => navigate('/media-import')}
           >
-            Try Media Scanner Demo
+            Try Media Import
           </button>
         </div>
         
