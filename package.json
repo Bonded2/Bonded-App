@@ -9,7 +9,7 @@
     "build": "cd src/bonded-app-frontend && npm install && npm run build",
     "prebuild": "npm run prebuild --workspaces --if-present",
     "pretest": "npm run prebuild --workspaces --if-present",
-    "start": "npm start --workspaces --if-present",
+    "start": "node index.js",
     "test": "npm test --workspaces --if-present"
   },
   "type": "module",
@@ -20,6 +20,7 @@
     "vite-plugin-pwa": "^1.0.0"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "react-select": "^5.10.1"
   }
 }
