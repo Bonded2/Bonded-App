@@ -1,19 +1,33 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowBack } from "../../icons/ArrowBack";
 import { Settings } from "../../icons/Settings";
 import { StyleOutlined } from "../../icons/StyleOutlined";
 import { LocationOn2 } from "../../icons/LocationOn2";
 import { Chat4 } from "../../icons/Chat4";
+import { EditProfileModal } from "../EditProfileModal";
+import { getUserData, logoutUser } from "../../utils/userState";
 import "./style.css";
 
 export const MenuFrame = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [userData, setUserData] = useState({ fullName: "User", email: "user@example.com", avatar: "U" });
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  // Load user data when component mounts
+  useEffect(() => {
+    const userInfo = getUserData();
+    setUserData({
+      fullName: userInfo.fullName || "User",
+      email: userInfo.email || "user@example.com",
+      avatar: userInfo.avatar || "U",
+    });
+  }, []);
 
   const handleLogout = () => {
     console.log("Logging out...");
-    // Add logout logic here
+    logoutUser();
     onClose();
     navigate('/');
   };
@@ -23,6 +37,21 @@ export const MenuFrame = ({ onClose }) => {
     if (onClose) {
       onClose();
     }
+  };
+
+  const handleEditProfile = () => {
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    // Refresh user data after edit
+    const userInfo = getUserData();
+    setUserData({
+      fullName: userInfo.fullName || "User",
+      email: userInfo.email || "user@example.com",
+      avatar: userInfo.avatar || "U",
+    });
   };
 
   const isActive = (path) => location.pathname === path;
@@ -39,12 +68,24 @@ export const MenuFrame = ({ onClose }) => {
 
         <div className="user-profile" aria-label="User profile">
           <div className="avatar" aria-hidden="true">
-            <span>JD</span>
+            <span>{userData.avatar}</span>
           </div>
           <div className="user-info">
-            <h2 className="user-name">John Doe</h2>
-            <p className="user-email">john.doe@example.com</p>
+            <h2 className="user-name">{userData.fullName}</h2>
+            <p className="user-email">{userData.email}</p>
           </div>
+          <button 
+            className="edit-profile-button" 
+            onClick={handleEditProfile} 
+            aria-label="Edit profile"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16.474 5.408l2.118 2.118m-.756-3.982L12.109 9.27a2.118 2.118 0 00-.58 1.082L11 13l2.648-.53c.41-.082.786-.283 1.082-.579l5.727-5.727a1.853 1.853 0 000-2.621 1.853 1.853 0 00-2.621 0z" 
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M19 15v3a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h3" 
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
         </div>
         
         <div className="menu-divider" role="separator"></div>
@@ -105,6 +146,8 @@ export const MenuFrame = ({ onClose }) => {
           </div>
         </div>
       </div>
+      
+      {showEditModal && <EditProfileModal onClose={handleCloseEditModal} />}
     </div>
   );
 };

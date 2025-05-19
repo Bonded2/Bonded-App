@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import Select from 'react-select'; // Assuming react-select is installed or you have a similar component
+import { saveProfileData, getUserData } from "../../utils/userState";
 import "./style.css";
 
 // A basic list of countries for the dropdown. Ideally, use a library for a comprehensive list.
@@ -38,6 +39,15 @@ export const ProfileSetup = () => {
   const inputRefs = [fullNameRef, dobRef, nationalityRef, cityRef, countryRef];
 
   useEffect(() => {
+    // Load existing user data if available
+    const userData = getUserData();
+    if (userData) {
+      setFormData(prevData => ({
+        ...prevData,
+        fullName: userData.fullName || prevData.fullName,
+      }));
+    }
+    
     fullNameRef.current?.focus();
   }, []);
 
@@ -119,6 +129,10 @@ export const ProfileSetup = () => {
 
     if (allValid) {
       console.log("Profile Data:", formData);
+      
+      // Save profile data to user state
+      saveProfileData(formData);
+      
       // Navigate to the main screen or next step
       navigate("/timeline"); 
     }

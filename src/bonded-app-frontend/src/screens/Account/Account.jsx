@@ -1,6 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowBack } from "../../icons/ArrowBack";
+import { EditProfileModal } from "../../components/EditProfileModal";
+import { getUserData, logoutUser, updateUserData } from "../../utils/userState";
+import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import "./style.css";
 
 const AccountTopBar = ({ onBackClick }) => {
@@ -20,14 +23,55 @@ export const Account = () => {
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnbondConfirm, setShowUnbondConfirm] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [userData, setUserData] = useState({
+    fullName: "",
+    email: "",
+    dateOfBirth: "",
+    nationality: null,
+    currentCity: "",
+    currentCountry: null
+  });
+  
+  // Password change state
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: ""
+  });
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  // Load user data
+  useEffect(() => {
+    const loadUserData = () => {
+      const data = getUserData();
+      setUserData(data);
+    };
+
+    loadUserData();
+  }, []);
 
   const handleBackClick = () => {
     navigate('/timeline');
   };
 
+  const handleEditProfile = () => {
+    setShowEditModal(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    // Refresh user data
+    const data = getUserData();
+    setUserData(data);
+  };
+
   const handleDeleteAccount = () => {
     if (showDeleteConfirm) {
-      // Actual deletion logic would go here
+      // Delete account and log out the user
+      logoutUser();
       console.log("Account deleted");
       navigate('/');
     } else {
@@ -52,6 +96,96 @@ export const Account = () => {
     setShowUnbondConfirm(false);
   };
 
+  // Password change handlers
+  const handleTogglePasswordForm = () => {
+    setShowPasswordForm(!showPasswordForm);
+    // Reset form on toggle
+    if (!showPasswordForm) {
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+      setPasswordErrors({});
+      setPasswordSuccess(false);
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error for this field when typing
+    if (passwordErrors[name]) {
+      setPasswordErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
+  };
+
+  const validatePasswordForm = () => {
+    const newErrors = {};
+    
+    // Simulate checking current password against stored password
+    // In a real app, this would verify against backend/stored password
+    if (!passwordData.currentPassword) {
+      newErrors.currentPassword = "Current password is required";
+    }
+    
+    if (!passwordData.newPassword) {
+      newErrors.newPassword = "New password is required";
+    } else if (passwordData.newPassword.length < 8) {
+      newErrors.newPassword = "Password must be at least 8 characters";
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match";
+    }
+    
+    setPasswordErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handlePasswordSubmit = (e) => {
+    e.preventDefault();
+    
+    if (!validatePasswordForm()) {
+      return;
+    }
+    
+    // In a real app, this would call an API to change the password
+    console.log("Password changed successfully");
+    
+    // Show success message
+    setPasswordSuccess(true);
+    
+    // Reset form after successful submission
+    setTimeout(() => {
+      setShowPasswordForm(false);
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: ""
+      });
+      setPasswordSuccess(false);
+    }, 2000);
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not set";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   return (
     <div className="account-screen">
       <AccountTopBar onBackClick={handleBackClick} />
@@ -61,13 +195,105 @@ export const Account = () => {
           <h2 className="section-title">Profile information</h2>
           <div className="profile-info">
             <p className="profile-label">Name</p>
-            <p className="profile-value">John Doe</p>
+            <p className="profile-value">{userData.fullName}</p>
           </div>
           <div className="profile-info">
             <p className="profile-label">Email</p>
-            <p className="profile-value">john.doe@example.com</p>
+            <p className="profile-value">{userData.email}</p>
           </div>
-          <button className="edit-button">Edit Profile</button>
+          {userData.dateOfBirth && (
+            <div className="profile-info">
+              <p className="profile-label">Date of Birth</p>
+              <p className="profile-value">{formatDate(userData.dateOfBirth)}</p>
+            </div>
+          )}
+          {userData.nationality && (
+            <div className="profile-info">
+              <p className="profile-label">Nationality</p>
+              <p className="profile-value">{userData.nationality.label}</p>
+            </div>
+          )}
+          {userData.currentCity && (
+            <div className="profile-info">
+              <p className="profile-label">Current City</p>
+              <p className="profile-value">{userData.currentCity}</p>
+            </div>
+          )}
+          {userData.currentCountry && (
+            <div className="profile-info">
+              <p className="profile-label">Current Country</p>
+              <p className="profile-value">{userData.currentCountry.label}</p>
+            </div>
+          )}
+          <button className="edit-button" onClick={handleEditProfile}>Edit Profile</button>
+        </div>
+
+        <div className="account-divider"></div>
+
+        <div className="account-section">
+          <h2 className="section-title">Security</h2>
+          
+          <button 
+            className="account-action-button"
+            onClick={handleTogglePasswordForm}
+          >
+            {showPasswordForm ? "Cancel" : "Change Password"}
+          </button>
+          
+          {showPasswordForm && (
+            <form className="password-form" onSubmit={handlePasswordSubmit}>
+              {passwordSuccess ? (
+                <div className="success-message">
+                  Password changed successfully!
+                </div>
+              ) : (
+                <>
+                  <div className="form-field">
+                    <CustomTextField
+                      label="Current Password"
+                      name="currentPassword"
+                      type="password"
+                      placeholder="Enter your current password"
+                      value={passwordData.currentPassword}
+                      onChange={handlePasswordChange}
+                      supportingText={passwordErrors.currentPassword || " "}
+                      className={passwordErrors.currentPassword ? "input-error" : ""}
+                    />
+                  </div>
+                  
+                  <div className="form-field">
+                    <CustomTextField
+                      label="New Password"
+                      name="newPassword"
+                      type="password"
+                      placeholder="Enter new password"
+                      value={passwordData.newPassword}
+                      onChange={handlePasswordChange}
+                      supportingText={passwordErrors.newPassword || "Minimum 8 characters"}
+                      className={passwordErrors.newPassword ? "input-error" : ""}
+                    />
+                  </div>
+                  
+                  <div className="form-field">
+                    <CustomTextField
+                      label="Confirm New Password"
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Confirm new password"
+                      value={passwordData.confirmPassword}
+                      onChange={handlePasswordChange}
+                      supportingText={passwordErrors.confirmPassword || " "}
+                      className={passwordErrors.confirmPassword ? "input-error" : ""}
+                    />
+                  </div>
+                  
+                  <button type="submit" className="submit-button">
+                    Update Password
+                  </button>
+                </>
+              )}
+            </form>
+          )}
         </div>
 
         <div className="account-divider"></div>
@@ -154,6 +380,8 @@ export const Account = () => {
           )}
         </div>
       </div>
+      
+      {showEditModal && <EditProfileModal onClose={handleCloseEditModal} />}
     </div>
   );
 }; 

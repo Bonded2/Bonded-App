@@ -1,12 +1,15 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
+import { saveRegistrationData } from "../../utils/userState";
 import "./style.css";
 
 export const Register = () => {
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
 
   const handleNameChange = (e) => {
     setFullName(e.target.value);
@@ -20,6 +23,27 @@ export const Register = () => {
     setPassword(e.target.value);
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    // Basic validation
+    const newErrors = {};
+    if (!fullName.trim()) newErrors.fullName = "Name is required";
+    if (!email.trim()) newErrors.email = "Email is required";
+    if (!password.trim()) newErrors.password = "Password is required";
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    
+    // Save user registration data
+    saveRegistrationData(fullName, email);
+    
+    // Continue to next screen
+    navigate("/getting-started");
+  };
+
   return (
     <div className="register">
       <div className="register-container">
@@ -31,15 +55,15 @@ export const Register = () => {
 
         <h1 className="create-account-title">Create an account</h1>
 
-        <form className="register-form">
+        <form className="register-form" onSubmit={handleSubmit}>
           <CustomTextField
             label="Full Name"
             placeholder="Enter your full name"
             value={fullName}
             onChange={handleNameChange}
             required={true}
-            supportingText="Its advisable to use the name on your legal documents."
-            className="form-field"
+            supportingText={errors.fullName || "It's advisable to use the name on your legal documents."}
+            className={`form-field ${errors.fullName ? "input-error" : ""}`}
           />
 
           <CustomTextField
@@ -49,7 +73,8 @@ export const Register = () => {
             value={email}
             onChange={handleEmailChange}
             required={true}
-            className="form-field"
+            supportingText={errors.email || " "}
+            className={`form-field ${errors.email ? "input-error" : ""}`}
           />
 
           <CustomTextField
@@ -59,18 +84,17 @@ export const Register = () => {
             value={password}
             onChange={handlePasswordChange}
             required={true}
-            className="form-field"
+            supportingText={errors.password || " "}
+            className={`form-field ${errors.password ? "input-error" : ""}`}
           />
 
-          <Link to="/getting-started" className="create-account-link">
-            <button className="create-account-button">
-              <div className="button-layout">
-                <div className="button-content">
-                  <div className="button-label">Create an account</div>
-                </div>
+          <button type="submit" className="create-account-button">
+            <div className="button-layout">
+              <div className="button-content">
+                <div className="button-label">Create an account</div>
               </div>
-            </button>
-          </Link>
+            </div>
+          </button>
         </form>
 
         <div className="login-redirect">
