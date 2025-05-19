@@ -27,5 +27,6 @@
     }
   ],
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "outputDirectory": "src/bonded-app-frontend/dist"
 } 
