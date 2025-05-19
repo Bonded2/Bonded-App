@@ -11,8 +11,12 @@
     }
   ],
   "routes": [
-    { "handle": "filesystem" },
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/manifest.webmanifest", "dest": "/manifest.webmanifest" },
+    { "src": "/sw.js", "dest": "/sw.js" },
+    { "src": "/workbox-(.+)\\.js", "dest": "/workbox-$1.js" },
+    { "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg))", "dest": "/$1" },
+    { "src": "/(.*)", "dest": "/index.html", "status": 200 }
   ]
 } 
