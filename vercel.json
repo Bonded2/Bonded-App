@@ -1,7 +1,8 @@
 {
-  "framework": "vite",
-  "buildCommand": "cd src/bonded-app-frontend && npm install && npm run build",
+  "version": 2,
+  "buildCommand": "bash ./vercel-build.sh",
   "outputDirectory": "src/bonded-app-frontend/dist",
+  "framework": "vite",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
