@@ -30,6 +30,8 @@ export default defineConfig({
         background_color: '#FF704D',
         display: 'standalone',
         orientation: 'portrait',
+        scope: '/',
+        start_url: '/',
         icons: [
           {
             src: '/images/icon-192x192.png',
@@ -61,6 +63,9 @@ export default defineConfig({
         ]
       },
       workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,gif,webp,woff,woff2,ttf,eot}'],
+        navigateFallback: 'index.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/_next\/static/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -95,6 +100,21 @@ export default defineConfig({
               expiration: {
                 maxEntries: 30,
                 maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
+              }
+            }
+          },
+          {
+            urlPattern: new RegExp('^https://api\\.'),
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              networkTimeoutSeconds: 10,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 // 1 hour
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
               }
             }
           }
