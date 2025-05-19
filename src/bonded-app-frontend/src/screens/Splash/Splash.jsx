@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { resetToFirstTimeUser } from "../../utils/firstTimeUserReset";
 import "./style.css";
 
 export const Splash = () => {
@@ -12,21 +13,12 @@ export const Splash = () => {
       setAnimationComplete(true);
     }, 2500);
 
-    // Check if this is the first visit
-    const hasVisitedBefore = localStorage.getItem("hasVisitedBefore");
-    
-    // Navigate after animations complete (total 3 seconds)
+    // Set session flag to indicate we're in an active session
+    sessionStorage.setItem('sessionStarted', 'true');
+
+    // Navigate to register after animation completes
     const navigateTimer = setTimeout(() => {
-      // Set the flag for future visits
-      localStorage.setItem("hasVisitedBefore", "true");
-      
-      // For first-time users, go to register
-      if (!hasVisitedBefore) {
-        navigate("/register");
-      } else {
-        // For returning users, go to login screen
-        navigate("/login");
-      }
+      navigate("/register");
     }, 3000);
 
     return () => {

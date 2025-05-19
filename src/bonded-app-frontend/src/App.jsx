@@ -1,5 +1,5 @@
-import React from "react";
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import React, { useEffect } from "react";
+import { RouterProvider, createBrowserRouter, redirect } from "react-router-dom";
 import { Splash } from "./screens/Splash/Splash";
 import { Login } from "./screens/Login/Login";
 import { Register } from "./screens/Register";
@@ -19,6 +19,7 @@ import { MediaScannerDemo } from "./screens/MediaScannerDemo";
 import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
+import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -43,6 +44,29 @@ export class ErrorBoundary extends React.Component {
   }
 }
 
+// Loader function to ensure first-time user flow only happens on initial entry
+const enforceFirstTimeUserLoader = async () => {
+  // Check if this is an initial load or a navigation within the current session
+  const isInitialLoad = !sessionStorage.getItem('sessionStarted');
+  
+  // If this is the initial load, reset everything and redirect to register
+  if (isInitialLoad) {
+    // Set session flag
+    sessionStorage.setItem('sessionStarted', 'true');
+    
+    // Check if we're already on the root or register path
+    const pathname = window.location.pathname;
+    if (pathname !== '/' && pathname !== '/register') {
+      // Reset user data and redirect to splash if entry is not through root or register
+      await resetToFirstTimeUser();
+      return redirect('/');
+    }
+  }
+  
+  // Allow navigation once session has started
+  return null;
+};
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -53,6 +77,7 @@ const router = createBrowserRouter([
     path: "/login",
     element: <Login />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/register",
@@ -63,107 +88,128 @@ const router = createBrowserRouter([
     path: "/partner-invite",
     element: <PartnerInvite />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/profile-setup",
     element: <ProfileSetup />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/getting-started",
     element: <GettingStarted />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/verify",
     element: <Verify />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/more-info",
     element: <MoreInfo />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/timeline",
     element: <TimelineCreated />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/timeline-created",
     element: <TimelineCreated />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/settings",
     element: <Capture />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/account",
     element: <Account />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/privacy",
     element: <Privacy />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/faq",
     element: <FAQ />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/export-timeline",
     element: <ExportTimeline onClose={() => {}} />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/timestamp-folder/:date",
     element: <TimestampFolder />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/image-preview/:itemId",
     element: <ImagePreview />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/export-all-data",
     element: <ExportAllData />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/media-scanner",
     element: <MediaScannerDemo />,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   // Advanced AI Tools routes (placeholders for future implementation)
   {
     path: "/advanced-tools",
     element: <div>Advanced AI Tools</div>,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/story-maker",
     element: <div>StoryMaker Tool</div>,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/application-maker",
     element: <div>ApplicationMaker Tool</div>,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/status-assessor",
     element: <div>Status Assessor Tool</div>,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/impermanent-access",
     element: <div>Impermanent Access Tool</div>,
     errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
   }
 ]);
 
@@ -194,6 +240,22 @@ const OfflineIndicator = () => {
 };
 
 export const App = () => {
+  // Only reset user data on initial app load of a new session
+  useEffect(() => {
+    const resetDataIfNeeded = async () => {
+      // Only reset if this is a direct entry to a deep link (not through splash or register)
+      const isInitialLoad = !sessionStorage.getItem('sessionStarted');
+      const pathname = window.location.pathname;
+      
+      if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
+        await resetToFirstTimeUser();
+        sessionStorage.setItem('sessionStarted', 'true');
+      }
+    };
+    
+    resetDataIfNeeded();
+  }, []);
+  
   return (
     <ErrorBoundary>
       <OfflineIndicator />
