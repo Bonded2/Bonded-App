@@ -42,14 +42,14 @@ const LEVEL_DESCRIPTIONS = {
 
 const CaptureTopBar = ({ onBackClick }) => {
   return (
-    <div className="capture-top-bar">
+    <header className="capture-top-bar">
       <div className="top-bar-content">
-        <div onClick={onBackClick} className="back-button">
+        <button onClick={onBackClick} className="back-button" aria-label="Go back">
           <ArrowBack className="back-icon" />
-        </div>
-        <div className="top-bar-title">Your data capture</div>
+        </button>
+        <h1 className="top-bar-title">Your data capture</h1>
       </div>
-    </div>
+    </header>
   );
 };
 
@@ -363,7 +363,7 @@ export const Capture = () => {
           {Object.keys(captureSettings).map((settingKey) => {
             const SettingIcon = SETTING_ICONS[settingKey];
             return (
-              <div className="capture-setting-item" key={settingKey}>
+              <div className="capture-setting-item" key={settingKey} style={{maxWidth: '100%', overflow: 'hidden'}}>
                 <div className="setting-header">
                   {SettingIcon && <SettingIcon className="setting-icon" />}
                   <h2>{formatSettingName(settingKey)}</h2>

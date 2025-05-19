@@ -19,6 +19,11 @@ html {
   overflow-y: auto; /* Allow scrolling */
 }
 
+/* Global box-sizing rule to prevent overflow issues */
+* {
+  box-sizing: border-box;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Trocchi', serif;
   color: #2C4CDF; /* Default heading color (Bonded Blue) */
