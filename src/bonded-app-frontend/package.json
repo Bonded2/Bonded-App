@@ -8,6 +8,7 @@
     "start": "node scripts/start.js",
     "prebuild": "",
     "build": "tsc && vite build",
+    "vercel-build": "vite build",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
     "generate-pwa-assets": "pwa-asset-generator public/images/app-icon.svg public/images --icon-only --favicon --opaque false --padding 0"
   },

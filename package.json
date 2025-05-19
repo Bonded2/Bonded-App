@@ -5,7 +5,8 @@
   },
   "name": "bonded-app",
   "scripts": {
-    "build": "cd src/bonded-app-frontend && npm run build",
+    "vercel-build": "cd src/bonded-app-frontend && npm install && npm run build",
+    "build": "cd src/bonded-app-frontend && npm install && npm run build",
     "prebuild": "npm run prebuild --workspaces --if-present",
     "pretest": "npm run prebuild --workspaces --if-present",
     "start": "npm start --workspaces --if-present",

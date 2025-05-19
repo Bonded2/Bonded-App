@@ -1,32 +1,10 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "^/assets/(.*)",
-      "headers": { "cache-control": "public, max-age=31536000, immutable" },
-      "continue": true
-    },
-    {
-      "src": "^/sw.js",
-      "headers": { "cache-control": "public, max-age=0, must-revalidate" },
-      "continue": true
-    },
-    {
-      "src": "^/workbox-(.+)\\.js",
-      "headers": { "cache-control": "public, max-age=31536000, immutable" },
-      "continue": true
-    },
-    {
-      "src": "^/manifest.webmanifest",
-      "headers": { "cache-control": "public, max-age=0, must-revalidate" },
-      "continue": true
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "framework": "vite",
+  "buildCommand": "./vercel-build.sh",
+  "outputDirectory": "src/bonded-app-frontend/dist",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "cleanUrls": true,
-  "trailingSlash": false,
-  "outputDirectory": "src/bonded-app-frontend/dist"
+  "trailingSlash": false
 } 
