@@ -3,13 +3,11 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  height: 100%;
   width: 100vw;
   max-width: 100%;
-  margin: 0;
-  padding: 0;
-  border: none;
-  overflow: hidden;
+  padding: 20px 0;
+  box-sizing: border-box;
+  overflow-y: auto;
   position: absolute;
   top: 0;
   left: 0;
@@ -27,6 +25,7 @@
   padding: 40px 20px;
   box-sizing: border-box;
   border: none;
+  margin: auto;
 }
 
 .bonded-logo-blue {
