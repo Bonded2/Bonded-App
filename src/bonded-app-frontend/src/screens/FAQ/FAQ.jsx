@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowBack } from "../../icons/ArrowBack";
-import "./style.css";
 
 const FAQTopBar = ({ onBackClick }) => {
   return (

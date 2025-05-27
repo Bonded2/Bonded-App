@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { MediaScanner } from "../../components/MediaScanner";
 import { InfoModal } from "../../components/InfoModal";
 import { DeleteModal } from "../../components/DeleteModal";
-import "./style.css";
 
 // LocalStorage keys - same as in TimelineCreated
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';

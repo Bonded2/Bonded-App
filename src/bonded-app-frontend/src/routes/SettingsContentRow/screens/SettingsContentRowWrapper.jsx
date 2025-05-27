@@ -1,6 +1,5 @@
 import React from "react";
 import { LevelFullWrapper } from "../components/LevelFullWrapper";
-import "./settings-content-row-wrapper.css";
 
 export const SettingsContentRowWrapper = () => {
   return (

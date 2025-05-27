@@ -1,85 +1,148 @@
-body {
-  margin: 0;
-  font-family: 'Rethink Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-y: auto; /* Ensure the body is scrollable */
-  overflow-x: hidden;
-  height: 100%; /* Full height */
-  width: 100%;
-  position: relative;
-  background-color: #FF704D; /* Default background for most screens */
-  color: #FFFFFF; /* Default text color for contrast on orange */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 29 27 32;
+
+    --card: 0 0% 100%;
+    --card-foreground: 29 27 32;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 29 27 32;
+
+    --primary: 44 76 223;
+    --primary-foreground: 255 255 255;
+
+    --secondary: 255 112 77;
+    --secondary-foreground: 255 255 255;
+
+    --muted: 230 224 233;
+    --muted-foreground: 73 69 79;
+
+    --accent: 185 255 70;
+    --accent-foreground: 0 0 0;
+
+    --destructive: 255 88 48;
+    --destructive-foreground: 255 255 255;
+
+    --border: 230 224 233;
+    --input: 230 224 233;
+    --ring: 44 76 223;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 29 27 32;
+    --foreground: 255 255 255;
+
+    --card: 29 27 32;
+    --card-foreground: 255 255 255;
+
+    --popover: 29 27 32;
+    --popover-foreground: 255 255 255;
+
+    --primary: 185 255 70;
+    --primary-foreground: 0 0 0;
+
+    --secondary: 255 112 77;
+    --secondary-foreground: 255 255 255;
+
+    --muted: 73 69 79;
+    --muted-foreground: 230 224 233;
+
+    --accent: 44 76 223;
+    --accent-foreground: 255 255 255;
+
+    --destructive: 255 88 48;
+    --destructive-foreground: 255 255 255;
+
+    --border: 73 69 79;
+    --input: 73 69 79;
+    --ring: 185 255 70;
+  }
 }
 
-html {
-  height: 100%;
-  overflow-y: auto; /* Allow scrolling */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-secondary text-white font-rethink;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-size: 1rem;
+  }
+
+  html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-size: 16px;
+  }
+
+  #root {
+    @apply m-0 p-0 overflow-hidden h-screen w-screen absolute top-0 left-0 max-w-full max-h-full border-none;
+  }
 }
 
-/* Global box-sizing rule to prevent overflow issues */
-* {
-  box-sizing: border-box;
+@layer utilities {
+  @media (max-width: 639px) {
+    html {
+      font-size: 14px;
+    }
+    
+    button, .btn {
+      @apply min-h-[44px] px-3 py-2;
+    }
+    
+    input, select, textarea {
+      @apply text-base min-h-[44px];
+    }
+  }
+
+  @media (max-height: 500px) {
+    .register, .login-screen {
+      @apply h-auto min-h-screen;
+    }
+  }
+
+  .pt-safe {
+    padding-top: calc(0.5rem + env(safe-area-inset-top));
+  }
+
+  .pb-safe {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+  }
+
+  .pl-safe {
+    padding-left: calc(0.5rem + env(safe-area-inset-left));
+  }
+
+  .pr-safe {
+    padding-right: calc(0.5rem + env(safe-area-inset-right));
+  }
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Trocchi', serif;
-  color: #2C4CDF; /* Default heading color (Bonded Blue) */
+input[type="text"], 
+input[type="email"], 
+input[type="password"], 
+select, 
+textarea {
+  @apply border-input bg-white/10 text-white placeholder:text-white/70 focus:border-accent focus:ring-accent/20;
 }
 
-/* Global link styling */
+input[type="checkbox"], 
+input[type="radio"] {
+  @apply accent-primary;
+}
+
 a {
-  color: #2C4CDF; /* Bonded Blue for links */
-  text-decoration: none;
+  @apply text-primary hover:text-primary/80 transition-colors duration-200;
 }
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* Utility class for main screen containers to ensure consistency */
-.screen-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start; /* Align content to the top */
-  min-height: 100vh; /* Full viewport height */
-  width: 100%;
-  padding: 20px;
-  box-sizing: border-box;
-  overflow-y: auto; /* Allow scrolling for content that exceeds viewport */
-}
-
-.content-wrapper {
-  width: 100%;
-  max-width: 480px; /* Consistent max-width for content */
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-/* Basic reset for some elements */
-button, input, select, textarea {
-  font-family: inherit; /* Inherit font from body */
-}
-
-/* Custom scrollbar for webkit browsers (optional, but can enhance look) */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(44, 76, 223, 0.1); /* Light blue track */
-}
-
-::-webkit-scrollbar-thumb {
-  background: #2C4CDF; /* Bonded blue thumb */
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #2342C8; /* Darker blue on hover */
-} 

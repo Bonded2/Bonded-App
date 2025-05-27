@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { TextField } from "../../components/TextField";
-import "./style.css";
 
 export const MoreInfo = () => {
   const [partnerEmail, setPartnerEmail] = useState("");

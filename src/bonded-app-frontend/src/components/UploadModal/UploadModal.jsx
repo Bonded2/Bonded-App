@@ -4,7 +4,6 @@ import { Photo1 } from "../../icons/Photo1";
 // import { DescriptionIcon } from "../../icons/Description"; // Example for document files - ensure you have such an icon
 import { Today } from "../../icons/Today"; // For date
 import { useGeoMetadata } from "../../features/geolocation/hooks/useGeoMetadata";
-import "./style.css";
 
 // Helper to get a simple file type category
 const getFileTypeCategory = (fileNameOrType) => {

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { TimestampFolder } from "../TimestampFolder/TimestampFolder";
-import "./style.css";
 
 // Content types for export selection
 const EXPORTABLE_CONTENT_TYPES = [

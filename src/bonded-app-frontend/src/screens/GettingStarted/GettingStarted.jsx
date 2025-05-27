@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { MenuFrame } from "../../components/MenuFrame/MenuFrame";
-import "./style.css";
 
 export const GettingStarted = () => {
   const [selectedStatus, setSelectedStatus] = useState("");

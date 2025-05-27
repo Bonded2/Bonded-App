@@ -4,7 +4,6 @@ import { ArrowBack } from "../../../icons/ArrowBack";
 import { Photo1 } from "../../../icons/Photo1";
 import { LocationOn2 } from "../../../icons/LocationOn2";
 import { Chat4 } from "../../../icons/Chat4";
-import "./capture.css";
 
 // Example file types for manual override - this could be more extensive
 const COMMON_FILE_TYPES = [

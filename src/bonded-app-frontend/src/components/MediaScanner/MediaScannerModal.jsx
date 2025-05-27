@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { MediaScanner } from "./MediaScanner";
 import { useGeoMetadata } from "../../features/geolocation/hooks/useGeoMetadata";
-import "./style.css";
 
 /**
  * Modal wrapper for the MediaScanner component that adds timeline and geolocation integration

@@ -5,7 +5,6 @@ Please share your feedback here: https://form.asana.com/?k=uvp-HPgd3_hyoXRBw1IcN
 
 import React from "react";
 import { Icn } from "../Icn";
-import "./style.css";
 
 export const TopAppBar = ({
   className,
@@ -36,9 +35,12 @@ export const TopAppBar = ({
   };
 
   return (
-    <div className={`top-app-bar ${className || ""}`}>
-      <div className="frame-14">
-        <div className="icn-wrapper" onClick={handleMenuClick}>
+    <div className={`flex items-center bg-primary h-14 px-2 sticky top-0 left-0 right-0 w-full shadow-lg z-50 gap-3 ${className || ""}`}>
+      <div className="flex items-center flex-1 gap-2.5">
+        <div 
+          className="flex items-center justify-center h-8 w-8 min-w-8 bg-white/15 rounded-full cursor-pointer transition-colors duration-200 hover:bg-white/25"
+          onClick={handleMenuClick}
+        >
           <Icn
             icon="burger"
             rectangleClassName={icnRectangleClassName}
@@ -46,13 +48,18 @@ export const TopAppBar = ({
             divClassName={icnDivClassName}
           />
         </div>
-        <div className="headline">{headline}</div>
+        <div className="text-white flex-1 font-trocchi text-2xl font-normal whitespace-nowrap overflow-hidden text-ellipsis drop-shadow-sm">
+          {headline}
+        </div>
       </div>
 
-      <div className="actions-container">
-        <div className="trailing-icon" onClick={handleScanMediaClick}>
+      <div className="flex items-center gap-2.5 flex-shrink-0">
+        <div 
+          className="flex items-center justify-center h-9 w-9 min-w-9 min-h-9 bg-white/15 rounded-full cursor-pointer transition-colors duration-200 hover:bg-white/25"
+          onClick={handleScanMediaClick}
+        >
           <svg
-            className="camera-icon"
+            className="w-6 h-6"
             fill="none"
             height="24"
             viewBox="0 0 24 24"
@@ -70,10 +77,15 @@ export const TopAppBar = ({
           </svg>
         </div>
 
-        <button className="btn" onClick={handleExportClick}>
-          <div className="layout">
-            <div className="label-wrapper">
-              <div className="label">Export</div>
+        <button 
+          className="flex items-center justify-center bg-secondary rounded-xl h-10 px-4 min-w-[90px] border-none outline-none flex-shrink-0 shadow-lg shadow-secondary/30 transition-all duration-200 hover:bg-secondary/90 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-secondary/40 active:translate-y-0 active:shadow-md active:shadow-secondary/30"
+          onClick={handleExportClick}
+        >
+          <div className="flex items-center justify-center gap-2 w-full">
+            <div className="flex flex-col items-center">
+              <div className="text-white font-trocchi text-[15px] font-medium tracking-wide leading-[1.71] text-center whitespace-nowrap">
+                Export
+              </div>
             </div>
           </div>
         </button>

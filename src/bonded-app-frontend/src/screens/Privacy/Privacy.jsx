@@ -1,7 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowBack } from "../../icons/ArrowBack";
-import "./style.css";
 
 const PrivacyTopBar = ({ onBackClick }) => {
   return (

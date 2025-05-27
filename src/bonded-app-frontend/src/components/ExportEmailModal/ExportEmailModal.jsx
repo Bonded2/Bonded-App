@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import "./style.css";
 
 export const ExportEmailModal = ({ onClose, onConfirm }) => {
   const [email, setEmail] = useState("");

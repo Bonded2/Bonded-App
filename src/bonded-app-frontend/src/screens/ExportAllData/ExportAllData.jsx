@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ExportEmailModal } from "../../components/ExportEmailModal";
-import "./style.css";
 
 export const ExportAllData = ({ onClose }) => {
   const navigate = useNavigate();

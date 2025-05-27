@@ -7,7 +7,6 @@ import { LocationOn2 } from "../../icons/LocationOn2";
 import { Chat4 } from "../../icons/Chat4";
 import { EditProfileModal } from "../EditProfileModal";
 import { getUserData, logoutUser } from "../../utils/userState";
-import "./style.css";
 
 export const MenuFrame = ({ onClose }) => {
   const navigate = useNavigate();

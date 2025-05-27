@@ -1,7 +1,6 @@
 import React from "react";
 import { Upload2 } from "../icons/Upload2";
 import { Icn } from "./Icn";
-import "./div-wrapper.css";
 
 export const DivWrapper = ({ className }) => {
   return (

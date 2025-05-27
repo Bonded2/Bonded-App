@@ -4,7 +4,6 @@ import { ArrowBack } from "../../icons/ArrowBack";
 import { EditProfileModal } from "../../components/EditProfileModal";
 import { getUserData, logoutUser, updateUserData } from "../../utils/userState";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
-import "./style.css";
 
 const AccountTopBar = ({ onBackClick }) => {
   return (

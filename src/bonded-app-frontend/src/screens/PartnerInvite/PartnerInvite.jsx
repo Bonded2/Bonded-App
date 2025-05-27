@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
-import "./style.css";
 
 export const PartnerInvite = () => {
   const [partnerEmail, setPartnerEmail] = useState("");

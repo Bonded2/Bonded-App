@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ExportTimeline } from "../../screens/ExportTimeline";
-import "./style.css";
 
 export const ExportModal = ({ onClose }) => {
   const navigate = useNavigate();

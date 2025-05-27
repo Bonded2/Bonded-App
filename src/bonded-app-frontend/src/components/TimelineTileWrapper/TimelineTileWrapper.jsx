@@ -7,7 +7,6 @@ import React, { useState } from "react";
 import { Icn4 } from "../../icons/Icn4";
 import { StyleOutlined } from "../../icons/StyleOutlined";
 import { TimelineTile } from "../TimelineTile";
-import "./style.css";
 
 export const TimelineTileWrapper = ({
   className,

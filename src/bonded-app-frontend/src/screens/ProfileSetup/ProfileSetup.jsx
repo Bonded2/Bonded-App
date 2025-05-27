@@ -12,7 +12,6 @@ import {
   detectVPN,
   validateLocationConsistency 
 } from "../../utils/locationService";
-import "./style.css";
 
 // Custom styles for react-select with flags
 const customSelectStyles = {

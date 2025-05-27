@@ -1,5 +1,4 @@
 import React from "react";
-import "./level-full-wrapper.css";
 
 export const LevelFullWrapper = ({
   level,

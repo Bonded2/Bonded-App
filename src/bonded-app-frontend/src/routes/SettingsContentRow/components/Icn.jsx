@@ -1,6 +1,5 @@
 import React from "react";
 import { IconChevron } from "../icons/IconChevron";
-import "./icn.css";
 
 export const Icn = ({
   icon,

@@ -1,5 +1,4 @@
 import React from "react";
-import "./style.css";
 
 export const DeleteModal = ({ onClose, onConfirm, item }) => {
   const handleDelete = () => {

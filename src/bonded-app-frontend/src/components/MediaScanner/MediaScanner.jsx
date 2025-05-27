@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "./style.css";
 
 /**
  * MediaScanner component that uses the File System Access API to scan folders for media files

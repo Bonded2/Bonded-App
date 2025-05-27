@@ -1,8 +1,17 @@
 import React, { useEffect } from "react";
-import { RouterProvider, createBrowserRouter, redirect } from "react-router-dom";
-import { Splash } from "./screens/Splash/Splash";
-import { Login } from "./screens/Login/Login";
-import { Register } from "./screens/Register";
+import { RouterProvider, createBrowserRouter, redirect, Navigate } from "react-router-dom";
+import AuthProvider from "./components/auth/AuthProvider";
+import ProtectedRoute, { OnboardingGate, ThresholdKeysGate } from "./components/auth/ProtectedRoute";
+import LoginForm from "./components/auth/LoginForm";
+import ProfileSetupForm from "./components/profile/ProfileSetupForm";
+import ThresholdKeySetup from "./components/auth/ThresholdKeySetup";
+import Dashboard from "./components/dashboard/Dashboard";
+import { Splash } from "./components/screens/Splash";
+import { Register } from "./components/screens/Register";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
+import GeoMetadataProvider from "./features/geolocation/GeoMetadataProvider";
+
+// Import existing screens that we'll gradually migrate
 import { GettingStarted } from "./screens/GettingStarted";
 import { Verify } from "./screens/Verify";
 import { MoreInfo } from "./screens/MoreInfo";
@@ -16,11 +25,7 @@ import { TimestampFolder } from "./screens/TimestampFolder";
 import { ImagePreview } from "./screens/ImagePreview";
 import { ExportAllData } from "./screens/ExportAllData";
 import { MediaImport } from "./screens/MediaImport";
-import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
-import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
-import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
-import GeoMetadataProvider from "./features/geolocation/GeoMetadataProvider";
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -33,40 +38,30 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.log(error, errorInfo);
+    console.error('App Error:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      return <h1>Something went wrong. Please try refreshing the page.</h1>;
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Something went wrong</h1>
+            <p className="text-gray-600 mb-6">Please refresh the page to continue.</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+            >
+              Refresh Page
+            </button>
+          </div>
+        </div>
+      );
     }
 
     return this.props.children;
   }
 }
-
-// Loader function to ensure first-time user flow only happens on initial entry
-const enforceFirstTimeUserLoader = async () => {
-  // Check if this is an initial load or a navigation within the current session
-  const isInitialLoad = !sessionStorage.getItem('sessionStarted');
-  
-  // If this is the initial load, reset everything and redirect to register
-  if (isInitialLoad) {
-    // Set session flag
-    sessionStorage.setItem('sessionStarted', 'true');
-    
-    // Check if we're already on the root or register path
-    const pathname = window.location.pathname;
-    if (pathname !== '/' && pathname !== '/register') {
-      // Reset user data and redirect to splash if entry is not through root or register
-      await resetToFirstTimeUser();
-      return redirect('/');
-    }
-  }
-  
-  // Allow navigation once session has started
-  return null;
-};
 
 const router = createBrowserRouter([
   {
@@ -76,9 +71,50 @@ const router = createBrowserRouter([
   },
   {
     path: "/login",
-    element: <Login />,
+    element: <LoginForm />,
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+  },
+  {
+    path: "/profile-setup",
+    element: (
+      <ProtectedRoute>
+        <ProfileSetupForm />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/getting-started",
+    element: (
+      <ProtectedRoute requireOnboarding={true}>
+        <ThresholdKeySetup />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <ProtectedRoute requireOnboarding={true} requireThresholdKeys={true}>
+        <Dashboard />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/timeline",
+    element: (
+      <ProtectedRoute requireOnboarding={true} requireThresholdKeys={true}>
+        <Dashboard />
+      </ProtectedRoute>
+    ),
+    errorElement: <ErrorBoundary />,
+  },
+  // Legacy routes - gradually migrate these
+  {
+    path: "/splash",
+    element: <Splash />,
+    errorElement: <ErrorBoundary />,
   },
   {
     path: "/register",
@@ -87,130 +123,187 @@ const router = createBrowserRouter([
   },
   {
     path: "/partner-invite",
-    element: <PartnerInvite />,
+    element: (
+      <ProtectedRoute>
+        <PartnerInvite />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
-  },
-  {
-    path: "/profile-setup",
-    element: <ProfileSetup />,
-    errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
-  },
-  {
-    path: "/getting-started",
-    element: <GettingStarted />,
-    errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/verify",
-    element: <Verify />,
+    element: (
+      <ProtectedRoute>
+        <Verify />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/more-info",
-    element: <MoreInfo />,
+    element: (
+      <ProtectedRoute>
+        <MoreInfo />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
-  },
-  {
-    path: "/timeline",
-    element: <TimelineCreated />,
-    errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/timeline-created",
-    element: <TimelineCreated />,
+    element: (
+      <ProtectedRoute>
+        <TimelineCreated />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/settings",
-    element: <Capture />,
+    element: (
+      <ProtectedRoute>
+        <Capture />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/account",
-    element: <Account />,
+    element: (
+      <ProtectedRoute>
+        <Account />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/privacy",
-    element: <Privacy />,
+    element: (
+      <ProtectedRoute>
+        <Privacy />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/faq",
     element: <FAQ />,
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/export-timeline",
-    element: <ExportTimeline onClose={() => {}} />,
+    element: (
+      <ProtectedRoute>
+        <ExportTimeline onClose={() => {}} />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/timestamp-folder/:date",
-    element: <TimestampFolder />,
+    element: (
+      <ProtectedRoute>
+        <TimestampFolder />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/image-preview/:itemId",
-    element: <ImagePreview />,
+    element: (
+      <ProtectedRoute>
+        <ImagePreview />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/export-all-data",
-    element: <ExportAllData />,
+    element: (
+      <ProtectedRoute>
+        <ExportAllData />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/media-import",
-    element: <MediaImport />,
+    element: (
+      <ProtectedRoute>
+        <MediaImport />
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
-  // Advanced AI Tools routes (placeholders for future implementation)
+  // Future AI Tools routes
   {
     path: "/advanced-tools",
-    element: <div>Advanced AI Tools</div>,
+    element: (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Advanced AI Tools</h1>
+            <p className="text-gray-600">Coming soon in Sprint 3</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/story-maker",
-    element: <div>StoryMaker Tool</div>,
+    element: (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">StoryMaker Tool</h1>
+            <p className="text-gray-600">AI-powered story generation from evidence - Coming in Sprint 3</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/application-maker",
-    element: <div>ApplicationMaker Tool</div>,
+    element: (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">ApplicationMaker Tool</h1>
+            <p className="text-gray-600">Automated application generation - Coming in Sprint 3</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/status-assessor",
-    element: <div>Status Assessor Tool</div>,
+    element: (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Status Assessor Tool</h1>
+            <p className="text-gray-600">AI relationship status assessment - Coming in Sprint 3</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/impermanent-access",
-    element: <div>Impermanent Access Tool</div>,
+    element: (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Impermanent Access Tool</h1>
+            <p className="text-gray-600">Temporary evidence sharing - Coming in Sprint 3</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   }
 ]);
 
@@ -234,36 +327,22 @@ const OfflineIndicator = () => {
   if (!isOffline) return null;
 
   return (
-    <div className="offline-indicator">
+    <div className="fixed top-0 left-0 right-0 p-2 bg-primary text-white text-center text-sm z-50 shadow-elevation-2dp animate-slideDown">
       You are currently offline. Some features may be unavailable.
     </div>
   );
 };
 
 export const App = () => {
-  // Only reset user data on initial app load of a new session
-  useEffect(() => {
-    const resetDataIfNeeded = async () => {
-      // Only reset if this is a direct entry to a deep link (not through splash or register)
-      const isInitialLoad = !sessionStorage.getItem('sessionStarted');
-      const pathname = window.location.pathname;
-      
-      if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
-        await resetToFirstTimeUser();
-        sessionStorage.setItem('sessionStarted', 'true');
-      }
-    };
-    
-    resetDataIfNeeded();
-  }, []);
-  
   return (
     <ErrorBoundary>
-      <GeoMetadataProvider>
-        <OfflineIndicator />
-        <RouterProvider router={router} />
-        <PWAInstallPrompt />
-      </GeoMetadataProvider>
+      <AuthProvider>
+        <GeoMetadataProvider>
+          <OfflineIndicator />
+          <RouterProvider router={router} />
+          <PWAInstallPrompt />
+        </GeoMetadataProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };

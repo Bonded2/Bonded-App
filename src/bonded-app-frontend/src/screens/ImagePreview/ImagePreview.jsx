@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { InfoModal } from "../../components/InfoModal";
 import { DeleteModal } from "../../components/DeleteModal";
-import "./style.css";
 
 // LocalStorage key for timestamp content - same as in TimestampFolder
 const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';

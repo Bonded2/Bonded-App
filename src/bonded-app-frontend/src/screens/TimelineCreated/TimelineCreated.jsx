@@ -7,7 +7,6 @@ import { MenuFrame } from "../../components/MenuFrame/MenuFrame";
 import { UploadModal } from "../../components/UploadModal";
 import { ExportModal } from "../../components/ExportModal";
 import { MediaScanner } from "../../components/MediaScanner";
-import "./style.css";
 
 // LocalStorage keys for storing timeline data
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';

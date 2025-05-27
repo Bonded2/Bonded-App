@@ -1,3 +1,176 @@
+type Location = record {
+  latitude : float64;
+  longitude : float64;
+  accuracy : opt float64;
+};
+
+type EvidenceSource = variant {
+  Manual;
+  Telegram;
+  PhotoLibrary;
+  Document;
+};
+
+type EvidenceMetadata = record {
+  file_type : text;
+  file_size : nat64;
+  timestamp : nat64;
+  location : opt Location;
+  content_filters_applied : vec text;
+  source : EvidenceSource;
+};
+
+type EvidenceEntry = record {
+  id : text;
+  owner : principal;
+  file_hash : text;
+  encrypted_data : text;
+  metadata : EvidenceMetadata;
+  created_at : nat64;
+  upload_cycle_id : text;
+  is_revoked : bool;
+};
+
+type UploadCycle = variant {
+  Daily;
+  Weekly;
+  Manual;
+};
+
+type PrivacyLevel = variant {
+  Private;
+  Relationship;
+  Public;
+};
+
+type UserSettings = record {
+  image_filter_enabled : bool;
+  text_filter_enabled : bool;
+  location_filter_enabled : bool;
+  upload_cycle : UploadCycle;
+  privacy_level : PrivacyLevel;
+};
+
+type KycStatus = variant {
+  Unverified;
+  Pending;
+  Verified;
+  Rejected;
+};
+
+type VerificationMethod = variant {
+  InternetIdentity;
+  Yoti : record { verification_id : text };
+  ThresholdKey : record { key_id : text };
+};
+
+type User = record {
+  user_principal : principal;
+  username : opt text;
+  email : opt text;
+  profile_photo : opt text;
+  kyc_status : KycStatus;
+  created_at : nat64;
+  updated_at : nat64;
+  settings : UserSettings;
+  verification_methods : vec VerificationMethod;
+};
+
+type AuthSession = record {
+  session_id : text;
+  user_principal : principal;
+  created_at : nat64;
+  expires_at : nat64;
+  is_active : bool;
+  verification_method : VerificationMethod;
+};
+
+type KeyShare = record {
+  share_id : text;
+  encrypted_share : text;
+  share_holder : principal;
+  created_at : nat64;
+};
+
+type ThresholdKeyData = record {
+  user_principal : principal;
+  key_shares : vec KeyShare;
+  threshold : nat8;
+  total_shares : nat8;
+  created_at : nat64;
+  is_active : bool;
+};
+
+type RelationshipType = variant {
+  Partner;
+  Family;
+  Friend;
+  Professional;
+};
+
+type RelationshipStatus = variant {
+  Pending;
+  Active;
+  Blocked;
+  Terminated;
+};
+
+type Relationship = record {
+  id : text;
+  user_a : principal;
+  user_b : principal;
+  relationship_type : RelationshipType;
+  status : RelationshipStatus;
+  created_at : nat64;
+  updated_at : nat64;
+  metadata : vec record { text; text };
+};
+
+type CreateUserRequest = record {
+  username : opt text;
+  email : opt text;
+  verification_method : VerificationMethod;
+};
+
+type UpdateUserRequest = record {
+  username : opt text;
+  email : opt text;
+  profile_photo : opt text;
+  settings : opt UserSettings;
+};
+
+type CreateRelationshipRequest = record {
+  target_user : principal;
+  relationship_type : RelationshipType;
+  metadata : vec record { text; text };
+};
+
+type UploadEvidenceRequest = record {
+  encrypted_data : text;
+  file_hash : text;
+  metadata : EvidenceMetadata;
+  upload_cycle_id : text;
+};
+
+type ApiResponse = record {
+  success : bool;
+  data : opt text;
+  error : opt text;
+};
+
 service : {
-    "greet": (text) -> (text) query;
+  create_user : (CreateUserRequest) -> (ApiResponse);
+  get_user : () -> (ApiResponse) query;
+  update_user : (UpdateUserRequest) -> (ApiResponse);
+  create_auth_session : () -> (ApiResponse);
+  invalidate_session : (text) -> (ApiResponse);
+  setup_threshold_keys : (nat8, nat8) -> (ApiResponse);
+  get_threshold_keys : () -> (ApiResponse) query;
+  create_relationship : (CreateRelationshipRequest) -> (ApiResponse);
+  get_relationships : () -> (ApiResponse) query;
+  upload_evidence : (UploadEvidenceRequest) -> (ApiResponse);
+  get_evidence_timeline : () -> (ApiResponse) query;
+  revoke_evidence : (text) -> (ApiResponse);
+  get_canister_info : () -> (ApiResponse) query;
+  health_check : () -> (ApiResponse) query;
 }
