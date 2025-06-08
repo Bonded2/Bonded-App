@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { RouterProvider, createBrowserRouter, redirect } from "react-router-dom";
+import { RouterProvider, createBrowserRouter, redirect, Navigate } from "react-router-dom";
 import { Splash } from "./screens/Splash/Splash";
 import { Login } from "./screens/Login/Login";
 import { Register } from "./screens/Register";
@@ -17,6 +17,7 @@ import { ImagePreview } from "./screens/ImagePreview";
 import { ExportAllData } from "./screens/ExportAllData";
 import { MediaImport } from "./screens/MediaImport";
 import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
+import { AISettings } from "./screens/AISettings/AISettings";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
 import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
@@ -129,9 +130,8 @@ const router = createBrowserRouter([
   },
   {
     path: "/settings",
-    element: <Capture />,
+    element: <Navigate to="/ai-settings" replace />,
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
   },
   {
     path: "/account",
@@ -178,6 +178,12 @@ const router = createBrowserRouter([
   {
     path: "/media-import",
     element: <MediaImport />,
+    errorElement: <ErrorBoundary />,
+    loader: enforceFirstTimeUserLoader,
+  },
+  {
+    path: "/ai-settings",
+    element: <AISettings />,
     errorElement: <ErrorBoundary />,
     loader: enforceFirstTimeUserLoader,
   },
@@ -255,6 +261,36 @@ export const App = () => {
     };
     
     resetDataIfNeeded();
+
+    // Listen for service worker messages
+    const handleServiceWorkerMessage = async (event) => {
+      if (event.data && event.data.type === 'TRIGGER_DAILY_PROCESSING') {
+        console.log('[App] Received daily processing trigger from service worker');
+        
+        try {
+          // Import and trigger evidence processing
+          const { evidenceProcessor } = await import('./services/index.js');
+          const result = await evidenceProcessor.processDailyEvidence();
+          
+          if (result.success) {
+            console.log('[App] Daily evidence processing completed successfully');
+          } else {
+            console.warn('[App] Daily evidence processing failed:', result.errors);
+          }
+        } catch (error) {
+          console.error('[App] Failed to process daily evidence:', error);
+        }
+      }
+    };
+
+    // Register service worker message listener
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+      
+      return () => {
+        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+      };
+    }
   }, []);
   
   return (

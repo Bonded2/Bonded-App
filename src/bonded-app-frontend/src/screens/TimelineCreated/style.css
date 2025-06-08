@@ -304,6 +304,44 @@
     animation: ripple 1s ease-out;
   }
   
+  /* Empty Timeline Actions */
+  .timeline-created .empty-timeline-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .timeline-created .ai-settings-button {
+    background-color: rgba(185, 255, 70, 0.2);
+    color: #B9FF46;
+    border: 2px solid #B9FF46;
+    border-radius: 28px;
+    padding: 14px 32px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 8px 20px rgba(185, 255, 70, 0.2);
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.8s ease-in-out 0.8s forwards;
+    opacity: 0;
+  }
+
+  .timeline-created .ai-settings-button:hover {
+    background-color: #B9FF46;
+    color: #2C4CDF;
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 12px 24px rgba(185, 255, 70, 0.4);
+  }
+
+  .timeline-created .ai-settings-button:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 4px 8px rgba(185, 255, 70, 0.3);
+  }
+  
   .timeline-created .timeline-line {
     height: 100%;
     left: 8px; /* Adjust to position properly with new tile margins */
@@ -381,6 +419,23 @@
   
   .timeline-created .timeline-dot-animated {
     transform: scale(1);
+  }
+
+  /* AI Timeline Dots */
+  .timeline-created .timeline-dot.ai-dot {
+    background-color: #B9FF46;
+    box-shadow: 0 0 15px rgba(185, 255, 70, 0.6);
+    border: 2px solid #2C4CDF;
+  }
+
+  .timeline-created .timeline-dot.ai-dot::after {
+    content: '🤖';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    line-height: 1;
   }
   
   /* Date badge styling */

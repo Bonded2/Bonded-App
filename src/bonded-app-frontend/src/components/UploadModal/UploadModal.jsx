@@ -4,6 +4,8 @@ import { Photo1 } from "../../icons/Photo1";
 // import { DescriptionIcon } from "../../icons/Description"; // Example for document files - ensure you have such an icon
 import { Today } from "../../icons/Today"; // For date
 import { useGeoMetadata } from "../../features/geolocation/hooks/useGeoMetadata";
+import { aiClassificationService } from "../../utils/aiClassification";
+import { AIClassificationDemo } from "../AIClassificationDemo";
 import "./style.css";
 
 // Helper to get a simple file type category
@@ -28,17 +30,25 @@ const FileIcon = ({ file }) => {
   return <span className="file-item-icon generic-icon">📄</span>; // Generic file icon
 };
 
-// Function to check if a file would be excluded by AI filters
-// This is a simplified version. Real logic would depend on how captureSettings levels (light, medium, full)
-// translate to specific file properties (size, resolution, content for telegram etc.)
-const getExclusionReason = (file, captureSettings, fileTypeOverrides) => {
+// Function to check if a file would be excluded by AI filters and settings
+const getExclusionReason = (file, captureSettings, fileTypeOverrides, aiClassificationResult = null) => {
   const category = getFileTypeCategory(file);
   const fileExt = file.name.split('.').pop().toLowerCase();
 
+  // Check manual file type overrides first
   if (fileTypeOverrides && fileTypeOverrides[fileExt] === false) {
     return `Manually excluded file type: .${fileExt}`;
   }
 
+  // Check AI classification results for images
+  if (aiClassificationResult && category === 'image') {
+    const exclusion = aiClassificationService.shouldExcludeContent(aiClassificationResult, 'image');
+    if (exclusion.exclude) {
+      return `AI Filter: ${exclusion.reason}`;
+    }
+  }
+
+  // Check capture settings
   if (captureSettings) {
     if (category === 'image' && captureSettings.photos === 'none') {
       return "Image capture is set to 'none'.";
@@ -69,15 +79,23 @@ export const UploadModal = ({
   const [currentFilter, setCurrentFilter] = useState("all");
   const [hoveredExclusion, setHoveredExclusion] = useState(null); // fileName for tooltip
   const [isPreparingUpload, setIsPreparingUpload] = useState(false);
+  const [aiClassificationResults, setAiClassificationResults] = useState({}); // Store AI results by filename
+  const [isClassifying, setIsClassifying] = useState(false);
+  const [showAIDemo, setShowAIDemo] = useState(false);
   
   // Get geolocation metadata hook
   const { getMetadataForFile, refreshMetadata } = useGeoMetadata();
+
+  // Initialize AI service on component mount
+  useEffect(() => {
+    aiClassificationService.initialize().catch(console.error);
+  }, []);
 
   const handleSelectFilesClick = () => {
     fileInputRef.current.click();
   };
 
-  const handleFileInputChange = (e) => {
+  const handleFileInputChange = async (e) => {
     const newFiles = Array.from(e.target.files);
     // Prevent duplicates by checking names, simple approach
     const uniqueNewFiles = newFiles.filter(nf => !selectedFiles.some(sf => sf.name === nf.name && sf.size === nf.size));
@@ -87,6 +105,44 @@ export const UploadModal = ({
     uniqueNewFiles.forEach(file => newChecked[file.name] = true); // Auto-check new files
     setCheckedFiles(newChecked);
     if(fileInputRef.current) fileInputRef.current.value = ""; 
+
+    // Run AI classification on new image files
+    await classifyNewFiles(uniqueNewFiles);
+  };
+
+  // Function to classify new files with AI
+  const classifyNewFiles = async (files) => {
+    const imageFiles = files.filter(file => getFileTypeCategory(file) === 'image');
+    
+    if (imageFiles.length === 0) return;
+
+    setIsClassifying(true);
+    
+    try {
+      const classificationPromises = imageFiles.map(async (file) => {
+        try {
+          const result = await aiClassificationService.classifyImage(file);
+          return { fileName: file.name, result };
+        } catch (error) {
+          console.error(`AI classification failed for ${file.name}:`, error);
+          return { fileName: file.name, error: error.message };
+        }
+      });
+
+      const results = await Promise.all(classificationPromises);
+      
+      // Update classification results state
+      const newResults = { ...aiClassificationResults };
+      results.forEach(({ fileName, result, error }) => {
+        newResults[fileName] = error ? { error } : result;
+      });
+      setAiClassificationResults(newResults);
+
+    } catch (error) {
+      console.error('Batch AI classification failed:', error);
+    } finally {
+      setIsClassifying(false);
+    }
   };
 
   const handleCheckboxChange = (fileName) => {
@@ -102,7 +158,10 @@ export const UploadModal = ({
       
       // Filter selected files
       const filesToUpload = selectedFiles.filter(file => checkedFiles[file.name]);
-      const finalFilesToUpload = filesToUpload.filter(file => !getExclusionReason(file, captureSettings, fileTypeOverrides));
+      const finalFilesToUpload = filesToUpload.filter(file => {
+        const aiResult = aiClassificationResults[file.name];
+        return !getExclusionReason(file, captureSettings, fileTypeOverrides, aiResult);
+      });
       
       if (finalFilesToUpload.length !== filesToUpload.length) {
           // Optionally confirm with user if some checked files will be excluded
@@ -209,8 +268,12 @@ export const UploadModal = ({
                         <span>Select All Visible ({filteredFiles.filter(f => !!checkedFiles[f.name]).length} / {filteredFiles.length})</span>
                       </li>
                       {filteredFiles.map(file => {
-                        const exclusionReason = getExclusionReason(file, captureSettings, fileTypeOverrides);
+                        const aiResult = aiClassificationResults[file.name];
+                        const exclusionReason = getExclusionReason(file, captureSettings, fileTypeOverrides, aiResult);
                         const isExcluded = !!exclusionReason;
+                        const isImage = getFileTypeCategory(file) === 'image';
+                        const isClassifying = isImage && !aiResult && isClassifying;
+                        
                         return (
                           <li 
                             key={`${file.name}-${file.lastModified}`}
@@ -231,6 +294,21 @@ export const UploadModal = ({
                                 <span className="file-meta">
                                     {(file.size / 1024).toFixed(1)} KB • {new Date(file.lastModified).toLocaleDateString()}
                                     {isExcluded && <span className="exclusion-indicator"> ℹ️</span>}
+                                    {isImage && (
+                                      <span className="ai-status">
+                                        {isClassifying ? (
+                                          <span className="ai-processing"> 🔄 AI Analyzing...</span>
+                                        ) : aiResult?.error ? (
+                                          <span className="ai-error"> ⚠️ AI Error</span>
+                                        ) : aiResult?.success ? (
+                                          aiResult.data.content_appropriate ? (
+                                            <span className="ai-approved"> ✅ AI Approved</span>
+                                          ) : (
+                                            <span className="ai-rejected"> ❌ AI Rejected</span>
+                                          )
+                                        ) : null}
+                                      </span>
+                                    )}
                                 </span>
                             </div>
                             {hoveredExclusion === file.name && isExcluded && (
@@ -253,15 +331,36 @@ export const UploadModal = ({
                   <button 
                     className="upload-checked-btn primary" 
                     onClick={handleUploadChecked} 
-                    disabled={countCheckedFiles() === 0 || isPreparingUpload}
+                    disabled={countCheckedFiles() === 0 || isPreparingUpload || isClassifying}
                   >
                     {isPreparingUpload ? (
                       <span>Preparing Files...</span>
+                    ) : isClassifying ? (
+                      <span>AI Processing...</span>
                     ) : (
                       <span>Upload {countCheckedFiles()} Selected</span>
                     )}
                   </button>
             </div>
+                
+                {/* AI Classification Status */}
+                {(isClassifying || Object.keys(aiClassificationResults).length > 0) && (
+                  <div className="ai-classification-status">
+                    <h4>AI Content Filtering</h4>
+                    <p>
+                      {isClassifying ? 
+                        "Analyzing images for content appropriateness..." : 
+                        "Image analysis complete. Inappropriate content will be automatically excluded."
+                      }
+                    </p>
+                    <button 
+                      className="ai-demo-button"
+                      onClick={() => setShowAIDemo(true)}
+                    >
+                      Test AI Classification
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -276,6 +375,11 @@ export const UploadModal = ({
           />
         </div>
       </div>
+      
+      {/* AI Classification Demo Modal */}
+      {showAIDemo && (
+        <AIClassificationDemo onClose={() => setShowAIDemo(false)} />
+      )}
     </div>
   );
 }; 

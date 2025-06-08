@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TimelineTileWrapper } from "../../components/TimelineTileWrapper";
+import { AITimelineEntry } from "../../components/AITimelineEntry";
 import { TopAppBar } from "../../components/TopAppBar";
 import { Chat4 } from "../../icons/Chat4";
 import { MenuFrame } from "../../components/MenuFrame/MenuFrame";
 import { UploadModal } from "../../components/UploadModal";
 import { ExportModal } from "../../components/ExportModal";
 import { MediaScanner } from "../../components/MediaScanner";
+import { autoAIScanner } from "../../utils/autoAIScanner";
+import useBondedServices from "../../hooks/useBondedServices";
 import "./style.css";
 
 // LocalStorage keys for storing timeline data
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';
 const TIMELINE_LAST_UPDATE_KEY = 'bonded_timeline_last_update';
 const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
+const AI_TIMELINE_DATA_KEY = 'aiProcessedTimeline';
 
 export const TimelineCreated = () => {
   const navigate = useNavigate();
@@ -28,8 +32,42 @@ export const TimelineCreated = () => {
   const [error, setError] = useState(null);
   const timelineRef = useRef(null);
 
+  // Use Bonded services hook
+  const {
+    isInitialized,
+    isLoading: servicesLoading,
+    timeline: bondedTimeline,
+    statistics,
+    refreshTimeline,
+    processEvidence,
+    exportToPDF,
+    isUploadDue,
+    error: servicesError
+  } = useBondedServices();
+
   // Initialize with empty timeline that will be populated dynamically
   const [timelineData, setTimelineData] = useState([]);
+  const [aiTimelineData, setAiTimelineData] = useState([]);
+  const [combinedTimelineData, setCombinedTimelineData] = useState([]);
+
+  // Function to load AI timeline data from localStorage
+  const loadAITimelineData = useCallback(() => {
+    try {
+      const savedAIData = localStorage.getItem(AI_TIMELINE_DATA_KEY);
+      if (savedAIData) {
+        const parsedAIData = JSON.parse(savedAIData);
+        if (Array.isArray(parsedAIData)) {
+          setAiTimelineData(parsedAIData);
+          console.log(`Loaded ${parsedAIData.length} AI timeline entries`);
+        }
+      } else {
+        setAiTimelineData([]);
+      }
+    } catch (error) {
+      console.error('Error loading AI timeline data:', error);
+      setAiTimelineData([]);
+    }
+  }, []);
 
   // Function to load timeline data from localStorage
   const loadTimelineData = useCallback(() => {
@@ -118,10 +156,69 @@ export const TimelineCreated = () => {
     }
   }, []);
 
+  // Combine timeline data and AI timeline data
+  const combineTimelineData = useCallback(() => {
+    const combined = [];
+    
+    // Add regular timeline entries
+    timelineData.forEach(item => {
+      combined.push({
+        ...item,
+        type: 'regular',
+        sortTimestamp: item.timestamp || Date.now()
+      });
+    });
+    
+    // Add AI timeline entries
+    aiTimelineData.forEach(item => {
+      combined.push({
+        ...item,
+        type: 'ai_processed',
+        sortTimestamp: new Date(item.createdAt).getTime()
+      });
+    });
+
+    // Add Bonded services timeline entries
+    bondedTimeline.forEach(item => {
+      combined.push({
+        ...item,
+        type: 'bonded_evidence',
+        sortTimestamp: item.timestamp || Date.now()
+      });
+    });
+    
+    // Sort by timestamp, newest first
+    combined.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
+    
+    setCombinedTimelineData(combined);
+  }, [timelineData, aiTimelineData, bondedTimeline]);
+
   // Load timeline data on mount
   useEffect(() => {
     loadTimelineData();
-  }, [loadTimelineData]);
+    loadAITimelineData();
+  }, [loadTimelineData, loadAITimelineData]);
+
+  // Combine data when either timeline changes
+  useEffect(() => {
+    combineTimelineData();
+  }, [combineTimelineData]);
+
+  // Set up auto AI scanner observer
+  useEffect(() => {
+    const aiScannerObserver = (event, data) => {
+      if (event === 'timelineUpdated') {
+        // Reload AI timeline data when new entries are added
+        loadAITimelineData();
+      }
+    };
+
+    autoAIScanner.addObserver(aiScannerObserver);
+
+    return () => {
+      autoAIScanner.removeObserver(aiScannerObserver);
+    };
+  }, [loadAITimelineData]);
 
   // Save timeline data to localStorage whenever it changes
   useEffect(() => {
@@ -460,9 +557,40 @@ export const TimelineCreated = () => {
     setIsMediaScannerOpen(false);
   };
 
+  // Handle manual evidence processing
+  const handleProcessEvidenceClick = async () => {
+    try {
+      const result = await processEvidence();
+      
+      if (result.success) {
+        setShowImportSuccess(true);
+        setImportedMediaInfo({
+          count: (result.evidence.photo ? 1 : 0) + result.evidence.messages.length,
+          type: result.evidence.photo ? 'photo and messages' : 'messages'
+        });
+        
+        // Hide success message after 3 seconds
+        setTimeout(() => setShowImportSuccess(false), 3000);
+      } else {
+        setError(`Evidence processing failed: ${result.errors.join(', ')}`);
+      }
+    } catch (err) {
+      setError(`Failed to process evidence: ${err.message}`);
+    }
+  };
+
+  // Handle timeline refresh
+  const handleRefreshTimeline = async () => {
+    try {
+      await refreshTimeline(true);
+    } catch (err) {
+      setError(`Failed to refresh timeline: ${err.message}`);
+    }
+  };
+
   // Handle scroll animations
   useEffect(() => {
-    if (!timelineData.length) return;
+    if (!combinedTimelineData.length) return;
     
     const observer = new IntersectionObserver(
       (entries) => {
@@ -479,21 +607,21 @@ export const TimelineCreated = () => {
     elements.forEach(element => observer.observe(element));
 
     return () => elements.forEach(element => observer.unobserve(element));
-  }, [timelineData]);
+  }, [combinedTimelineData]);
 
   // Handle initial animation on mount
   useEffect(() => {
-    if (!timelineData.length) return;
+    if (!combinedTimelineData.length) return;
     
     const timer = setTimeout(() => {
       // Animate first 3 items or all items if less than 3
-      const itemsToAnimate = Math.min(timelineData.length, 3);
-      const itemIds = timelineData.slice(0, itemsToAnimate).map(item => item.id);
+      const itemsToAnimate = Math.min(combinedTimelineData.length, 3);
+      const itemIds = combinedTimelineData.slice(0, itemsToAnimate).map(item => item.id);
       setAnimatedItems(itemIds);
     }, 500);
     
     return () => clearTimeout(timer);
-  }, [timelineData]);
+  }, [combinedTimelineData]);
 
   const renderTimelineContent = () => {
     if (loading) {
@@ -516,14 +644,19 @@ export const TimelineCreated = () => {
       );
     }
     
-    if (timelineData.length === 0) {
+    if (combinedTimelineData.length === 0) {
       return (
         <div className="empty-timeline">
           <p>Your timeline is empty</p>
-          <p className="empty-timeline-hint">Scan your device to import media into your timeline</p>
+          <p className="empty-timeline-hint">Scan your device to import media into your timeline or enable AI auto-scanning</p>
+          <div className="empty-timeline-actions">
           <button className="scan-media-button" onClick={handleScanMediaClick}>
             Scan Device Media
           </button>
+            <button className="ai-settings-button" onClick={() => navigate('/ai-settings')}>
+              AI Settings
+            </button>
+          </div>
         </div>
       );
     }
@@ -532,17 +665,29 @@ export const TimelineCreated = () => {
       <>
         <div className="timeline-line">
           <div className="timeline-vertical-line">
-            {timelineData.map((item, index) => (
+            {combinedTimelineData.map((item, index) => (
               <div 
                 key={`dot-${item.id}`} 
-                className={`timeline-dot ${animatedItems.includes(item.id) ? 'timeline-dot-animated' : ''}`}
+                className={`timeline-dot ${animatedItems.includes(item.id) ? 'timeline-dot-animated' : ''} ${item.type === 'ai_processed' ? 'ai-dot' : ''}`}
                 style={{ top: `${index * 200 + 100}px` }}
               />
             ))}
           </div>
         </div>
 
-        {timelineData.map((item, index) => (
+        {combinedTimelineData.map((item, index) => {
+          if (item.type === 'ai_processed') {
+            return (
+              <AITimelineEntry
+                key={item.id}
+                entry={item}
+                onClick={handleTimelineTileClick}
+                className={`timeline-item ${animatedItems.includes(item.id) ? 'timeline-item-animated' : ''}`}
+                isAnimated={animatedItems.includes(item.id)}
+              />
+            );
+          } else {
+            return (
           <div 
             className={`timeline-item ${animatedItems.includes(item.id) ? 'timeline-item-animated' : ''}`}
             key={item.id}
@@ -571,7 +716,9 @@ export const TimelineCreated = () => {
               blockchainTimestamp={item.blockchainTimestamp}
             />
           </div>
-        ))}
+            );
+          }
+        })}
         
         <div className="timeline-end">
           <div className="timeline-end-dot" />

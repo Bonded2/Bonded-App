@@ -228,6 +228,13 @@ self.addEventListener('sync', event => {
   }
 });
 
+// Handle periodic background sync for daily evidence processing
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'daily-evidence-upload') {
+    event.waitUntil(performDailyEvidenceProcessing());
+  }
+});
+
 // Handle push notifications for collaboration invites
 self.addEventListener('push', event => {
   const data = event.data.json();
@@ -302,4 +309,29 @@ async function getPendingUploads() {
 async function removePendingUpload(id) {
   // This would be implemented to remove a successful upload from the pending queue
   return true;
+}
+
+// Function to perform daily evidence processing in background
+async function performDailyEvidenceProcessing() {
+  try {
+    console.log('[ServiceWorker] Performing daily evidence processing...');
+    
+    // Send message to main app to trigger evidence processing
+    const clients = await self.clients.matchAll();
+    
+    if (clients.length > 0) {
+      // App is open, send message to trigger processing
+      clients[0].postMessage({
+        type: 'TRIGGER_DAILY_PROCESSING',
+        timestamp: Date.now()
+      });
+    } else {
+      // App is closed, we would need to implement background processing
+      // For MVP, we'll just log and wait for app to open
+      console.log('[ServiceWorker] App not open, daily processing deferred');
+    }
+    
+  } catch (error) {
+    console.error('[ServiceWorker] Daily evidence processing failed:', error);
+  }
 } 

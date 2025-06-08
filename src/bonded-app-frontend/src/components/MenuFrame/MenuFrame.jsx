@@ -7,6 +7,8 @@ import { LocationOn2 } from "../../icons/LocationOn2";
 import { Chat4 } from "../../icons/Chat4";
 import { EditProfileModal } from "../EditProfileModal";
 import { getUserData, logoutUser } from "../../utils/userState";
+import { autoAIScanner } from "../../utils/autoAIScanner";
+import { aiClassificationService } from "../../utils/aiClassification";
 import "./style.css";
 
 export const MenuFrame = ({ onClose }) => {
@@ -14,6 +16,14 @@ export const MenuFrame = ({ onClose }) => {
   const location = useLocation();
   const [userData, setUserData] = useState({ fullName: "User", email: "user@example.com", avatar: "U" });
   const [showEditModal, setShowEditModal] = useState(false);
+  const [aiStatus, setAiStatus] = useState({
+    isInitialized: false,
+    isScanning: false,
+    scanProgress: 0,
+    approvedCount: 0,
+    rejectedCount: 0,
+    autoScanEnabled: false
+  });
 
   // Load user data when component mounts
   useEffect(() => {
@@ -23,7 +33,33 @@ export const MenuFrame = ({ onClose }) => {
       email: userInfo.email || "user@example.com",
       avatar: userInfo.avatar || "U",
     });
+
+    // Initialize AI status
+    updateAiStatus();
+
+    // Set up AI scanner observer
+    const aiObserver = (event, data) => {
+      updateAiStatus();
+    };
+
+    autoAIScanner.addObserver(aiObserver);
+
+    return () => {
+      autoAIScanner.removeObserver(aiObserver);
+    };
   }, []);
+
+  const updateAiStatus = () => {
+    const scanStatus = autoAIScanner.getScanStatus();
+    setAiStatus({
+      isInitialized: aiClassificationService.isInitialized,
+      isScanning: scanStatus.isScanning,
+      scanProgress: scanStatus.progress,
+      approvedCount: scanStatus.approvedCount,
+      rejectedCount: scanStatus.rejectedCount,
+      autoScanEnabled: scanStatus.settings.autoScanEnabled
+    });
+  };
 
   const handleLogout = () => {
     console.log("Logging out...");
@@ -52,6 +88,28 @@ export const MenuFrame = ({ onClose }) => {
       email: userInfo.email || "user@example.com",
       avatar: userInfo.avatar || "U",
     });
+  };
+
+  const handleStartAIScan = async () => {
+    try {
+      await autoAIScanner.startAutoScan();
+      updateAiStatus();
+    } catch (error) {
+      console.error('Failed to start AI scan:', error);
+    }
+  };
+
+  const handleStopAIScan = () => {
+    autoAIScanner.stopAutoScan();
+    updateAiStatus();
+  };
+
+  const handleToggleAutoScan = () => {
+    const newSettings = {
+      autoScanEnabled: !aiStatus.autoScanEnabled
+    };
+    autoAIScanner.saveSettings(newSettings);
+    updateAiStatus();
   };
 
   const isActive = (path) => location.pathname === path;
@@ -91,14 +149,73 @@ export const MenuFrame = ({ onClose }) => {
         <div className="menu-divider" role="separator"></div>
         
         <nav className="menu-nav-items" aria-label="Main navigation">
+          {/* AI Data Capture Section */}
+          <div className="ai-section">
+            <div className="ai-section-header">
+              <h3>AI Data Capture</h3>
+              <div className={`ai-status-indicator ${aiStatus.isInitialized ? 'ready' : 'not-ready'}`}>
+                {aiStatus.isInitialized ? '🤖 Ready' : '⚠️ Not Ready'}
+              </div>
+            </div>
+            
+            {/* AI Status Summary */}
+            <div className="ai-status-summary">
+              <div className="ai-stats">
+                <div className="ai-stat">
+                  <span className="stat-value">{aiStatus.approvedCount}</span>
+                  <span className="stat-label">Approved</span>
+                </div>
+                <div className="ai-stat">
+                  <span className="stat-value">{aiStatus.rejectedCount}</span>
+                  <span className="stat-label">Filtered</span>
+                </div>
+                {aiStatus.isScanning && (
+                  <div className="ai-stat">
+                    <span className="stat-value">{Math.round(aiStatus.scanProgress)}%</span>
+                    <span className="stat-label">Progress</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* AI Controls */}
+              <div className="ai-controls">
+                <button 
+                  className={`ai-toggle ${aiStatus.autoScanEnabled ? 'enabled' : 'disabled'}`}
+                  onClick={handleToggleAutoScan}
+                  disabled={!aiStatus.isInitialized}
+                >
+                  {aiStatus.autoScanEnabled ? '🟢 Auto Scan ON' : '🔴 Auto Scan OFF'}
+                </button>
+                
+                {aiStatus.isScanning ? (
+                  <button className="ai-action stop" onClick={handleStopAIScan}>
+                    ⏹️ Stop Scan
+                  </button>
+                ) : (
+                  <button 
+                    className="ai-action start" 
+                    onClick={handleStartAIScan}
+                    disabled={!aiStatus.isInitialized || !aiStatus.autoScanEnabled}
+                  >
+                    ▶️ Start Scan
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Links */}
           <Link 
-            to="/settings" 
-            className={`menu-item ${isActive("/settings") ? "active" : ""}`}
+            to="/ai-settings" 
+            className={`menu-item ${isActive("/ai-settings") ? "active" : ""}`}
             onClick={onClose}
-            aria-current={isActive("/settings") ? "page" : undefined}
+            aria-current={isActive("/ai-settings") ? "page" : undefined}
           >
-            <Settings className="menu-icon" aria-hidden="true" />
-            <span className="menu-text">Data Capture Settings</span>
+            <div className="menu-icon ai-icon">🤖</div>
+            <span className="menu-text">AI Settings & Demo</span>
+            <div className="menu-badge">
+              {aiStatus.isScanning ? 'Scanning...' : 'Configure'}
+            </div>
           </Link>
           
           <Link 

@@ -23,3 +23,11 @@ dist/
 
 # environment variables
 .env
+
+
+# cursor rules
+.cursorrules
+.cursor/
+
+# assets 
+src/bonded-app-frontend/public/models/
