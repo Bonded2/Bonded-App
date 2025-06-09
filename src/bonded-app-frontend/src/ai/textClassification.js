@@ -476,5 +476,6 @@ class TextClassificationService {
   }
 }
 
-// Export singleton instance
-export const TextClassificationService = new TextClassificationService(); 
+// Export class and singleton instance
+export { TextClassificationService };
+export const textClassificationService = new TextClassificationService(); 

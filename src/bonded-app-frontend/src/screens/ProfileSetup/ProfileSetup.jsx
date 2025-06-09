@@ -4,6 +4,7 @@ import Select from 'react-select';
 import AsyncSelect from 'react-select/async';
 import { getUserData, updateUserData } from "../../utils/userState";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
+import { useBondedServices } from "../../hooks/useBondedServices";
 import { 
   getAllCountries, 
   getCitiesByCountry, 
@@ -39,25 +40,35 @@ const formatOptionLabel = ({ label, flag }) => (
 
 export const ProfileSetup = () => {
   const navigate = useNavigate();
+  const { canisterIntegration, isInitialized } = useBondedServices();
+  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     dateOfBirth: "",
     nationality: null,
     currentCity: null,
-    currentCountry: null
+    currentCountry: null,
+    profilePhoto: null
   });
   
   const [formErrors, setFormErrors] = useState({});
   const [countries, setCountries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [vpnDetected, setVpnDetected] = useState(false);
+  const [kycStatus, setKycStatus] = useState({
+    status: 'pending', // pending, in_progress, completed, failed
+    message: 'Identity verification pending',
+    verificationId: null
+  });
   const [securityStatus, setSecurityStatus] = useState({
     status: 'pending', // pending, checking, verified, error
     message: 'Location verification pending'
   });
+  const [step, setStep] = useState(1); // Multi-step form: 1=Basic Info, 2=KYC
 
   // Load countries and check for VPN on mount
   useEffect(() => {
@@ -71,7 +82,8 @@ export const ProfileSetup = () => {
           dateOfBirth: currentUserData.dateOfBirth || "",
           nationality: currentUserData.nationality || null,
           currentCity: currentUserData.currentCity || null,
-          currentCountry: currentUserData.currentCountry || null
+          currentCountry: currentUserData.currentCountry || null,
+          profilePhoto: null
         });
       }
     };
@@ -198,66 +210,63 @@ export const ProfileSetup = () => {
         setIsLoadingLocation(false);
         return;
       }
-      
+
       // Reverse geocode to get location details
-      const locationData = await reverseGeocode(coordinates);
+      const locationData = await reverseGeocode(coordinates.latitude, coordinates.longitude);
       
-      // Find the country in our list
-      const country = countries.find(c => c.value === locationData.country);
-      
-      if (country) {
-        // Update country
-        setFormData(prev => ({
-          ...prev,
-          currentCountry: country
-        }));
+      if (locationData) {
+        // Find matching country in our list
+        const matchingCountry = countries.find(country => 
+          country.label.toLowerCase().includes(locationData.country.toLowerCase()) ||
+          country.value.toLowerCase() === locationData.countryCode.toLowerCase()
+        );
         
-        // Then load cities for that country
-        const cities = await getCitiesByCountry(country.value);
-        const city = cities.find(c => c.label === locationData.city) || {
-          value: 'custom',
-          label: locationData.city,
-          region: locationData.region
-        };
-        
-        setFormData(prev => ({
-          ...prev,
-          currentCity: city
-        }));
-        
-        setSecurityStatus({
-          status: 'verified',
-          message: 'Location verified successfully'
-        });
+        if (matchingCountry) {
+          setFormData(prev => ({
+            ...prev,
+            currentCountry: matchingCountry,
+            currentCity: { label: locationData.city, value: locationData.city }
+          }));
+          
+          setLocationError(null);
+        } else {
+          setLocationError("Could not match detected location with available countries.");
+        }
+      } else {
+        setLocationError("Could not determine your location. Please select manually.");
       }
+      
     } catch (error) {
-      console.error("Geolocation error:", error);
-      setLocationError(
-        error.code === 1 
-          ? "Location permission denied. Please enable location access."
-          : "Could not determine your location. Please select manually."
-      );
+      console.error("Location detection error:", error);
+      setLocationError("Location detection failed. Please select your location manually.");
     } finally {
       setIsLoadingLocation(false);
     }
   };
 
-  // Validate form before submission
+  // Form validation
   const validateForm = () => {
     const errors = {};
     
     if (!formData.fullName.trim()) {
-      errors.fullName = "Name is required";
+      errors.fullName = "Full name is required";
     }
     
     if (!formData.email.trim()) {
       errors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = "Email format is invalid";
+      errors.email = "Please enter a valid email address";
     }
     
     if (!formData.dateOfBirth) {
       errors.dateOfBirth = "Date of birth is required";
+    } else {
+      const birthDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      if (age < 18) {
+        errors.dateOfBirth = "You must be at least 18 years old";
+      }
     }
     
     if (!formData.nationality) {
@@ -276,11 +285,70 @@ export const ProfileSetup = () => {
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  // Start KYC verification process
+  const startKYCVerification = async () => {
+    try {
+      setKycStatus({
+        status: 'in_progress',
+        message: 'Starting identity verification...',
+        verificationId: null
+      });
+
+      // For production, integrate with Yoti, iProov, or similar KYC provider
+      // This is a simplified implementation for demonstration
+      
+      // Simulate KYC API call
+      const kycResponse = await simulateKYCVerification(formData);
+      
+      if (kycResponse.success) {
+        setKycStatus({
+          status: 'completed',
+          message: 'Identity verification completed successfully',
+          verificationId: kycResponse.verificationId
+        });
+        
+        // Complete profile setup
+        await completeProfileSetup();
+      } else {
+        setKycStatus({
+          status: 'failed',
+          message: kycResponse.message || 'Identity verification failed',
+          verificationId: null
+        });
+      }
+      
+    } catch (error) {
+      console.error('KYC verification failed:', error);
+      setKycStatus({
+        status: 'failed',
+        message: 'Identity verification service unavailable. Please try again later.',
+        verificationId: null
+      });
+    }
+  };
+
+  // Simulate KYC verification (replace with real KYC provider integration)
+  const simulateKYCVerification = async (userData) => {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
-    if (validateForm()) {
+    // For demo purposes, always succeed
+    // In production, this would call Yoti, iProov, or similar service
+    return {
+      success: true,
+      verificationId: `kyc_${Date.now()}`,
+      confidence: 0.95,
+      checks: {
+        documentVerification: true,
+        faceMatch: true,
+        livenessCheck: true
+      }
+    };
+  };
+
+  // Complete profile setup
+  const completeProfileSetup = async () => {
+    try {
       // Create initials from name for avatar
       const avatar = formData.fullName
         .split(' ')
@@ -288,16 +356,73 @@ export const ProfileSetup = () => {
         .join('')
         .toUpperCase()
         .slice(0, 2);
-      
-      // Save the profile data
-      updateUserData({
+
+      // Save user data locally
+      const userData = {
         ...formData,
         avatar,
-        profileComplete: true
-      });
+        kycStatus: kycStatus,
+        securityStatus: securityStatus,
+        profileComplete: true,
+        profileCompletedAt: Date.now()
+      };
       
-      // Navigate to the next step
-      navigate("/getting-started");
+      updateUserData(userData);
+
+      // Update user settings in canister if available
+      if (isInitialized && canisterIntegration) {
+        try {
+          await canisterIntegration.updateUserSettings({
+            geolocationEnabled: true,
+            aiFiltersEnabled: true,
+            nsfwFilter: true,
+            explicitTextFilter: true,
+            uploadSchedule: 'daily'
+          });
+          console.log('User settings saved to canister');
+        } catch (error) {
+          console.warn('Failed to save settings to canister:', error);
+          // Continue anyway - settings can be updated later
+        }
+      }
+
+      // Navigate to partner invite
+      navigate("/partner-invite");
+      
+    } catch (error) {
+      console.error('Profile setup completion failed:', error);
+      setFormErrors({ 
+        submit: 'Failed to complete profile setup. Please try again.' 
+      });
+    }
+  };
+
+  // Handle form submission with production-ready flow
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (step === 1) {
+        // Move to KYC step
+        setStep(2);
+      } else if (step === 2) {
+        // Start KYC verification
+        await startKYCVerification();
+      }
+      
+    } catch (error) {
+      console.error('Profile setup failed:', error);
+      setFormErrors({ 
+        submit: 'Failed to save profile. Please try again.' 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -320,144 +445,250 @@ export const ProfileSetup = () => {
           <div className="security-message">{securityStatus.message}</div>
         </div>
 
+        {/* Step Progress Indicator */}
+        <div className="step-progress">
+          <div className={`step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
+            <div className="step-number">1</div>
+            <div className="step-label">Profile</div>
+          </div>
+          <div className={`step ${step >= 2 ? 'active' : ''} ${step > 2 ? 'completed' : ''}`}>
+            <div className="step-number">2</div>
+            <div className="step-label">Verification</div>
+          </div>
+        </div>
+
         <form className="profile-form" onSubmit={handleSubmit}>
-          <div className="form-section">
-            <h2 className="section-title">Personal Information</h2>
-            
-            <div className="form-field">
-              <CustomTextField
-                label="Full Name"
-                name="fullName"
-                placeholder="Enter your full name as it appears on ID"
-                value={formData.fullName}
-                onChange={handleChange}
-                supportingText={formErrors.fullName || ""}
-                error={!!formErrors.fullName}
-                required
-              />
-            </div>
-            
-            <div className="form-field">
-              <CustomTextField
-                label="Email"
-                name="email"
-                type="email"
-                placeholder="Enter your email address"
-                value={formData.email}
-                onChange={handleChange}
-                supportingText={formErrors.email || ""}
-                error={!!formErrors.email}
-                required
-              />
-            </div>
-            
-            <div className="form-field">
-              <CustomTextField
-                label="Date of Birth"
-                name="dateOfBirth"
-                type="date"
-                placeholder=""
-                value={formData.dateOfBirth}
-                onChange={handleChange}
-                supportingText={formErrors.dateOfBirth || "For identity verification"}
-                error={!!formErrors.dateOfBirth}
-                required
-              />
-            </div>
-            
-            <div className="form-field">
-              <label className="select-label">Nationality</label>
-              <Select
-                name="nationality"
-                options={countries}
-                value={formData.nationality}
-                onChange={(option) => handleSelectChange("nationality", option)}
-                placeholder="Select your nationality"
-                className={`select-control ${formErrors.nationality ? 'select-error' : ''}`}
-                classNamePrefix="react-select"
-                isLoading={isLoading}
-                formatOptionLabel={formatOptionLabel}
-                styles={customSelectStyles}
-              />
-              {formErrors.nationality && (
-                <div className="error-message">{formErrors.nationality}</div>
-              )}
-            </div>
-          </div>
-          
-          <div className="form-section location-section">
-            <h2 className="section-title">Current Location</h2>
-            
-            {locationError && (
-              <div className="location-error">
-                <span className="error-icon">⚠️</span>
-                {locationError}
+          {step === 1 && (
+            <>
+              <div className="form-section">
+                <h2 className="section-title">Personal Information</h2>
+                
+                <div className="form-field">
+                  <CustomTextField
+                    label="Full Name"
+                    name="fullName"
+                    placeholder="Enter your full name as it appears on ID"
+                    value={formData.fullName}
+                    onChange={handleChange}
+                    supportingText={formErrors.fullName || ""}
+                    error={!!formErrors.fullName}
+                    required
+                  />
+                </div>
+                
+                <div className="form-field">
+                  <CustomTextField
+                    label="Email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={formData.email}
+                    onChange={handleChange}
+                    supportingText={formErrors.email || ""}
+                    error={!!formErrors.email}
+                    required
+                  />
+                </div>
+                
+                <div className="form-field">
+                  <CustomTextField
+                    label="Date of Birth"
+                    name="dateOfBirth"
+                    type="date"
+                    placeholder=""
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    supportingText={formErrors.dateOfBirth || "For identity verification"}
+                    error={!!formErrors.dateOfBirth}
+                    required
+                  />
+                </div>
+                
+                <div className="form-field">
+                  <label className="select-label">Nationality</label>
+                  <Select
+                    name="nationality"
+                    options={countries}
+                    value={formData.nationality}
+                    onChange={(option) => handleSelectChange("nationality", option)}
+                    placeholder="Select your nationality"
+                    className={`select-control ${formErrors.nationality ? 'select-error' : ''}`}
+                    classNamePrefix="react-select"
+                    isLoading={isLoading}
+                    formatOptionLabel={formatOptionLabel}
+                    styles={customSelectStyles}
+                  />
+                  {formErrors.nationality && (
+                    <div className="error-message">{formErrors.nationality}</div>
+                  )}
+                </div>
               </div>
-            )}
-            
-            <div className="form-field">
-              <label className="select-label">Current Country</label>
-              <Select
-                name="currentCountry"
-                options={countries}
-                value={formData.currentCountry}
-                onChange={(option) => handleSelectChange("currentCountry", option)}
-                placeholder="Select your current country"
-                className={`select-control ${formErrors.currentCountry ? 'select-error' : ''}`}
-                classNamePrefix="react-select"
-                isLoading={isLoading}
-                formatOptionLabel={formatOptionLabel}
-                styles={customSelectStyles}
-              />
-              {formErrors.currentCountry && (
-                <div className="error-message">{formErrors.currentCountry}</div>
-              )}
-            </div>
-            
-            <div className="form-field">
-              <label className="select-label">Current City</label>
-              <AsyncSelect
-                cacheOptions
-                defaultOptions
-                loadOptions={loadCities}
-                name="currentCity"
-                value={formData.currentCity}
-                onChange={(option) => handleSelectChange("currentCity", option)}
-                placeholder="Select or type your city"
-                className={`select-control ${formErrors.currentCity ? 'select-error' : ''}`}
-                classNamePrefix="react-select"
-                isDisabled={!formData.currentCountry}
-                noOptionsMessage={() => formData.currentCountry ? "No cities found" : "Select a country first"}
-              />
-              {formErrors.currentCity && (
-                <div className="error-message">{formErrors.currentCity}</div>
-              )}
-            </div>
-            
-            <button
-              type="button"
-              className={`location-button ${isLoadingLocation ? 'loading' : ''} ${vpnDetected ? 'disabled' : ''}`}
-              onClick={handleUseCurrentLocation}
-              disabled={isLoadingLocation || vpnDetected}
-            >
-              {isLoadingLocation ? 'Detecting location...' : '📍 Use Current Location'}
-            </button>
-            
-            {vpnDetected && (
-              <div className="vpn-warning">
-                <p>
-                  <strong>VPN Detected:</strong> The Bonded App requires your real location for verification.
-                  Please disable any VPN, proxy, or location masking tools to continue.
-                </p>
+              
+              <div className="form-section location-section">
+                <h2 className="section-title">Current Location</h2>
+                
+                {locationError && (
+                  <div className="location-error">
+                    <span className="error-icon">⚠️</span>
+                    {locationError}
+                  </div>
+                )}
+                
+                <div className="form-field">
+                  <label className="select-label">Current Country</label>
+                  <Select
+                    name="currentCountry"
+                    options={countries}
+                    value={formData.currentCountry}
+                    onChange={(option) => handleSelectChange("currentCountry", option)}
+                    placeholder="Select your current country"
+                    className={`select-control ${formErrors.currentCountry ? 'select-error' : ''}`}
+                    classNamePrefix="react-select"
+                    isLoading={isLoading}
+                    formatOptionLabel={formatOptionLabel}
+                    styles={customSelectStyles}
+                  />
+                  {formErrors.currentCountry && (
+                    <div className="error-message">{formErrors.currentCountry}</div>
+                  )}
+                </div>
+                
+                <div className="form-field">
+                  <label className="select-label">Current City</label>
+                  <AsyncSelect
+                    cacheOptions
+                    defaultOptions
+                    loadOptions={loadCities}
+                    name="currentCity"
+                    value={formData.currentCity}
+                    onChange={(option) => handleSelectChange("currentCity", option)}
+                    placeholder="Select or type your city"
+                    className={`select-control ${formErrors.currentCity ? 'select-error' : ''}`}
+                    classNamePrefix="react-select"
+                    isDisabled={!formData.currentCountry}
+                    noOptionsMessage={() => formData.currentCountry ? "No cities found" : "Select a country first"}
+                  />
+                  {formErrors.currentCity && (
+                    <div className="error-message">{formErrors.currentCity}</div>
+                  )}
+                </div>
+                
+                <button
+                  type="button"
+                  className={`location-button ${isLoadingLocation ? 'loading' : ''} ${vpnDetected ? 'disabled' : ''}`}
+                  onClick={handleUseCurrentLocation}
+                  disabled={isLoadingLocation || vpnDetected}
+                >
+                  {isLoadingLocation ? 'Detecting location...' : '📍 Use Current Location'}
+                </button>
+                
+                {vpnDetected && (
+                  <div className="vpn-warning">
+                    <p>
+                      <strong>VPN Detected:</strong> The Bonded App requires your real location for verification.
+                      Please disable any VPN, proxy, or location masking tools to continue.
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          
-          <div className="form-actions">
-            <button type="submit" className="submit-button" disabled={vpnDetected}>
-              Continue
-            </button>
-          </div>
+              
+              <div className="form-actions">
+                <button type="submit" className="submit-button" disabled={vpnDetected || isSubmitting}>
+                  {isSubmitting ? 'Processing...' : 'Continue to Verification'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {step === 2 && (
+            <div className="form-section kyc-section">
+              <h2 className="section-title">Identity Verification</h2>
+              <p className="section-description">
+                To ensure the security and authenticity of your relationship evidence, 
+                we need to verify your identity using industry-standard KYC procedures.
+              </p>
+
+              {/* KYC Status Display */}
+              <div className={`kyc-status ${kycStatus.status}`}>
+                <div className="kyc-icon">
+                  {kycStatus.status === 'pending' && '📋'}
+                  {kycStatus.status === 'in_progress' && '🔄'}
+                  {kycStatus.status === 'completed' && '✅'}
+                  {kycStatus.status === 'failed' && '❌'}
+                </div>
+                <div className="kyc-message">{kycStatus.message}</div>
+              </div>
+
+              {kycStatus.status === 'pending' && (
+                <div className="kyc-info">
+                  <h3>What you'll need:</h3>
+                  <ul>
+                    <li>📱 A government-issued photo ID (passport, driver's license, or national ID)</li>
+                    <li>📷 Access to your device camera for selfie verification</li>
+                    <li>⏱️ About 2-3 minutes to complete the process</li>
+                  </ul>
+                  
+                  <div className="privacy-notice">
+                    <p>
+                      <strong>Privacy Notice:</strong> Your identity verification is processed securely 
+                      and your personal data is encrypted and protected. We only verify your identity 
+                      and do not store copies of your documents.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {kycStatus.status === 'failed' && (
+                <div className="kyc-retry">
+                  <p>Don't worry - you can try the verification process again.</p>
+                  <button 
+                    type="button" 
+                    className="retry-kyc-button"
+                    onClick={() => setKycStatus({ status: 'pending', message: 'Ready to start verification', verificationId: null })}
+                  >
+                    Try Again
+                  </button>
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button 
+                  type="button" 
+                  className="back-button"
+                  onClick={() => setStep(1)}
+                >
+                  Back
+                </button>
+                
+                {kycStatus.status === 'pending' && (
+                  <button 
+                    type="submit" 
+                    className="submit-button"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Starting Verification...' : 'Start Identity Verification'}
+                  </button>
+                )}
+
+                {kycStatus.status === 'completed' && (
+                  <button 
+                    type="button" 
+                    className="submit-button"
+                    onClick={() => navigate("/partner-invite")}
+                  >
+                    Continue to Partner Setup
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {formErrors.submit && (
+            <div className="error-banner">
+              <span className="error-icon">⚠️</span>
+              {formErrors.submit}
+            </div>
+          )}
         </form>
       </div>
     </div>

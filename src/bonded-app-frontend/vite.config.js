@@ -126,6 +126,17 @@ export default defineConfig({
   build: {
     outDir: path.join(__dirname, "dist"),
     emptyOutDir: true,
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: undefined,
+      },
+    },
+    commonjsOptions: {
+      transformMixedEsModules: true,
+      exclude: ['**/node_modules/core-js/**'],
+    },
+    target: 'esnext'
   },
   server: {
     host: '0.0.0.0',
@@ -162,10 +173,12 @@ export default defineConfig({
     global: {},
   },
   optimizeDeps: {
+    exclude: ['core-js', 'jspdf', 'nsfwjs', '@tensorflow/tfjs'],
     esbuildOptions: {
       define: {
         global: 'globalThis'
-      }
+      },
+      target: 'esnext'
     }
   }
 });

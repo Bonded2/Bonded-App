@@ -508,5 +508,6 @@ class EncryptionService {
   }
 }
 
-// Export singleton instance
-export const EncryptionService = new EncryptionService(); 
+// Export class and singleton instance
+export { EncryptionService };
+export const encryptionService = new EncryptionService(); 

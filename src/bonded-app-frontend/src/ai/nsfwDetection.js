@@ -325,5 +325,6 @@ class NSFWDetectionService {
   }
 }
 
-// Export singleton instance
-export const NSFWDetectionService = new NSFWDetectionService(); 
+// Export class and singleton instance
+export { NSFWDetectionService };
+export const nsfwDetectionService = new NSFWDetectionService(); 

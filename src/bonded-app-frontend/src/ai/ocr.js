@@ -454,5 +454,6 @@ class OCRService {
   }
 }
 
-// Export singleton instance
-export const OCRService = new OCRService(); 
+// Export class and singleton instance
+export { OCRService };
+export const ocrService = new OCRService(); 

@@ -15,17 +15,16 @@ export { webrtcService } from './webrtcService.js';
 // Re-export AI services for convenience
 export { 
   FaceDetectionService,
-  NSFWDetectionService, 
-  TextClassificationService,
-  OCRService,
-  AIEvidenceFilter 
+  faceDetectionService,
+  nsfwDetectionService, 
+  textClassificationService,
+  ocrService,
+  aiEvidenceFilter 
 } from '../ai/index.js';
 
 // Re-export crypto services
-export { EncryptionService } from '../crypto/encryption.js';
+export { EncryptionService, encryptionService } from '../crypto/encryption.js';
 
-// Create singleton instances for global use
-export const evidenceProcessor = new EvidenceProcessor();
-export const timelineService = new TimelineService();
-export const encryptionService = new EncryptionService();
-export const aiEvidenceFilter = new AIEvidenceFilter(); 
+// Re-export instances from their respective modules
+export { evidenceProcessor } from './evidenceProcessor.js';
+export { timelineService } from './timelineService.js'; 

@@ -5,10 +5,10 @@
  * text classification, and OCR to filter evidence according to Bonded MVP requirements
  */
 
-import { FaceDetectionService } from './faceDetection.js';
-import { NSFWDetectionService } from './nsfwDetection.js';
-import { TextClassificationService } from './textClassification.js';
-import { OCRService } from './ocr.js';
+import { faceDetectionService } from './faceDetection.js';
+import { nsfwDetectionService } from './nsfwDetection.js';
+import { textClassificationService } from './textClassification.js';
+import { ocrService } from './ocr.js';
 import { openDB } from 'idb';
 
 class AIEvidenceFilter {
@@ -67,7 +67,7 @@ class AIEvidenceFilter {
 
     try {
       if (this.settings.enableFaceDetection) {
-        const faceResult = await FaceDetectionService.detectFaces(imageInput);
+        const faceResult = await faceDetectionService.detectFaces(imageInput);
         result.details.faceDetection = faceResult;
 
         if (this.settings.requireHumanPresence && faceResult.faces.length === 0) {
@@ -77,7 +77,7 @@ class AIEvidenceFilter {
       }
 
       if (this.settings.enableNSFWFilter) {
-        const nsfwResult = await NSFWDetectionService.detectNSFW(imageInput);
+        const nsfwResult = await nsfwDetectionService.detectNSFW(imageInput);
         result.details.nsfwDetection = nsfwResult;
 
         if (nsfwResult.isExplicit) {
@@ -124,7 +124,7 @@ class AIEvidenceFilter {
 
       const classificationResults = [];
       for (const text of validTexts) {
-        const classResult = await TextClassificationService.isExplicitText(text);
+        const classResult = await textClassificationService.isExplicitText(text);
         classificationResults.push(classResult);
       }
 
@@ -245,10 +245,10 @@ class AIEvidenceFilter {
 
   async getAIStatus() {
     return {
-      faceDetection: FaceDetectionService.getStatus(),
-      nsfwDetection: NSFWDetectionService.getStatus(),
-      textClassification: TextClassificationService.getStatus(),
-      ocr: OCRService.getStatus(),
+      faceDetection: faceDetectionService.getStatus(),
+      nsfwDetection: nsfwDetectionService.getStatus(),
+      textClassification: textClassificationService.getStatus(),
+      ocr: ocrService.getStatus(),
       evidenceFilter: {
         settings: this.settings,
         statistics: this.getStatistics()
@@ -259,10 +259,10 @@ class AIEvidenceFilter {
   async cleanup() {
     try {
       await Promise.all([
-        FaceDetectionService.cleanup(),
-        NSFWDetectionService.cleanup(), 
-        TextClassificationService.cleanup(),
-        OCRService.cleanup()
+        faceDetectionService.cleanup(),
+        nsfwDetectionService.cleanup(), 
+        textClassificationService.cleanup(),
+        ocrService.cleanup()
       ]);
 
       if (this.db) {
@@ -275,4 +275,6 @@ class AIEvidenceFilter {
   }
 }
 
-export const AIEvidenceFilter = new AIEvidenceFilter();
+// Export class and singleton instance
+export { AIEvidenceFilter };
+export const aiEvidenceFilter = new AIEvidenceFilter();

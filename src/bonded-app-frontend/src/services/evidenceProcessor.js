@@ -10,8 +10,8 @@
  * Implements the daily midnight upload schedule as per MVP requirements
  */
 
-import { AIEvidenceFilter } from '../ai/evidenceFilter.js';
-import { EncryptionService } from '../crypto/encryption.js';
+import { aiEvidenceFilter } from '../ai/evidenceFilter.js';
+import { encryptionService } from '../crypto/encryption.js';
 import { canisterIntegration } from './canisterIntegration.js';
 import { mediaAccessService } from './mediaAccess.js';
 import { openDB } from 'idb';
@@ -145,7 +145,7 @@ class EvidenceProcessor {
         result.errors.push(`Evidence failed AI filtering: ${filteringResult.reasoning}`);
         
         // Check if manual override is possible
-        if (AIEvidenceFilter.getSettings().allowManualOverride) {
+        if (aiEvidenceFilter.getSettings().allowManualOverride) {
           await this.queueForManualReview(collectedEvidence, filteringResult, targetDate);
           result.manualReviewQueued = true;
         }
@@ -342,7 +342,7 @@ class EvidenceProcessor {
     try {
       console.log('[EvidenceProcessor] Applying AI filtering...');
       
-      const filteringResult = await AIEvidenceFilter.filterEvidencePackage({
+      const filteringResult = await aiEvidenceFilter.filterEvidencePackage({
         photo: evidence.photo,
         messages: evidence.messages,
         photoMetadata: evidence.metadata.photoMetadata,
@@ -651,5 +651,6 @@ class EvidenceProcessor {
   }
 }
 
-// Export singleton instance
-export const EvidenceProcessor = new EvidenceProcessor(); 
+// Export class and singleton instance
+export { EvidenceProcessor };
+export const evidenceProcessor = new EvidenceProcessor(); 

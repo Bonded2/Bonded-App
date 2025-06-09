@@ -5,7 +5,7 @@
  * Handles decryption of evidence items for display and PDF generation
  */
 
-import { EncryptionService } from '../crypto/encryption.js';
+import { encryptionService } from '../crypto/encryption.js';
 import { canisterIntegration } from './canisterIntegration.js';
 import { openDB } from 'idb';
 import jsPDF from 'jspdf';
@@ -633,5 +633,6 @@ class TimelineService {
   }
 }
 
-// Export singleton instance
-export const TimelineService = new TimelineService(); 
+// Export class and singleton instance
+export { TimelineService };
+export const timelineService = new TimelineService(); 
