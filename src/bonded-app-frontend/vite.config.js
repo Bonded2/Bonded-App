@@ -16,7 +16,13 @@ const network = process.env["DFX_NETWORK"] || "local";
 
 export default defineConfig({
   plugins: [
-    react(),
+    react({
+      jsxRuntime: 'automatic',
+      jsxImportSource: 'react',
+      babel: {
+        plugins: []
+      }
+    }),
     EnvironmentPlugin("all", { prefix: "CANISTER_" }),
     EnvironmentPlugin("all", { prefix: "DFX_" }),
     VitePWA({
@@ -136,7 +142,7 @@ export default defineConfig({
       transformMixedEsModules: true,
       exclude: ['**/node_modules/core-js/**'],
     },
-    target: 'esnext'
+    target: 'es2020'
   },
   server: {
     host: '0.0.0.0',
@@ -178,7 +184,7 @@ export default defineConfig({
       define: {
         global: 'globalThis'
       },
-      target: 'esnext'
+      target: 'es2020'
     }
   }
 });
