@@ -417,7 +417,6 @@ class EvidenceProcessor {
       };
 
       // Step 1: Encrypt the evidence package
-      const encryptionService = new EncryptionService();
       const encryptedPackage = await encryptionService.encryptEvidencePackage(
         packagedEvidence,
         null // For MVP, encryption key would come from relationship setup
