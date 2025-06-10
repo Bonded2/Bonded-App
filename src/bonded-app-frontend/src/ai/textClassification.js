@@ -2,49 +2,46 @@
  * Text Classification Service
  * 
  * Client-side text filtering for explicit/inappropriate content
- * Uses Hugging Face Transformers (DistilBERT/TinyBERT) via @xenova/transformers
+ * MVP implementation using keyword-based filtering for reliable builds
  * Runs 100% in-browser for privacy
  */
 
-import { pipeline, env } from '@xenova/transformers';
 import { openDB } from 'idb';
-
-// Configure to run locally without external requests
-env.allowRemoteModels = false;
-env.allowLocalModels = true;
 
 class TextClassificationService {
   constructor() {
-    this.classifier = null;
-    this.isLoading = false;
-    this.isLoaded = false;
+    this.isLoaded = true; // Always ready for keyword-based filtering
     this.lastError = null;
     this.db = null;
     
-    // Default model configuration
-    this.modelConfig = {
-      task: 'text-classification',
-      model: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english', // Fallback model
-      preferredModel: 'Xenova/toxic-bert', // For explicit content detection
-    };
-    
-    // Explicit content keywords (fallback when model unavailable)
+    // Explicit content keywords (comprehensive list for MVP)
     this.explicitKeywords = [
       // Sexual content
       'sex', 'porn', 'nude', 'naked', 'erotic', 'orgasm', 'masturbat', 
       'fuck', 'shit', 'damn', 'bitch', 'whore', 'slut',
       // Profanity (configurable)
-      'asshole', 'bastard', 'cocksucker'
+      'asshole', 'bastard', 'cocksucker', 'cunt', 'dick', 'pussy',
+      // Additional explicit terms
+      'blowjob', 'handjob', 'anal', 'vagina', 'penis', 'breast',
+      'horny', 'sexy', 'kinky', 'fetish', 'bondage'
+    ];
+    
+    // Relationship-positive keywords (these are good)
+    this.positiveKeywords = [
+      'love', 'heart', 'kiss', 'hug', 'cuddle', 'romance', 'date',
+      'together', 'forever', 'marry', 'wedding', 'anniversary',
+      'beautiful', 'gorgeous', 'handsome', 'sweet', 'caring',
+      'miss', 'thinking', 'dream', 'future', 'family'
     ];
     
     // Confidence thresholds
     this.thresholds = {
       explicit: 0.7,    // High confidence for explicit content
-      toxic: 0.6,       // Moderate confidence for toxic content  
       safe: 0.4         // Threshold for safe content
     };
     
     this.initDB();
+    console.log('[TextClassification] Service initialized (keyword-based MVP)');
   }
 
   /**
@@ -54,11 +51,6 @@ class TextClassificationService {
     try {
       this.db = await openDB('BondedTextDB', 1, {
         upgrade(db) {
-          // Model cache
-          if (!db.objectStoreNames.contains('modelCache')) {
-            db.createObjectStore('modelCache');
-          }
-          
           // Classification results cache
           if (!db.objectStoreNames.contains('classificationCache')) {
             const store = db.createObjectStore('classificationCache');
@@ -78,70 +70,12 @@ class TextClassificationService {
   }
 
   /**
-   * Load the text classification model
-   * @param {string} modelName - Optional model name override
+   * Load the text classification model (MVP: always ready)
    * @returns {Promise<boolean>} Success status
    */
-  async loadModel(modelName = null) {
-    if (this.isLoaded) return true;
-    if (this.isLoading) {
-      while (this.isLoading) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      return this.isLoaded;
-    }
-
-    this.isLoading = true;
-    this.lastError = null;
-
-    try {
-      console.log('[TextClassification] Loading model...');
-      
-      const targetModel = modelName || this.modelConfig.preferredModel;
-      
-      // Try to load preferred model for explicit content detection
-      try {
-        this.classifier = await pipeline(
-          this.modelConfig.task,
-          targetModel,
-          { 
-            revision: 'main',
-            quantized: true // Use quantized model for better performance
-          }
-        );
-        console.log(`[TextClassification] Loaded model: ${targetModel}`);
-      } catch (modelError) {
-        console.warn(`[TextClassification] Primary model failed, trying fallback:`, modelError);
-        
-        // Fallback to sentiment analysis model
-        this.classifier = await pipeline(
-          this.modelConfig.task,
-          this.modelConfig.model,
-          { quantized: true }
-        );
-        console.log(`[TextClassification] Loaded fallback model: ${this.modelConfig.model}`);
-      }
-      
-      this.isLoaded = true;
-      
-      // Cache successful load
-      if (this.db) {
-        await this.db.put('modelCache', {
-          loaded: true,
-          timestamp: Date.now(),
-          model: targetModel
-        }, 'loadStatus');
-      }
-      
-      return true;
-      
-    } catch (error) {
-      this.lastError = error;
-      console.error('[TextClassification] Model loading failed:', error);
-      return false;
-    } finally {
-      this.isLoading = false;
-    }
+  async loadModel() {
+    // MVP: keyword-based filtering is always ready
+    return true;
   }
 
   /**
@@ -167,15 +101,8 @@ class TextClassificationService {
         return cachedResult;
       }
 
-      let result;
-
-      // Try ML model first
-      if (this.isLoaded || await this.loadModel()) {
-        result = await this.classifyWithModel(normalizedText);
-      } else {
-        // Fallback to keyword detection
-        result = this.classifyWithKeywords(normalizedText);
-      }
+      // Use keyword-based classification
+      const result = this.classifyWithKeywords(normalizedText);
 
       // Cache result
       await this.cacheResult(normalizedText, result);
@@ -189,156 +116,134 @@ class TextClassificationService {
   }
 
   /**
-   * Classify text using ML model
-   * @param {string} text - Normalized text
-   * @returns {Promise<Object>} Classification result
-   */
-  async classifyWithModel(text) {
-    try {
-      const predictions = await this.classifier(text);
-      
-      // Handle different model outputs
-      let isExplicit = false;
-      let confidence = 0;
-      let reasoning = '';
-
-      if (Array.isArray(predictions) && predictions.length > 0) {
-        // Find toxic/negative predictions
-        const toxicPrediction = predictions.find(p => 
-          p.label && (
-            p.label.toLowerCase().includes('toxic') ||
-            p.label.toLowerCase().includes('negative') ||
-            p.label.toLowerCase().includes('hate')
-          )
-        );
-
-        if (toxicPrediction) {
-          confidence = toxicPrediction.score;
-          isExplicit = confidence > this.thresholds.explicit;
-          reasoning = `Model detected ${toxicPrediction.label.toLowerCase()} content (${Math.round(confidence * 100)}% confidence)`;
-        } else {
-          // Use highest confidence prediction
-          const topPrediction = predictions[0];
-          confidence = topPrediction.score;
-          
-          // For sentiment models, negative sentiment might indicate explicit content
-          if (topPrediction.label.toLowerCase().includes('negative')) {
-            isExplicit = confidence > this.thresholds.toxic;
-            reasoning = `Negative sentiment detected (${Math.round(confidence * 100)}% confidence)`;
-          } else {
-            isExplicit = false;
-            reasoning = `Safe content detected (${Math.round(confidence * 100)}% confidence)`;
-          }
-        }
-      }
-
-      // Secondary check with keywords if model confidence is low
-      if (confidence < this.thresholds.safe) {
-        const keywordResult = this.classifyWithKeywords(text);
-        if (keywordResult.isExplicit) {
-          return {
-            ...keywordResult,
-            reasoning: `${reasoning} + keyword detection: ${keywordResult.reasoning}`,
-            modelConfidence: confidence
-          };
-        }
-      }
-
-      return {
-        isExplicit,
-        confidence: Math.round(confidence * 100) / 100,
-        reasoning,
-        method: 'ml-model',
-        thresholds: this.thresholds
-      };
-
-    } catch (error) {
-      console.warn('[TextClassification] Model classification failed, using keywords:', error);
-      return this.classifyWithKeywords(text);
-    }
-  }
-
-  /**
-   * Classify text using keyword matching (fallback)
+   * Classify text using keyword matching
    * @param {string} text - Normalized text
    * @returns {Object} Classification result
    */
   classifyWithKeywords(text) {
-    const foundKeywords = [];
-    let explicitScore = 0;
-
-    // Check for explicit keywords
-    for (const keyword of this.explicitKeywords) {
-      if (text.includes(keyword)) {
-        foundKeywords.push(keyword);
-        explicitScore += 1;
+    try {
+      const words = text.split(/\s+/);
+      let explicitMatches = 0;
+      let positiveMatches = 0;
+      let matchedExplicitWords = [];
+      let matchedPositiveWords = [];
+      
+      // Check for explicit keywords
+      for (const word of words) {
+        const cleanWord = word.replace(/[^\w]/g, ''); // Remove punctuation
+        
+        // Check explicit keywords
+        for (const keyword of this.explicitKeywords) {
+          if (cleanWord.includes(keyword) || keyword.includes(cleanWord)) {
+            explicitMatches++;
+            if (!matchedExplicitWords.includes(keyword)) {
+              matchedExplicitWords.push(keyword);
+            }
+          }
+        }
+        
+        // Check positive keywords
+        for (const keyword of this.positiveKeywords) {
+          if (cleanWord.includes(keyword) || keyword.includes(cleanWord)) {
+            positiveMatches++;
+            if (!matchedPositiveWords.includes(keyword)) {
+              matchedPositiveWords.push(keyword);
+            }
+          }
+        }
       }
+      
+      // Calculate confidence based on matches
+      const totalWords = words.length;
+      const explicitRatio = explicitMatches / totalWords;
+      const positiveRatio = positiveMatches / totalWords;
+      
+      // Determine if explicit
+      const isExplicit = explicitMatches > 0 && explicitRatio > 0.1; // 10% threshold
+      const confidence = isExplicit ? 
+        Math.min(0.9, 0.5 + explicitRatio) : // Cap at 0.9 for keyword-based
+        Math.max(0.1, 0.5 - explicitRatio);  // Minimum 0.1 confidence
+      
+      // Build reasoning
+      let reasoning = `Keyword analysis: ${explicitMatches} explicit, ${positiveMatches} positive terms`;
+      if (matchedExplicitWords.length > 0) {
+        reasoning += ` (explicit: ${matchedExplicitWords.slice(0, 3).join(', ')})`;
+      }
+      if (matchedPositiveWords.length > 0) {
+        reasoning += ` (positive: ${matchedPositiveWords.slice(0, 3).join(', ')})`;
+      }
+      
+      return {
+        isExplicit,
+        confidence,
+        reasoning,
+        analysis: {
+          explicitMatches,
+          positiveMatches,
+          explicitRatio,
+          positiveRatio,
+          totalWords,
+          method: 'keyword-based'
+        }
+      };
+      
+    } catch (error) {
+      console.error('[TextClassification] Keyword classification failed:', error);
+      return this.getSafeResult(`Keyword analysis error: ${error.message}`);
     }
-
-    // Calculate confidence based on keyword frequency
-    const totalWords = text.split(/\s+/).length;
-    const keywordDensity = foundKeywords.length / Math.max(totalWords, 1); 
-    const confidence = Math.min(keywordDensity * 2, 1); // Cap at 100%
-
-    const isExplicit = foundKeywords.length > 0 && confidence > 0.1;
-
-    return {
-      isExplicit,
-      confidence: Math.round(confidence * 100) / 100,
-      reasoning: isExplicit 
-        ? `Explicit keywords detected: ${foundKeywords.join(', ')}`
-        : 'No explicit keywords found',
-      method: 'keyword-matching',
-      foundKeywords,
-      thresholds: this.thresholds
-    };
   }
 
   /**
-   * Get safe result (default to allowing content)
-   * @param {string} reason - Reason for safe result
-   * @returns {Object} Safe classification result
+   * Get safe result (non-explicit)
+   * @param {string} reason - Reason for safe classification
+   * @returns {Object} Safe result
    */
   getSafeResult(reason) {
     return {
       isExplicit: false,
-      confidence: 0,
-      reasoning: `Safe by default: ${reason}`,
-      method: 'fallback',
-      fallback: true
+      confidence: 0.9,
+      reasoning: reason,
+      analysis: {
+        method: 'safe-default'
+      }
     };
   }
 
   /**
    * Get cached classification result
-   * @param {string} text - Text to look up
+   * @param {string} text - Text to check
    * @returns {Promise<Object|null>} Cached result or null
    */
   async getCachedResult(text) {
     if (!this.db) return null;
-
+    
     try {
       const textHash = this.simpleHash(text);
       const cached = await this.db.get('classificationCache', textHash);
       
-      if (cached && Date.now() - cached.timestamp < 24 * 60 * 60 * 1000) { // 24 hour cache
-        return cached.result;
+      if (cached) {
+        // Check if cache is still valid (1 day)
+        const ageMs = Date.now() - cached.timestamp;
+        if (ageMs < 24 * 60 * 60 * 1000) {
+          return cached.result;
+        }
       }
+      
+      return null;
     } catch (error) {
-      console.debug('[TextClassification] Cache lookup failed:', error);
+      console.warn('[TextClassification] Cache lookup failed:', error);
+      return null;
     }
-    
-    return null;
   }
 
   /**
    * Cache classification result
-   * @param {string} text - Original text
+   * @param {string} text - Text that was classified
    * @param {Object} result - Classification result
    */
   async cacheResult(text, result) {
     if (!this.db) return;
-
+    
     try {
       const textHash = this.simpleHash(text);
       await this.db.put('classificationCache', {
@@ -347,12 +252,12 @@ class TextClassificationService {
         timestamp: Date.now()
       }, textHash);
     } catch (error) {
-      console.debug('[TextClassification] Caching failed:', error);
+      console.warn('[TextClassification] Caching failed:', error);
     }
   }
 
   /**
-   * Simple hash function for text
+   * Generate simple hash for text
    * @param {string} text - Text to hash
    * @returns {string} Hash string
    */
@@ -363,67 +268,72 @@ class TextClassificationService {
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
-    return hash.toString(36);
+    return hash.toString(16);
   }
 
   /**
-   * Batch classify multiple texts
+   * Classify multiple texts in batch
    * @param {string[]} texts - Array of texts to classify
    * @returns {Promise<Object[]>} Array of classification results
    */
   async classifyBatch(texts) {
-    if (!Array.isArray(texts)) {
-      throw new Error('Input must be an array of texts');
-    }
-
-    const results = [];
-    for (const text of texts) {
-      const result = await this.isExplicitText(text);
-      results.push({
-        text: text.substring(0, 100) + (text.length > 100 ? '...' : ''), // Truncate for logging
-        ...result
-      });
-    }
-
-    return results;
-  }
-
-  /**
-   * Filter messages to only include safe content
-   * @param {string[]} messages - Array of message texts
-   * @returns {Promise<{safe: string[], blocked: Object[]}>} Filtered results
-   */
-  async filterMessages(messages) {
-    const results = await this.classifyBatch(messages);
-    const safe = [];
-    const blocked = [];
-
-    results.forEach((result, index) => {
-      if (result.isExplicit) {
-        blocked.push({
-          originalText: messages[index],
-          index,
+    try {
+      const results = [];
+      
+      for (const text of texts) {
+        const result = await this.isExplicitText(text);
+        results.push({
+          text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
           ...result
         });
-      } else {
-        safe.push(messages[index]);
       }
-    });
-
-    return { safe, blocked };
+      
+      return results;
+    } catch (error) {
+      console.error('[TextClassification] Batch classification failed:', error);
+      return texts.map(text => ({
+        text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
+        ...this.getSafeResult('Batch processing error')
+      }));
+    }
   }
 
   /**
-   * Update classification thresholds
+   * Filter array of messages, removing explicit content
+   * @param {Object[]} messages - Array of message objects with 'text' property
+   * @returns {Promise<Object[]>} Filtered messages
+   */
+  async filterMessages(messages) {
+    try {
+      const filteredMessages = [];
+      
+      for (const message of messages) {
+        const classification = await this.isExplicitText(message.text || '');
+        
+        if (!classification.isExplicit) {
+          filteredMessages.push({
+            ...message,
+            classification
+          });
+        } else {
+          console.log(`[TextClassification] Filtered explicit message: ${classification.reasoning}`);
+        }
+      }
+      
+      return filteredMessages;
+    } catch (error) {
+      console.error('[TextClassification] Message filtering failed:', error);
+      return messages; // Return original messages on error
+    }
+  }
+
+  /**
+   * Update confidence thresholds
    * @param {Object} newThresholds - New threshold values
    */
   updateThresholds(newThresholds) {
     this.thresholds = { ...this.thresholds, ...newThresholds };
-    
-    // Save to preferences
-    if (this.db) {
-      this.db.put('preferences', this.thresholds, 'thresholds');
-    }
+    console.log('[TextClassification] Updated thresholds:', this.thresholds);
   }
 
   /**
@@ -433,11 +343,18 @@ class TextClassificationService {
   updateKeywords(newKeywords) {
     if (Array.isArray(newKeywords)) {
       this.explicitKeywords = [...new Set([...this.explicitKeywords, ...newKeywords])];
-      
-      // Save to preferences
-      if (this.db) {
-        this.db.put('preferences', this.explicitKeywords, 'keywords');
-      }
+      console.log(`[TextClassification] Updated keywords: ${this.explicitKeywords.length} total`);
+    }
+  }
+
+  /**
+   * Add positive keywords (relationship-friendly terms)
+   * @param {string[]} newKeywords - New positive keywords
+   */
+  updatePositiveKeywords(newKeywords) {
+    if (Array.isArray(newKeywords)) {
+      this.positiveKeywords = [...new Set([...this.positiveKeywords, ...newKeywords])];
+      console.log(`[TextClassification] Updated positive keywords: ${this.positiveKeywords.length} total`);
     }
   }
 
@@ -448,34 +365,29 @@ class TextClassificationService {
   getStatus() {
     return {
       isLoaded: this.isLoaded,
-      isLoading: this.isLoading,
-      lastError: this.lastError,
+      method: 'keyword-based',
+      explicitKeywords: this.explicitKeywords.length,
+      positiveKeywords: this.positiveKeywords.length,
       thresholds: this.thresholds,
-      keywordCount: this.explicitKeywords.length,
-      modelConfig: this.modelConfig
+      lastError: this.lastError?.message
     };
   }
 
   /**
-   * Clean up resources
+   * Cleanup resources
    */
   async cleanup() {
-    if (this.classifier) {
-      // Cleanup model resources if needed
-      this.classifier = null;
-    }
-    
-    this.isLoaded = false;
-    this.isLoading = false;
-    this.lastError = null;
-    
-    if (this.db) {
-      this.db.close();
-      this.db = null;
+    try {
+      if (this.db) {
+        this.db.close();
+        this.db = null;
+      }
+      console.log('[TextClassification] Cleanup completed');
+    } catch (error) {
+      console.error('[TextClassification] Cleanup failed:', error);
     }
   }
 }
 
-// Export class and singleton instance
-export { TextClassificationService };
+// Export singleton instance
 export const textClassificationService = new TextClassificationService(); 

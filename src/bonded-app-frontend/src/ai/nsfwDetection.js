@@ -7,6 +7,8 @@
 
 import * as nsfwjs from 'nsfwjs';
 import { openDB } from 'idb';
+import { modelOptimizationService } from './modelOptimization.js';
+import { wasmModelContainer } from './wasmModelContainer.js';
 
 class NSFWDetectionService {
   constructor() {
@@ -52,7 +54,7 @@ class NSFWDetectionService {
   }
 
   /**
-   * Load the NSFWJS model
+   * Load the NSFWJS model (optimized for PWA)
    * @param {string} modelUrl - Optional custom model URL
    * @returns {Promise<boolean>} Success status
    */
@@ -70,20 +72,41 @@ class NSFWDetectionService {
     this.lastError = null;
 
     try {
-      console.log('[NSFWDetection] Loading NSFWJS model...');
+      console.log('[NSFWDetection] Loading optimized NSFW model...');
       
-      // Load the model (defaults to CDN if no URL provided)
-      this.model = await nsfwjs.load(modelUrl);
+      // Try optimized container approach first
+      try {
+        await wasmModelContainer.createContainer('nsfw-detector', {
+          type: 'onnx-quantized',
+          modelUrl: '/models/nsfw-quantized.onnx',
+          memoryMB: 8,
+          inputShape: [1, 224, 224, 3],
+          inputType: 'float32'
+        });
+        
+        this.model = { 
+          type: 'container',
+          containerName: 'nsfw-detector'
+        };
+        console.log('[NSFWDetection] Using containerized model (2MB)');
+        
+      } catch (containerError) {
+        console.log('[NSFWDetection] Container failed, trying optimized model...');
+        
+        // Fallback to model optimization service
+        this.model = await modelOptimizationService.loadOptimizedModel('nsfw');
+        console.log(`[NSFWDetection] Using optimized model (${this.model.config?.size || 'unknown size'})`);
+      }
       
       this.isLoaded = true;
-      console.log('[NSFWDetection] Model loaded successfully');
       
       // Cache successful load
       if (this.db) {
         await this.db.put('modelCache', { 
           loaded: true, 
           timestamp: Date.now(),
-          version: 'nsfwjs-default'
+          version: 'optimized',
+          type: this.model.type
         }, 'loadStatus');
       }
       
@@ -91,7 +114,17 @@ class NSFWDetectionService {
     } catch (error) {
       this.lastError = error;
       console.error('[NSFWDetection] Model loading failed:', error);
-      return false;
+      
+      // Ultimate fallback to original NSFWJS (but only if no other option works)
+      try {
+        console.log('[NSFWDetection] Trying original NSFWJS as last resort...');
+        this.model = await nsfwjs.load(modelUrl);
+        this.isLoaded = true;
+        return true;
+      } catch (fallbackError) {
+        console.error('[NSFWDetection] All model loading methods failed:', fallbackError);
+        return false;
+      }
     } finally {
       this.isLoading = false;
     }

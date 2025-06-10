@@ -157,6 +157,15 @@ class SchedulerService {
       if ('serviceWorker' in navigator && 'periodicSync' in window.ServiceWorkerRegistration.prototype) {
         const registration = await navigator.serviceWorker.ready;
         
+        // Check if permission is available
+        if ('permissions' in navigator) {
+          const permissionStatus = await navigator.permissions.query({ name: 'periodic-background-sync' });
+          if (permissionStatus.state !== 'granted') {
+            console.log('[Scheduler] Periodic background sync permission not granted');
+            return;
+          }
+        }
+        
         // Register periodic sync for daily uploads
         await registration.periodicSync.register('daily-evidence-upload', {
           minInterval: 24 * 60 * 60 * 1000 // 24 hours
@@ -169,7 +178,8 @@ class SchedulerService {
       }
       
     } catch (error) {
-      console.warn('[Scheduler] Failed to register periodic sync:', error);
+      // Expected in many browsers/environments - not a critical error
+      console.log('[Scheduler] Periodic sync not available, using fallback scheduling:', error.message);
     }
   }
 

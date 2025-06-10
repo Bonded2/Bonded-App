@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { VitePWA } from 'vite-plugin-pwa';
 import EnvironmentPlugin from "vite-plugin-environment";
+// import { VitePWA } from 'vite-plugin-pwa';
 import dotenv from "dotenv";
 import path from "path";
 
@@ -17,116 +17,12 @@ const network = process.env["DFX_NETWORK"] || "local";
 export default defineConfig({
   plugins: [
     react({
-      jsxRuntime: 'automatic',
-      jsxImportSource: 'react',
-      babel: {
-        plugins: []
-      }
+      // Use classic runtime to avoid JSX dev runtime issues in production
+      jsxRuntime: 'classic'
     }),
     EnvironmentPlugin("all", { prefix: "CANISTER_" }),
-    EnvironmentPlugin("all", { prefix: "DFX_" }),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
-      manifest: {
-        name: 'Bonded - Relationship Verification',
-        short_name: 'Bonded',
-        description: 'AI and blockchain-based relationship verification app for visa, residency and citizenship applications',
-        theme_color: '#2C4CDF',
-        background_color: '#FF704D',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          {
-            src: '/images/icon-192x192.png',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/images/icon-512x512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ],
-        categories: ['productivity', 'utilities', 'social'],
-        screenshots: [
-          {
-            src: '/images/screenshot-timeline.png',
-            sizes: '1280x720',
-            type: 'image/png',
-            form_factor: 'wide'
-          },
-          {
-            src: '/images/screenshot-mobile.png',
-            sizes: '750x1334',
-            type: 'image/png',
-            form_factor: 'narrow'
-          }
-        ]
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,gif,webp,woff,woff2,ttf,eot}'],
-        navigateFallback: 'index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/_next\/static/],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico)$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'images-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
-              }
-            }
-          },
-          {
-            urlPattern: /\.(?:js|css)$/,
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'static-resources',
-              expiration: {
-                maxEntries: 30,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
-              }
-            }
-          },
-          {
-            urlPattern: new RegExp('^https://api\\.'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 10,
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 // 1 hour
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
-      }
-    })
+    EnvironmentPlugin("all", { prefix: "DFX_" })
+    // Temporarily disable PWA plugin to fix build issues
   ],
   root: path.join(__dirname),
   build: {
@@ -134,15 +30,97 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       external: [],
+      onwarn(warning, warn) {
+        // Suppress warnings about CommonJS default exports
+        if (warning.code === 'MISSING_EXPORT' && 
+            (warning.message.includes('rgbcolor') || 
+             warning.message.includes('raf') ||
+             warning.message.includes('canvg'))) {
+          return;
+        }
+        warn(warning);
+      },
       output: {
-        manualChunks: undefined,
+        manualChunks: (id) => {
+          // Separate AI models into individual chunks to prevent circular dependencies
+          if (id.includes('tensorflow') || id.includes('tfjs')) {
+            return 'tensorflow';
+          }
+          if (id.includes('onnxruntime') || id.includes('onnx')) {
+            return 'onnxruntime';
+          }
+          if (id.includes('transformers') || id.includes('@xenova')) {
+            return 'transformers';
+          }
+          if (id.includes('nsfwjs')) {
+            return 'nsfwjs';
+          }
+          if (id.includes('tesseract')) {
+            return 'tesseract';
+          }
+          if (id.includes('jspdf') || id.includes('pdf-lib')) {
+            return 'pdf-tools';
+          }
+          if (id.includes('html2canvas')) {
+            return 'html2canvas';
+          }
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+            return 'react-vendor';
+          }
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        },
+        chunkFileNames: (chunkInfo) => {
+          return '[name]-[hash].js';
+        },
       },
     },
     commonjsOptions: {
       transformMixedEsModules: true,
-      exclude: ['**/node_modules/core-js/**'],
+      defaultIsModuleExports: 'auto',
+      exclude: [
+        '**/node_modules/core-js/**',
+        '**/node_modules/simple-peer/**',
+        '**/node_modules/queue-microtask/**',
+        '**/node_modules/err-code/**'
+      ],
+      include: [
+        '**/node_modules/@tensorflow/**',
+        '**/node_modules/nsfwjs/**',
+        '**/node_modules/react/**',
+        '**/node_modules/react-dom/**',
+        '**/node_modules/react-router/**',
+        '**/node_modules/react-router-dom/**',
+        '**/node_modules/buffer/**',
+        '**/node_modules/long/**',
+        '**/node_modules/seedrandom/**',
+        '**/node_modules/borc/**',
+        '**/node_modules/@dfinity/**',
+        '**/node_modules/simple-cbor/**',
+        '**/node_modules/hoist-non-react-statics/**',
+        '**/node_modules/@emotion/**',
+        '**/node_modules/rgbcolor/**',
+        '**/node_modules/canvg/**'
+      ],
     },
-    target: 'es2020'
+    target: 'es2020',
+    sourcemap: false,
+    chunkSizeWarningLimit: 2048,
+    // Use esbuild instead of terser to prevent variable initialization issues
+    minify: 'esbuild',
+    esbuild: {
+      // Keep names to prevent initialization issues
+      keepNames: true,
+      // Don't drop console in development
+      drop: isDev ? [] : ['console', 'debugger'],
+      // Use modern target to avoid transpilation issues
+      target: 'es2020',
+      // Preserve function and class names to prevent circular dependency issues
+      minifyIdentifiers: false,
+      minifySyntax: true,
+      minifyWhitespace: true
+    },
   },
   server: {
     host: '0.0.0.0',
@@ -170,16 +148,43 @@ export default defineConfig({
         find: "declarations",
         replacement: path.resolve(__dirname, "../declarations"),
       },
+      {
+        find: "buffer",
+        replacement: "buffer",
+      },
+      {
+        find: "rgbcolor",
+        replacement: path.resolve(__dirname, "src/utils/rgbcolor-wrapper.js"),
+      },
+      {
+        find: "raf",
+        replacement: path.resolve(__dirname, "src/utils/raf-wrapper.js"),
+      }
     ],
     dedupe: ["@dfinity/agent"],
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || (isDev ? 'development' : 'production')),
     'process.env.DFX_NETWORK': JSON.stringify(network),
-    global: {},
+    global: 'globalThis',
+    __DEV__: isDev,
   },
   optimizeDeps: {
-    exclude: ['core-js', 'jspdf', 'nsfwjs', '@tensorflow/tfjs'],
+    exclude: ['core-js', 'simple-peer'],
+    include: [
+      '@tensorflow/tfjs',
+      '@tensorflow/tfjs-core',
+      '@tensorflow/tfjs-backend-webgl',
+      '@tensorflow/tfjs-backend-cpu',
+      'nsfwjs',
+      'jspdf',
+      'buffer',
+      'borc',
+      '@dfinity/agent',
+      '@dfinity/candid',
+      '@dfinity/principal',
+      'simple-cbor'
+    ],
     esbuildOptions: {
       define: {
         global: 'globalThis'

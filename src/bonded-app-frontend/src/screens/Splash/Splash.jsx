@@ -7,7 +7,10 @@ export const Splash = () => {
   const navigate = useNavigate();
   const [animationComplete, setAnimationComplete] = useState(false);
 
+  console.log("🎬 Splash component rendered");
+
   useEffect(() => {
+    console.log("🚀 Splash useEffect running");
     // Start the exit animation after 2.5 seconds
     const animationTimer = setTimeout(() => {
       setAnimationComplete(true);

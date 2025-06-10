@@ -1,0 +1,48 @@
+/**
+ * Font Definitions for Bonded PWA
+ * Provides fallback fonts and utility classes
+ */
+
+/* Fallback font definitions - used when Google Fonts fail to load */
+.font-rethink-sans {
+  font-family: 'Rethink Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.font-trocchi {
+  font-family: 'Trocchi', Georgia, 'Times New Roman', Times, serif;
+}
+
+/* System font fallbacks */
+.font-system {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.font-serif {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+/* Set default fonts for common elements with graceful fallbacks */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+/* Font loading states - removed visibility hidden to prevent blank screen */
+.fonts-loading {
+  /* Could add loading indicator here instead of hiding content */
+}
+
+.fonts-loaded,
+.fonts-failed {
+  /* Font loading completed */
+}
+
+/* Enhanced font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+} 

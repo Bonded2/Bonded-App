@@ -23,7 +23,10 @@ dist/
 
 # environment variables
 .env
-
+.env.local
+.env.development
+.env.production
+*.env
 
 # cursor rules
 .cursorrules
@@ -31,3 +34,10 @@ dist/
 
 # assets 
 src/bonded-app-frontend/public/models/
+
+# markdown files
+*.md
+!README.md
+
+# service worker
+src/bonded-app-frontend/service-worker.js

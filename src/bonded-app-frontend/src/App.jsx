@@ -247,8 +247,11 @@ const OfflineIndicator = () => {
 };
 
 export const App = () => {
+  console.log("🚀 App component rendered");
+  
   // Only reset user data on initial app load of a new session
   useEffect(() => {
+    console.log("🔧 App useEffect running");
     const resetDataIfNeeded = async () => {
       // Only reset if this is a direct entry to a deep link (not through splash or register)
       const isInitialLoad = !sessionStorage.getItem('sessionStarted');

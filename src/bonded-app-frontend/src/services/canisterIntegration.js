@@ -11,99 +11,161 @@ import { HttpAgent, Actor } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 import { AuthClient } from '@dfinity/auth-client';
 
-// Candid interface definitions for our canisters
-const evidenceCanisterIDL = ({ IDL }) => {
-  const Result = IDL.Variant({ 'Ok' : IDL.Text, 'Err' : IDL.Text });
-  const EvidenceMetadata = IDL.Record({
-    'timestamp' : IDL.Int,
-    'content_type' : IDL.Text,
-    'location' : IDL.Opt(IDL.Text),
-    'description' : IDL.Opt(IDL.Text),
-    'tags' : IDL.Vec(IDL.Text),
+// Unified Bonded Backend Canister IDL - matches the deployed Rust canister
+const bondedBackendIDL = ({ IDL }) => {
+  // Common types
+  const BondedResult = IDL.Variant({ 'Ok' : IDL.Vec(IDL.Nat8), 'Err' : IDL.Text });
+  const BondedResult_1 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
+  const BondedResult_2 = IDL.Variant({ 'Ok' : IDL.Text, 'Err' : IDL.Text });
+  const BondedResult_3 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
+  const BondedResult_4 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
+  const BondedResult_5 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
+  const BondedResult_6 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
+  const BondedResult_7 = IDL.Variant({ 'Ok' : IDL.Vec(IDL.Rec()), 'Err' : IDL.Text });
+  const BondedResult_8 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
+
+  // Request/Response types
+  const CreateRelationshipRequest = IDL.Record({ 'partner_principal' : IDL.Principal });
+  const CreateRelationshipResponse = IDL.Record({
+    'public_key' : IDL.Vec(IDL.Nat8),
+    'relationship_id' : IDL.Text,
+    'user_key_share' : IDL.Vec(IDL.Nat8),
   });
+
+  // Evidence types
+  const EvidenceMetadata = IDL.Record({
+    'tags' : IDL.Vec(IDL.Text),
+    'content_type' : IDL.Text,
+    'description' : IDL.Opt(IDL.Text),
+    'timestamp' : IDL.Nat64,
+    'location' : IDL.Opt(IDL.Text),
+  });
+
   const Evidence = IDL.Record({
     'id' : IDL.Text,
-    'relationship_id' : IDL.Text,
     'encrypted_data' : IDL.Vec(IDL.Nat8),
+    'signature' : IDL.Opt(IDL.Vec(IDL.Nat8)),
     'metadata' : EvidenceMetadata,
-    'upload_timestamp' : IDL.Int,
     'hash' : IDL.Text,
+    'uploader' : IDL.Principal,
+    'relationship_id' : IDL.Text,
+    'upload_timestamp' : IDL.Nat64,
   });
-  
-  return IDL.Service({
-    'upload_evidence' : IDL.Func([IDL.Text, IDL.Vec(IDL.Nat8), EvidenceMetadata], [Result], []),
-    'get_timeline' : IDL.Func([IDL.Text, IDL.Nat32, IDL.Nat32], [IDL.Vec(Evidence)], ['query']),
-    'delete_evidence' : IDL.Func([IDL.Text, IDL.Text], [Result], []),
-    'get_evidence_by_id' : IDL.Func([IDL.Text], [IDL.Opt(Evidence)], ['query']),
-  });
-};
 
-const relationshipCanisterIDL = ({ IDL }) => {
-  const Result = IDL.Variant({ 'Ok' : IDL.Text, 'Err' : IDL.Text });
-  const RelationshipStatus = IDL.Variant({
-    'Pending' : IDL.Null,
-    'Active' : IDL.Null,
-    'Terminated' : IDL.Null,
+  // Relationship types
+  const RelationshipStatus = IDL.Variant({ 
+    'Terminated' : IDL.Null, 
+    'Active' : IDL.Null, 
+    'Pending' : IDL.Null 
   });
+
   const Relationship = IDL.Record({
     'id' : IDL.Text,
+    'status' : RelationshipStatus,
+    'bonded_key_share' : IDL.Vec(IDL.Nat8),
+    'created_at' : IDL.Nat64,
     'partner1' : IDL.Principal,
     'partner2' : IDL.Opt(IDL.Principal),
-    'status' : RelationshipStatus,
-    'created_at' : IDL.Int,
-    'bonded_key_share' : IDL.Vec(IDL.Nat8),
+    'last_activity' : IDL.Nat64,
+    'evidence_count' : IDL.Nat64,
   });
-  
-  return IDL.Service({
-    'create_relationship' : IDL.Func([IDL.Principal], [Result], []),
-    'accept_relationship' : IDL.Func([IDL.Text], [Result], []),
-    'get_relationship' : IDL.Func([IDL.Text], [IDL.Opt(Relationship)], ['query']),
-    'get_user_relationships' : IDL.Func([], [IDL.Vec(Relationship)], ['query']),
-    'terminate_relationship' : IDL.Func([IDL.Text], [Result], []),
-    'get_key_share' : IDL.Func([IDL.Text], [IDL.Opt(IDL.Vec(IDL.Nat8))], ['query']),
-  });
-};
 
-const settingsCanisterIDL = ({ IDL }) => {
-  const Result = IDL.Variant({ 'Ok' : IDL.Text, 'Err' : IDL.Text });
-  const UserSettings = IDL.Record({
-    'ai_filters_enabled' : IDL.Bool,
-    'nsfw_filter' : IDL.Bool,
-    'explicit_text_filter' : IDL.Bool,
-    'upload_schedule' : IDL.Text,
-    'geolocation_enabled' : IDL.Bool,
-    'notification_preferences' : IDL.Vec(IDL.Text),
+  // Timeline types
+  const TimelineQuery = IDL.Record({
+    'category_filter' : IDL.Opt(IDL.Text),
+    'page' : IDL.Opt(IDL.Nat32),
+    'end_date' : IDL.Opt(IDL.Nat64),
+    'start_date' : IDL.Opt(IDL.Nat64),
+    'relationship_id' : IDL.Text,
   });
-  
+
+  const TimelineResponse = IDL.Record({
+    'evidence' : IDL.Vec(Evidence),
+    'total_count' : IDL.Nat64,
+    'has_more' : IDL.Bool,
+  });
+
+  // User types
+  const UserProfile = IDL.Record({
+    'total_evidence_uploaded' : IDL.Nat64,
+    'principal' : IDL.Principal,
+    'kyc_verified' : IDL.Bool,
+    'created_at' : IDL.Nat64,
+    'last_seen' : IDL.Nat64,
+    'relationships' : IDL.Vec(IDL.Text),
+  });
+
+  // Settings types
+  const UpdateSettingsRequest = IDL.Record({
+    'notification_preferences' : IDL.Opt(IDL.Vec(IDL.Text)),
+    'upload_schedule' : IDL.Opt(IDL.Text),
+    'explicit_text_filter' : IDL.Opt(IDL.Bool),
+    'nsfw_filter' : IDL.Opt(IDL.Bool),
+    'geolocation_enabled' : IDL.Opt(IDL.Bool),
+    'ai_filters_enabled' : IDL.Opt(IDL.Bool),
+  });
+
+  const UserSettings = IDL.Record({
+    'updated_at' : IDL.Nat64,
+    'notification_preferences' : IDL.Vec(IDL.Text),
+    'upload_schedule' : IDL.Text,
+    'explicit_text_filter' : IDL.Bool,
+    'nsfw_filter' : IDL.Bool,
+    'geolocation_enabled' : IDL.Bool,
+    'ai_filters_enabled' : IDL.Bool,
+  });
+
+  // Update result types to use proper records
+  BondedResult_1.fill(CreateRelationshipResponse);
+  BondedResult_3.fill(Evidence);
+  BondedResult_4.fill(Relationship);
+  BondedResult_5.fill(TimelineResponse);
+  BondedResult_6.fill(UserProfile);
+  BondedResult_7.fill(IDL.Vec(Relationship));
+  BondedResult_8.fill(UserSettings);
+
   return IDL.Service({
-    'update_user_settings' : IDL.Func([UserSettings], [Result], []),
-    'get_user_settings' : IDL.Func([], [IDL.Opt(UserSettings)], ['query']),
-    'reset_to_defaults' : IDL.Func([], [Result], []),
+    'accept_relationship' : IDL.Func([IDL.Text], [BondedResult], []),
+    'create_relationship' : IDL.Func([CreateRelationshipRequest], [BondedResult_1], []),
+    'delete_evidence' : IDL.Func([IDL.Text, IDL.Text], [BondedResult_2], []),
+    'delete_user_account' : IDL.Func([], [BondedResult_2], []),
+    'get_canister_stats' : IDL.Func([], [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Nat64))], ['query']),
+    'get_evidence_by_id' : IDL.Func([IDL.Text], [BondedResult_3], ['query']),
+    'get_key_share' : IDL.Func([IDL.Text], [BondedResult], ['query']),
+    'get_relationship' : IDL.Func([IDL.Text], [BondedResult_4], ['query']),
+    'get_timeline' : IDL.Func([IDL.Text, IDL.Nat32, IDL.Nat32], [BondedResult_5], ['query']),
+    'get_timeline_with_filters' : IDL.Func([TimelineQuery], [BondedResult_5], ['query']),
+    'get_user_profile' : IDL.Func([], [BondedResult_6], ['query']),
+    'get_user_relationships' : IDL.Func([], [BondedResult_7], ['query']),
+    'get_user_settings' : IDL.Func([], [BondedResult_8], ['query']),
+    'greet' : IDL.Func([IDL.Text], [IDL.Text], ['query']),
+    'health_check' : IDL.Func([], [IDL.Text], ['query']),
+    'register_user' : IDL.Func([IDL.Opt(IDL.Text)], [BondedResult_2], []),
+    'terminate_relationship' : IDL.Func([IDL.Text], [BondedResult_2], []),
+    'update_face_embedding' : IDL.Func([IDL.Vec(IDL.Float32)], [BondedResult_2], []),
+    'update_user_settings' : IDL.Func([UpdateSettingsRequest], [BondedResult_2], []),
+    'upload_evidence' : IDL.Func([IDL.Text, IDL.Vec(IDL.Nat8), EvidenceMetadata], [BondedResult_2], []),
+    'verify_kyc' : IDL.Func([], [BondedResult_2], []),
+    'whoami' : IDL.Func([], [IDL.Principal], ['query']),
   });
 };
 
 class CanisterIntegrationService {
   constructor() {
     this.agent = null;
-    this.evidenceCanister = null;
-    this.relationshipCanister = null;
-    this.settingsCanister = null;
+    this.bondedBackend = null;
     this.authClient = null;
     this.identity = null;
     this.isInitialized = false;
     
-    // Production canister IDs - these should be set via environment variables
-    this.canisterIds = {
-      evidence: process.env.REACT_APP_EVIDENCE_CANISTER_ID || 'rdmx6-jaaaa-aaaah-qdrqq-cai',
-      relationship: process.env.REACT_APP_RELATIONSHIP_CANISTER_ID || 'rrkah-fqaaa-aaaah-qdrra-cai', 
-      settings: process.env.REACT_APP_SETTINGS_CANISTER_ID || 'ryjl3-tyaaa-aaaah-qdrri-cai'
-    };
+    // Unified backend canister ID - get from environment or use deployed local ID
+    this.backendCanisterId = process.env.REACT_APP_BONDED_BACKEND_CANISTER_ID || 'uxrrr-q7777-77774-qaaaq-cai';
     
     // Network configuration
     this.networkConfig = {
       local: {
         host: 'http://127.0.0.1:4943',
-        identityProvider: `http://127.0.0.1:4943/?canisterId=${process.env.REACT_APP_INTERNET_IDENTITY_CANISTER_ID}`
+        identityProvider: `http://127.0.0.1:4943/?canisterId=${process.env.REACT_APP_INTERNET_IDENTITY_CANISTER_ID || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
       },
       mainnet: {
         host: 'https://ic0.app',
@@ -143,67 +205,64 @@ class CanisterIntegrationService {
         await this.agent.fetchRootKey();
       }
 
-      // Initialize production canister actors
-      await this.initializeProductionCanisters();
+      // Initialize unified backend canister
+      await this.initializeBackendCanister();
       
       this.isInitialized = true;
-      console.log('[CanisterIntegration] Production initialization successful');
+      console.log('[CanisterIntegration] Backend initialization successful');
       
     } catch (error) {
-      console.error('[CanisterIntegration] Production initialization failed:', error);
+      console.error('[CanisterIntegration] Backend initialization failed:', error);
       // Don't throw on initialization failure - allow graceful degradation
       this.isInitialized = false;
     }
   }
 
   /**
-   * Initialize production canister actor interfaces
+   * Initialize unified backend canister actor
    */
-  async initializeProductionCanisters() {
+  async initializeBackendCanister() {
     try {
-      console.log('[CanisterIntegration] Creating production canister actors...');
-      
-      // Create evidence canister actor
-      this.evidenceCanister = Actor.createActor(evidenceCanisterIDL, {
-        agent: this.agent,
-        canisterId: this.canisterIds.evidence,
+      console.log('[CanisterIntegration] Creating unified backend canister actor...', {
+        canisterId: this.backendCanisterId,
+        isLocal: this.isLocal
       });
       
-      // Create relationship canister actor  
-      this.relationshipCanister = Actor.createActor(relationshipCanisterIDL, {
+      // Create unified backend canister actor
+      this.bondedBackend = Actor.createActor(bondedBackendIDL, {
         agent: this.agent,
-        canisterId: this.canisterIds.relationship,
+        canisterId: this.backendCanisterId,
       });
       
-      // Create settings canister actor
-      this.settingsCanister = Actor.createActor(settingsCanisterIDL, {
-        agent: this.agent,
-        canisterId: this.canisterIds.settings,
-      });
-      
-      console.log('[CanisterIntegration] Production canister actors created successfully');
+      console.log('[CanisterIntegration] Backend canister actor created successfully');
       
       // Test connectivity with a simple query
       await this.testConnectivity();
       
     } catch (error) {
-      console.error('[CanisterIntegration] Failed to create production canister actors:', error);
+      console.error('[CanisterIntegration] Failed to create backend canister actor:', error);
       throw error;
     }
   }
 
   /**
-   * Test connectivity to canisters
+   * Test connectivity to backend canister
    */
   async testConnectivity() {
     try {
-      console.log('[CanisterIntegration] Testing canister connectivity...');
+      console.log('[CanisterIntegration] Testing backend canister connectivity...');
       
-      // Test with a simple query to each canister
-      const settingsPromise = this.settingsCanister.get_user_settings().catch(e => null);
-      const relationshipsPromise = this.relationshipCanister.get_user_relationships().catch(e => null);
+      // Test with a simple health check query
+      const healthResult = await this.bondedBackend.health_check();
+      console.log('[CanisterIntegration] Health check result:', healthResult);
       
-      await Promise.all([settingsPromise, relationshipsPromise]);
+      // Test greet function
+      const greetResult = await this.bondedBackend.greet('ICP Backend');
+      console.log('[CanisterIntegration] Greet result:', greetResult);
+      
+      // Test canister stats
+      const statsResult = await this.bondedBackend.get_canister_stats();
+      console.log('[CanisterIntegration] Stats result:', statsResult);
       
       console.log('[CanisterIntegration] Connectivity test passed');
       
@@ -214,7 +273,7 @@ class CanisterIntegrationService {
   }
 
   /**
-   * Upload encrypted evidence to the evidence canister
+   * Upload encrypted evidence to the backend canister
    * @param {string} relationshipId - Relationship identifier
    * @param {ArrayBuffer} encryptedData - Encrypted evidence package
    * @param {Object} metadata - Evidence metadata
@@ -229,20 +288,20 @@ class CanisterIntegrationService {
       
       // Format metadata for Candid interface
       const candidMetadata = {
-        timestamp: BigInt(Math.floor(Date.now() / 1000)), // Unix timestamp
+        timestamp: BigInt(Math.floor(metadata.timestamp || Date.now())), // Use provided timestamp or current
         content_type: metadata.contentType || 'mixed',
         location: metadata.location ? [metadata.location] : [], // Optional field
         description: metadata.description ? [metadata.description] : [], // Optional field
         tags: metadata.tags || [],
       };
       
-      console.log('[CanisterIntegration] Uploading evidence to production canister...', {
+      console.log('[CanisterIntegration] Uploading evidence to backend canister...', {
         relationshipId,
         dataSize: dataArray.length,
         metadata: candidMetadata
       });
       
-      const result = await this.evidenceCanister.upload_evidence(
+      const result = await this.bondedBackend.upload_evidence(
         relationshipId,
         Array.from(dataArray), // Convert to regular array for Candid
         candidMetadata
@@ -263,7 +322,7 @@ class CanisterIntegrationService {
   }
 
   /**
-   * Fetch timeline data from the evidence canister
+   * Fetch timeline data from the backend canister
    * @param {string} relationshipId - Relationship identifier
    * @param {Object} options - Fetch options (page, filters)
    * @returns {Promise<Array>} Timeline items
@@ -274,34 +333,41 @@ class CanisterIntegrationService {
     try {
       const { page = 1, limit = 50 } = options;
       
-      console.log('[CanisterIntegration] Fetching timeline from production canister...', {
+      console.log('[CanisterIntegration] Fetching timeline from backend canister...', {
         relationshipId,
         page,
         limit
       });
       
-      const result = await this.evidenceCanister.get_timeline(
+      const result = await this.bondedBackend.get_timeline(
         relationshipId,
         page,
         limit
       );
       
-      // Convert the result to the expected format
-      const timelineItems = result.map(evidence => ({
-        id: evidence.id,
-        relationshipId: evidence.relationship_id,
-        contentType: evidence.metadata.content_type,
-        originalTimestamp: Number(evidence.metadata.timestamp) * 1000, // Convert to milliseconds
-        uploadTimestamp: Number(evidence.upload_timestamp) * 1000,
-        location: evidence.metadata.location.length > 0 ? evidence.metadata.location[0] : null,
-        description: evidence.metadata.description.length > 0 ? evidence.metadata.description[0] : null,
-        tags: evidence.metadata.tags,
-        hash: evidence.hash,
-        encryptedData: new Uint8Array(evidence.encrypted_data) // Convert back to Uint8Array
-      }));
-      
-      console.log('[CanisterIntegration] Timeline fetch successful:', timelineItems.length, 'items');
-      return timelineItems;
+      // Handle Rust Result type
+      if ('Ok' in result) {
+        const timelineData = result.Ok;
+        
+        // Convert the result to the expected format
+        const timelineItems = (timelineData.items || []).map(evidence => ({
+          id: evidence.id,
+          relationshipId: evidence.relationship_id,
+          contentType: evidence.metadata.content_type,
+          originalTimestamp: Number(evidence.metadata.timestamp) * 1000, // Convert to milliseconds
+          uploadTimestamp: Number(evidence.upload_timestamp) * 1000,
+          location: evidence.metadata.location.length > 0 ? evidence.metadata.location[0] : null,
+          description: evidence.metadata.description.length > 0 ? evidence.metadata.description[0] : null,
+          tags: evidence.metadata.tags,
+          hash: evidence.hash,
+          encryptedData: new Uint8Array(evidence.encrypted_data) // Convert back to Uint8Array
+        }));
+        
+        console.log('[CanisterIntegration] Timeline fetch successful:', timelineItems.length, 'items');
+        return timelineItems;
+      } else {
+        throw new Error(result.Err);
+      }
       
     } catch (error) {
       console.error('[CanisterIntegration] Timeline fetch failed:', error);
@@ -332,7 +398,7 @@ class CanisterIntegrationService {
       
       console.log('[CanisterIntegration] Creating relationship with partner:', partnerPrincipalObj.toString());
       
-      const result = await this.relationshipCanister.create_relationship(
+      const result = await this.bondedBackend.create_relationship(
         partnerPrincipalObj
       );
       
@@ -365,7 +431,7 @@ class CanisterIntegrationService {
     try {
       console.log('[CanisterIntegration] Terminating relationship:', relationshipId);
       
-      const result = await this.relationshipCanister.terminate_relationship(
+      const result = await this.bondedBackend.terminate_relationship(
         relationshipId
       );
       
@@ -404,7 +470,7 @@ class CanisterIntegrationService {
       
       console.log('[CanisterIntegration] Updating user settings:', candidSettings);
       
-      const result = await this.settingsCanister.update_user_settings(
+      const result = await this.bondedBackend.update_user_settings(
         candidSettings
       );
       
@@ -432,11 +498,12 @@ class CanisterIntegrationService {
     try {
       console.log('[CanisterIntegration] Fetching user settings...');
       
-      const result = await this.settingsCanister.get_user_settings();
+      const result = await this.bondedBackend.get_user_settings();
       
-      if (result.length > 0) {
+      // Handle Rust Result type
+      if ('Ok' in result) {
         // Convert from Candid format to our format
-        const settings = result[0];
+        const settings = result.Ok;
         const formattedSettings = {
           aiFiltersEnabled: settings.ai_filters_enabled,
           nsfwFilter: settings.nsfw_filter,
@@ -449,7 +516,7 @@ class CanisterIntegrationService {
         console.log('[CanisterIntegration] Settings fetch successful:', formattedSettings);
         return formattedSettings;
       } else {
-        // Return default settings if none found
+        // Return default settings if not found
         const defaultSettings = {
           aiFiltersEnabled: true,
           nsfwFilter: true,
@@ -488,20 +555,25 @@ class CanisterIntegrationService {
     try {
       console.log('[CanisterIntegration] Fetching user relationships...');
       
-      const result = await this.relationshipCanister.get_user_relationships();
+      const result = await this.bondedBackend.get_user_relationships();
       
-      // Convert from Candid format to our format
-      const relationships = result.map(rel => ({
-        id: rel.id,
-        partner1: rel.partner1.toString(),
-        partner2: rel.partner2.length > 0 ? rel.partner2[0].toString() : null,
-        status: Object.keys(rel.status)[0].toLowerCase(), // Convert variant to string
-        createdAt: Number(rel.created_at) * 1000, // Convert to milliseconds
-        bondedKeyShare: new Uint8Array(rel.bonded_key_share)
-      }));
-      
-      console.log('[CanisterIntegration] Relationships fetch successful:', relationships.length, 'relationships');
-      return relationships;
+      // Handle Rust Result type
+      if ('Ok' in result) {
+        // Convert from Candid format to our format
+        const relationships = result.Ok.map(rel => ({
+          id: rel.id,
+          partner1: rel.partner1.toString(),
+          partner2: rel.partner2.length > 0 ? rel.partner2[0].toString() : null,
+          status: Object.keys(rel.status)[0].toLowerCase(), // Convert variant to string
+          createdAt: Number(rel.created_at) * 1000, // Convert to milliseconds
+          bondedKeyShare: new Uint8Array(rel.bonded_key_share)
+        }));
+        
+        console.log('[CanisterIntegration] Relationships fetch successful:', relationships.length, 'relationships');
+        return relationships;
+      } else {
+        throw new Error(result.Err);
+      }
       
     } catch (error) {
       console.error('[CanisterIntegration] Relationships fetch failed:', error);
@@ -522,7 +594,7 @@ class CanisterIntegrationService {
     try {
       console.log('[CanisterIntegration] Accepting relationship:', relationshipId);
       
-      const result = await this.relationshipCanister.accept_relationship(relationshipId);
+      const result = await this.bondedBackend.accept_relationship(relationshipId);
       
       // Handle Rust Result type
       if ('Ok' in result) {
@@ -554,8 +626,9 @@ class CanisterIntegrationService {
   getStatus() {
     return {
       isInitialized: this.isInitialized,
-      canisterIds: this.canisterIds,
-      agentConnected: !!this.agent
+      backendCanisterId: this.backendCanisterId,
+      agentConnected: !!this.agent,
+      bondedBackendConnected: !!this.bondedBackend
     };
   }
 }
