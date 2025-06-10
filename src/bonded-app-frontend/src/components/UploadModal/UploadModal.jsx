@@ -272,7 +272,7 @@ export const UploadModal = ({
                         const exclusionReason = getExclusionReason(file, captureSettings, fileTypeOverrides, aiResult);
                         const isExcluded = !!exclusionReason;
                         const isImage = getFileTypeCategory(file) === 'image';
-                        const isClassifying = isImage && !aiResult && isClassifying;
+                        const isCurrentlyClassifying = isImage && !aiResult && isClassifying;
                         
                         return (
                           <li 
@@ -296,7 +296,7 @@ export const UploadModal = ({
                                     {isExcluded && <span className="exclusion-indicator"> ℹ️</span>}
                                     {isImage && (
                                       <span className="ai-status">
-                                        {isClassifying ? (
+                                        {isCurrentlyClassifying ? (
                                           <span className="ai-processing"> 🔄 AI Analyzing...</span>
                                         ) : aiResult?.error ? (
                                           <span className="ai-error"> ⚠️ AI Error</span>

@@ -211,14 +211,16 @@ export const useBondedServices = () => {
           const encryptedData = await encryptionService.encryptEvidence(result.evidence);
           
           // Upload to canister
-          const uploadResult = await canisterIntegration.uploadEvidence({
+          const relationshipId = 'mock-relationship-id'; // TODO: Get from actual relationship context
+          const uploadResult = await canisterIntegration.uploadEvidence(
+            relationshipId,
             encryptedData,
-            metadata: {
+            {
               timestamp: Date.now(),
               contentType: result.evidence.type || 'mixed',
               category: result.evidence.category || 'relationship'
             }
-          });
+          );
           
           console.log('[useBondedServices] Evidence uploaded to canister:', uploadResult);
           

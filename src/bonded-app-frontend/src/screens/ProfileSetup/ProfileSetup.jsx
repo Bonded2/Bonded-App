@@ -212,13 +212,16 @@ export const ProfileSetup = () => {
       }
 
       // Reverse geocode to get location details
-      const locationData = await reverseGeocode(coordinates.latitude, coordinates.longitude);
+      const locationData = await reverseGeocode({
+        lat: coordinates.latitude,
+        lng: coordinates.longitude
+      });
       
-      if (locationData) {
+      if (locationData && locationData.country && locationData.countryName) {
         // Find matching country in our list
         const matchingCountry = countries.find(country => 
-          country.label.toLowerCase().includes(locationData.country.toLowerCase()) ||
-          country.value.toLowerCase() === locationData.countryCode.toLowerCase()
+          country.label.toLowerCase().includes(locationData.countryName.toLowerCase()) ||
+          country.value.toLowerCase() === locationData.country.toLowerCase()
         );
         
         if (matchingCountry) {

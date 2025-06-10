@@ -82,15 +82,17 @@ export const TimelineCreated = () => {
       setUploadProgress({ stage: 'uploading', progress: 75 });
       
       // Upload to Evidence Canister
-      const uploadResult = await canisterIntegration.uploadEvidence({
+      const relationshipId = 'mock-relationship-id'; // TODO: Get from actual relationship context
+      const uploadResult = await canisterIntegration.uploadEvidence(
+        relationshipId,
         encryptedData,
-        metadata: {
+        {
           timestamp: Date.now(),
           contentType: evidence.type,
           hash: evidenceHash,
           category: evidence.category || 'relationship'
         }
-      });
+      );
 
       setUploadProgress({ stage: 'completed', progress: 100 });
       
