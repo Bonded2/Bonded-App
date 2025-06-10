@@ -213,6 +213,190 @@
   font-family: "Rethink Sans", sans-serif;
   font-size: 16px;
   color: #FFFFFF;
+  flex: 1;
+}
+
+/* AI Section Styles */
+.ai-section {
+  background: rgba(185, 255, 70, 0.1);
+  border: 1px solid rgba(185, 255, 70, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 0 16px 20px;
+  backdrop-filter: blur(10px);
+}
+
+.ai-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ai-section-header h3 {
+  font-family: "Trocchi", serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #B9FF46;
+  margin: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.ai-status-indicator {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 12px;
+  border: 1px solid;
+}
+
+.ai-status-indicator.ready {
+  background: rgba(185, 255, 70, 0.2);
+  border-color: rgba(185, 255, 70, 0.5);
+  color: #B9FF46;
+}
+
+.ai-status-indicator.not-ready {
+  background: rgba(255, 107, 107, 0.2);
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #FF6B6B;
+}
+
+.ai-status-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ai-stats {
+  display: flex;
+  justify-content: space-around;
+  gap: 8px;
+}
+
+.ai-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-value {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 2px;
+}
+
+.stat-label {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.ai-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.ai-toggle {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ai-toggle.enabled {
+  background: rgba(185, 255, 70, 0.3);
+  color: #B9FF46;
+  border: 1px solid rgba(185, 255, 70, 0.5);
+}
+
+.ai-toggle.disabled {
+  background: rgba(255, 107, 107, 0.3);
+  color: #FF6B6B;
+  border: 1px solid rgba(255, 107, 107, 0.5);
+}
+
+.ai-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ai-action {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+}
+
+.ai-action.start {
+  background: rgba(185, 255, 70, 0.3);
+  color: #B9FF46;
+  border: 1px solid rgba(185, 255, 70, 0.5);
+}
+
+.ai-action.start:hover:not(:disabled) {
+  background: rgba(185, 255, 70, 0.4);
+  transform: translateY(-1px);
+}
+
+.ai-action.stop {
+  background: rgba(255, 107, 107, 0.3);
+  color: #FF6B6B;
+  border: 1px solid rgba(255, 107, 107, 0.5);
+}
+
+.ai-action.stop:hover {
+  background: rgba(255, 107, 107, 0.4);
+  transform: translateY(-1px);
+}
+
+.ai-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* AI Menu Item Styles */
+.menu-item .ai-icon {
+  font-size: 20px;
+  margin-right: 16px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-badge {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(185, 255, 70, 0.3);
+  color: #B9FF46;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: auto;
 }
 
 /* Footer section */
@@ -284,6 +468,53 @@
   
   .user-name {
     font-size: 18px;
+  }
+
+  /* AI Section responsive */
+  .ai-section {
+    margin: 0 12px 16px;
+    padding: 12px;
+  }
+
+  .ai-section-header h3 {
+    font-size: 16px;
+  }
+
+  .ai-status-indicator {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+
+  .ai-stats {
+    gap: 6px;
+  }
+
+  .ai-stat {
+    padding: 6px;
+  }
+
+  .stat-value {
+    font-size: 14px;
+  }
+
+  .stat-label {
+    font-size: 9px;
+  }
+
+  .ai-controls {
+    gap: 6px;
+  }
+
+  .ai-toggle,
+  .ai-action {
+    padding: 6px 8px;
+    font-size: 11px;
+    min-width: 60px;
+  }
+
+  .menu-badge {
+    font-size: 9px;
+    padding: 1px 4px;
   }
 }
 

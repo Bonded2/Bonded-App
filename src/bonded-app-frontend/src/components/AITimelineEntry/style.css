@@ -1,0 +1,413 @@
+.ai-timeline-entry {
+  position: relative;
+  margin-bottom: 24px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ai-timeline-entry.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* AI Processing Badge */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #B9FF46, #ccff7a);
+  color: #2C4CDF;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  margin-left: 32px;
+  box-shadow: 0 2px 8px rgba(185, 255, 70, 0.3);
+  position: relative;
+  z-index: 3;
+}
+
+.ai-icon {
+  font-size: 14px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.ai-text {
+  letter-spacing: 0.5px;
+}
+
+/* Main Timeline Tile Styling */
+.ai-timeline-tile {
+  position: relative;
+  border: 2px solid rgba(185, 255, 70, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(185, 255, 70, 0.05);
+  transition: all 0.3s ease;
+}
+
+.ai-timeline-tile:hover {
+  border-color: rgba(185, 255, 70, 0.6);
+  background: rgba(185, 255, 70, 0.1);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(185, 255, 70, 0.2);
+}
+
+.ai-timeline-image {
+  filter: brightness(1.1) contrast(1.05);
+  transition: filter 0.3s ease;
+}
+
+.ai-timeline-tile:hover .ai-timeline-image {
+  filter: brightness(1.2) contrast(1.1);
+}
+
+.ai-photo-icon {
+  color: #B9FF46;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+}
+
+/* Expand Controls */
+.ai-entry-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+  margin-left: 32px;
+}
+
+.expand-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.expand-button:hover {
+  background: rgba(185, 255, 70, 0.2);
+  border-color: rgba(185, 255, 70, 0.4);
+  color: #B9FF46;
+  transform: translateY(-1px);
+}
+
+.expand-icon {
+  font-size: 10px;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.expand-text {
+  letter-spacing: 0.3px;
+}
+
+/* Details Panel */
+.ai-details-panel {
+  margin-top: 16px;
+  margin-left: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  backdrop-filter: blur(10px);
+  animation: slideDown 0.4s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 1000px;
+  }
+}
+
+.ai-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ai-details-header h4 {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #B9FF46;
+  margin: 0;
+}
+
+.processing-time {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* AI Stats Grid */
+.ai-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ai-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.ai-stat-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(185, 255, 70, 0.3);
+  transform: translateY(-1px);
+}
+
+.stat-icon {
+  font-size: 18px;
+  min-width: 20px;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.stat-label {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Files Preview */
+.ai-files-preview {
+  margin-bottom: 20px;
+}
+
+.ai-files-preview h5 {
+  font-family: "Trocchi", serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #B9FF46;
+  margin: 0 0 12px 0;
+}
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 12px;
+}
+
+.file-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.file-preview:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(185, 255, 70, 0.3);
+  transform: translateY(-2px);
+}
+
+.file-thumbnail {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.file-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.file-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  background: rgba(185, 255, 70, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #B9FF46;
+}
+
+.file-name {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more-files .file-placeholder {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* AI Metadata */
+.ai-metadata {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.metadata-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.metadata-row:last-child {
+  margin-bottom: 0;
+}
+
+.metadata-label {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.metadata-value {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 400;
+  text-align: right;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .ai-badge {
+    margin-left: 16px;
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .ai-details-panel {
+    margin-left: 16px;
+    padding: 16px;
+  }
+
+  .ai-entry-controls {
+    margin-left: 16px;
+  }
+
+  .ai-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 8px;
+  }
+
+  .file-thumbnail,
+  .file-placeholder {
+    width: 40px;
+    height: 40px;
+  }
+
+  .file-placeholder {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-badge {
+    margin-left: 8px;
+  }
+
+  .ai-details-panel {
+    margin-left: 8px;
+    padding: 12px;
+  }
+
+  .ai-entry-controls {
+    margin-left: 8px;
+  }
+
+  .ai-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-details-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .metadata-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .metadata-value {
+    max-width: 100%;
+    text-align: left;
+  }
+} 

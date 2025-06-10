@@ -1,38 +1,169 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
+import { useBondedServices } from "../../hooks/useBondedServices";
+import { AuthClient } from "@dfinity/auth-client";
 import "./style.css";
 
 export const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginMethod, setLoginMethod] = useState("email"); // "email" or "ii"
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [authClient, setAuthClient] = useState(null);
   const navigate = useNavigate();
+  
+  // Initialize Bonded services
+  const { initializeServices, isInitialized } = useBondedServices();
+
+  // Initialize authentication client on component mount
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const client = await AuthClient.create();
+        setAuthClient(client);
+        
+        // Check if user is already authenticated
+        const isAuthenticated = await client.isAuthenticated();
+        if (isAuthenticated) {
+          // User is already logged in, redirect to timeline
+          navigate("/timeline");
+        }
+      } catch (error) {
+        console.error("Auth client initialization failed:", error);
+        setError("Authentication service unavailable. Please try again later.");
+      }
+    };
+    
+    initAuth();
+  }, [navigate]);
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
+    // Clear error when user starts typing
+    if (error) setError("");
   };
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
+    // Clear error when user starts typing
+    if (error) setError("");
   };
 
-  const handleEmailLogin = (e) => {
+  const handleEmailLogin = async (e) => {
     e.preventDefault();
-    // Here you would normally authenticate with your backend
-    console.log("Logging in with email:", email);
-    // If login successful, navigate to timeline
-    navigate("/timeline");
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // Validate inputs
+      if (!email || !password) {
+        throw new Error("Please fill in all fields");
+      }
+
+      if (!email.includes("@")) {
+        throw new Error("Please enter a valid email address");
+      }
+
+      // For production, this would call your authentication API
+      // For now, we'll simulate authentication with basic validation
+      console.log("Authenticating with email:", email);
+
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // For demo purposes, accept any email/password combination
+      // In production, this would verify credentials against your backend
+      
+      // Store user session
+      localStorage.setItem("bonded_user_session", JSON.stringify({
+        email: email,
+        loginMethod: "email",
+        loginTime: Date.now(),
+        sessionId: `session_${Date.now()}`
+      }));
+
+      // Initialize Bonded services after successful login
+      await initializeServices();
+
+      // Navigate to timeline with a small delay for UX
+      setTimeout(() => {
+        navigate("/timeline");
+      }, 300);
+
+    } catch (error) {
+      console.error("Email login failed:", error);
+      setError(error.message || "Login failed. Please check your credentials and try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleICPLogin = () => {
-    // Implement ICP Internet Identity authentication
-    console.log("Initiating ICP Internet Identity login");
-    // This would typically involve redirect to ICP authentication
-    // For now, we'll just simulate success
-    setTimeout(() => {
-      navigate("/timeline");
-    }, 1000);
+  const handleICPLogin = async () => {
+    if (!authClient) {
+      setError("Authentication service not ready. Please refresh the page.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      console.log("Initiating Internet Identity authentication...");
+
+      // Configure the login options
+      const loginOptions = {
+        identityProvider: process.env.DFX_NETWORK === "local" 
+          ? `http://localhost:4943/?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID}`
+          : "https://identity.ic0.app",
+        maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days in nanoseconds
+        onSuccess: async () => {
+          try {
+            console.log("Internet Identity authentication successful");
+            
+            // Get the identity from the auth client
+            const identity = authClient.getIdentity();
+            const principal = identity.getPrincipal().toString();
+
+            console.log("User principal:", principal);
+
+            // Store user session
+            localStorage.setItem("bonded_user_session", JSON.stringify({
+              principal: principal,
+              loginMethod: "internet_identity",
+              loginTime: Date.now(),
+              sessionId: `ii_session_${Date.now()}`
+            }));
+
+            // Initialize Bonded services after successful login
+            await initializeServices();
+
+            // Navigate to timeline
+            navigate("/timeline");
+            
+          } catch (error) {
+            console.error("Post-authentication setup failed:", error);
+            setError("Authentication successful, but setup failed. Please try again.");
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        onError: (error) => {
+          console.error("Internet Identity authentication failed:", error);
+          setError("Internet Identity authentication failed. Please try again.");
+          setIsLoading(false);
+        }
+      };
+
+      // Start the login process
+      await authClient.login(loginOptions);
+
+    } catch (error) {
+      console.error("ICP login failed:", error);
+      setError("Failed to start Internet Identity authentication. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -45,21 +176,32 @@ export const Login = () => {
         />
 
         <h1 className="login-title">Welcome back</h1>
+        
+        {error && (
+          <div className="error-banner" role="alert" aria-live="polite">
+            <span className="error-icon">⚠️</span>
+            {error}
+          </div>
+        )}
 
         <div className="login-method-toggle">
           <button
             className={`toggle-button ${loginMethod === "email" ? "active" : ""}`}
             onClick={() => setLoginMethod("email")}
+            disabled={isLoading}
+            aria-pressed={loginMethod === "email"}
           >
             Email & Password
           </button>
           <button
             className={`toggle-button ${loginMethod === "ii" ? "active" : ""}`}
             onClick={() => setLoginMethod("ii")}
+            disabled={isLoading}
+            aria-pressed={loginMethod === "ii"}
           >
             Internet Identity
           </button>
-          </div>
+        </div>
 
         <div className="login-options">
           {loginMethod === "email" && (
@@ -85,10 +227,18 @@ export const Login = () => {
               className="form-field"
             />
 
-            <button type="submit" className="email-login-button">
+            <button 
+              type="submit" 
+              className={`email-login-button ${isLoading ? "loading" : ""}`}
+              disabled={isLoading || !email || !password}
+              aria-describedby={error ? "login-error" : undefined}
+            >
               <div className="button-layout">
                 <div className="button-content">
-                  <div className="button-label">Login</div>
+                  {isLoading && <div className="loading-spinner"></div>}
+                  <div className="button-label">
+                    {isLoading ? "Signing in..." : "Login"}
+                  </div>
                 </div>
               </div>
             </button>
@@ -98,15 +248,30 @@ export const Login = () => {
 
           {loginMethod === "ii" && (
             <div className="ii-container animate-ii">
-              <button className="icp-login-button" onClick={handleICPLogin} aria-label="Login with Internet Identity">
-                <img
-                  src="/images/icp-logo-button.svg"
-                  alt="Internet Computer"
-                  className="icp-logo"
-                />
-                 Login with Internet Identity
+              <button 
+                className={`icp-login-button ${isLoading ? "loading" : ""}`}
+                onClick={handleICPLogin} 
+                disabled={isLoading}
+                aria-label="Login with Internet Identity"
+                aria-describedby="ii-info-text"
+              >
+                {isLoading ? (
+                  <div className="loading-spinner"></div>
+                ) : (
+                  <img
+                    src="/images/icp-logo-button.svg"
+                    alt="Internet Computer"
+                    className="icp-logo"
+                  />
+                )}
+                {isLoading ? "Connecting to Internet Identity..." : "Login with Internet Identity"}
               </button>
-              <p className="ii-info-text">You will be redirected to the Internet Identity service to authenticate.</p>
+              <p id="ii-info-text" className="ii-info-text">
+                {isLoading 
+                  ? "Please complete authentication in the popup window..."
+                  : "You will be redirected to the Internet Identity service to authenticate."
+                }
+              </p>
             </div>
           )}
         </div>

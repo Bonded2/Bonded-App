@@ -338,4 +338,75 @@
 .select-files-btn .btn-label,
 .upload-checked-btn .btn-label {
   /* Styles specific to button labels if needed */
+}
+
+/* AI Classification Styles */
+.ai-status {
+  margin-left: 8px;
+}
+
+.ai-processing {
+  color: #FF9500;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ai-approved {
+  color: #4CAF50;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ai-rejected {
+  color: #FF5252;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ai-error {
+  color: #FF9800;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.ai-classification-status {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  border: 1px solid rgba(185, 255, 70, 0.3);
+}
+
+.ai-classification-status h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #B9FF46;
+  font-family: "Trocchi", serif;
+}
+
+.ai-classification-status p {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: "Rethink Sans", sans-serif;
+}
+
+.ai-demo-button {
+  background-color: transparent;
+  color: #B9FF46;
+  border: 1px solid #B9FF46;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: "Rethink Sans", sans-serif;
+}
+
+.ai-demo-button:hover {
+  background-color: rgba(185, 255, 70, 0.1);
+  border-color: #ccff7a;
+  color: #ccff7a;
 } 

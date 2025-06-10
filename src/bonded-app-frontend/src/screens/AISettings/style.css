@@ -1,0 +1,682 @@
+.ai-settings-screen {
+  background: linear-gradient(135deg, #4c2cdf 0%, #381ab3 100%);
+  min-height: 100vh;
+  color: #FFFFFF;
+}
+
+.ai-settings-content {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* AI Hero Section */
+.ai-hero-section {
+  background: linear-gradient(135deg, rgba(185, 255, 70, 0.15) 0%, rgba(185, 255, 70, 0.05) 100%);
+  border: 2px solid rgba(185, 255, 70, 0.3);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 32px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.ai-hero-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.ai-hero-section h2 {
+  font-family: "Trocchi", serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: #B9FF46;
+  margin: 0 0 16px 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.ai-hero-section p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 24px 0;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ai-features {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.ai-feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  min-width: 120px;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.ai-feature:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.feature-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.ai-feature span:last-child {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FFFFFF;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.settings-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.settings-header h1 {
+  font-family: "Trocchi", serif;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #B9FF46;
+}
+
+.settings-header p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+.settings-section {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settings-section h2 {
+  font-family: "Trocchi", serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 20px 0;
+  color: #B9FF46;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+/* AI Status Section */
+.ai-status-section {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.status-indicator.ready {
+  background-color: rgba(76, 175, 80, 0.2);
+  border: 1px solid #4CAF50;
+}
+
+.status-indicator.error {
+  background-color: rgba(255, 82, 82, 0.2);
+  border: 1px solid #FF5252;
+}
+
+.status-icon {
+  font-size: 20px;
+}
+
+.status-text {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.model-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.model-card {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.model-card h3 {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: #B9FF46;
+}
+
+.model-card p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+.model-card p:last-child {
+  margin-bottom: 0;
+}
+
+/* Setting Items */
+.setting-item {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-header {
+  margin-bottom: 8px;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #FFFFFF;
+  cursor: pointer;
+  user-select: none;
+}
+
+.setting-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #B9FF46;
+  cursor: pointer;
+}
+
+.setting-label input[type="checkbox"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.setting-description {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  line-height: 1.4;
+  margin-left: 30px;
+}
+
+/* Confidence Slider */
+.confidence-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  outline: none;
+  margin: 12px 0;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.confidence-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #B9FF46;
+  cursor: pointer;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.confidence-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #B9FF46;
+  cursor: pointer;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.confidence-slider:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.confidence-slider:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+.confidence-slider:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+}
+
+/* Test AI Button */
+.test-ai-button {
+  background-color: #B9FF46;
+  color: #2C4CDF;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.test-ai-button:hover:not(:disabled) {
+  background-color: #ccff7a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.test-ai-button:disabled {
+  background-color: #666666;
+  color: #999999;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* MVP Info Section */
+.mvp-info {
+  background-color: rgba(185, 255, 70, 0.1);
+  border: 1px solid rgba(185, 255, 70, 0.3);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.info-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-item h3 {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #B9FF46;
+}
+
+.info-item p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .ai-settings-content {
+    padding: 16px;
+  }
+
+  .ai-hero-section {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .ai-hero-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+
+  .ai-hero-section h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+  }
+
+  .ai-hero-section p {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  .ai-features {
+    gap: 16px;
+  }
+
+  .ai-feature {
+    padding: 12px;
+    min-width: 100px;
+  }
+
+  .feature-icon {
+    font-size: 20px;
+  }
+
+  .ai-feature span:last-child {
+    font-size: 11px;
+  }
+  
+  .settings-header h1 {
+    font-size: 24px;
+  }
+  
+  .settings-header p {
+    font-size: 14px;
+  }
+  
+  .settings-section {
+    padding: 20px;
+  }
+  
+  .settings-section h2 {
+    font-size: 18px;
+  }
+  
+  .model-info {
+    grid-template-columns: 1fr;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .setting-label {
+    font-size: 15px;
+  }
+  
+  .setting-description {
+    font-size: 13px;
+    margin-left: 26px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-settings-content {
+    padding: 12px;
+  }
+
+  .ai-hero-section {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .ai-hero-icon {
+    font-size: 36px;
+    margin-bottom: 10px;
+  }
+
+  .ai-hero-section h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .ai-hero-section p {
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .ai-features {
+    gap: 12px;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .ai-feature {
+    padding: 10px;
+    min-width: 80px;
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .feature-icon {
+    font-size: 18px;
+  }
+
+  .ai-feature span:last-child {
+    font-size: 10px;
+  }
+  
+  .settings-section {
+    padding: 16px;
+  }
+  
+  .settings-header h1 {
+    font-size: 22px;
+  }
+  
+  .test-ai-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Automatic Scanning Styles */
+.scan-status-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scan-status-section h3 {
+  font-family: "Trocchi", serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+  color: #B9FF46;
+}
+
+.scan-status {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 16px;
+}
+
+.scan-status.scanning {
+  border-color: #B9FF46;
+  background: rgba(185, 255, 70, 0.1);
+}
+
+.status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.status-row:last-child {
+  margin-bottom: 0;
+}
+
+.status-label {
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.status-value {
+  font-family: "Rethink Sans", sans-serif;
+  color: #FFFFFF;
+  font-size: 14px;
+}
+
+.status-value.approved {
+  color: #B9FF46;
+  font-weight: 600;
+}
+
+.status-value.rejected {
+  color: #FF6B6B;
+  font-weight: 600;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #B9FF46, #ccff7a);
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.scan-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.scan-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.scan-button.start {
+  background: #B9FF46;
+  color: #2C4CDF;
+}
+
+.scan-button.start:hover:not(:disabled) {
+  background: #ccff7a;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.scan-button.stop {
+  background: #FF6B6B;
+  color: white;
+}
+
+.scan-button.stop:hover {
+  background: #ff5252;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.scan-button:disabled {
+  background: #666666;
+  color: #999999;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.scan-results {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(185, 255, 70, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(185, 255, 70, 0.3);
+}
+
+.scan-results h4 {
+  font-family: "Trocchi", serif;
+  margin: 0 0 8px 0;
+  color: #B9FF46;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.scan-results p {
+  font-family: "Rethink Sans", sans-serif;
+  margin: 4px 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+}
+
+/* Responsive adjustments for scanning UI */
+@media (max-width: 768px) {
+  .scan-status-section {
+    padding: 16px;
+  }
+  
+  .scan-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .scan-button {
+    width: 100%;
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .scan-status-section {
+    padding: 12px;
+  }
+} 

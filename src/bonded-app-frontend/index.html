@@ -11,10 +11,20 @@
   <link rel="icon" href="/favicon.ico" />
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Rethink+Sans:ital,wght@0,400..800;1,400..800&family=Trocchi&display=swap" rel="stylesheet">
+  <!-- Content Security Policy to allow required resources -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' blob: data:;
+    style-src 'self' 'unsafe-inline' blob: data:;
+    font-src 'self' data: blob:;
+    img-src 'self' data: blob: https:;
+    media-src 'self' data: blob:;
+    connect-src 'self' http://localhost:* https://*.icp0.io https://icp-api.io https://fonts.googleapis.com https://fonts.gstatic.com wss://localhost:* blob: data:;
+    worker-src 'self' blob: data:;
+    object-src 'none';
+    base-uri 'self';
+    form-action 'self';
+  ">
 
   <!-- Primary Theme Color for browsers -->
   <meta name="theme-color" content="#2C4CDF" />
@@ -74,73 +84,41 @@
 
 <body>
   <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
   <script>
-    // Register service worker with improved error handling and update flow
-    if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
-      window.addEventListener('load', () => {
-        // Attempt to unregister any existing service workers first
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister()
-              .then(function() { console.log('Old service worker unregistered', registration); })
-              .catch(function(err) { console.error('Failed to unregister old service worker', err); });
+    // Polyfill Buffer for nsfwjs and other Node.js modules
+    if (typeof globalThis.Buffer === 'undefined') {
+      globalThis.Buffer = {
+        from: (data, encoding) => {
+          if (typeof data === 'string') {
+            return new TextEncoder().encode(data);
           }
-        }).then(() => {
-          // Then, register the new service worker
-          navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => {
-              console.log('Service Worker registered: ', registration);
-              
-              registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                console.log('Service Worker update found. New worker:', newWorker);
-                newWorker.addEventListener('statechange', () => {
-                  console.log('New Service Worker state:', newWorker.state);
-                  if (newWorker.state === 'installed') {
-                    if (navigator.serviceWorker.controller) {
-                      // New content is available and has been installed.
-                      // For development, let's just log it and not force a reload.
-                      console.log('New service worker installed and ready. Manual refresh might be needed to see changes.');
-                    } else {
-                      // This is the first service worker being installed.
-                      console.log('Service worker installed for the first time.');
-                    }
-                  }
-                });
-              });
-            })
-            .catch(registrationError => {
-              console.log('Service Worker registration failed: ', registrationError);
-            });
-        });
-          
-        // Handle browser compatibility differences
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        
-        if (isIOS) {
-          // iOS specific adjustments
-          document.body.classList.add('ios-device');
-          
-          // Fix for iOS Safari standalone mode
-          if (window.navigator.standalone === true) {
-            document.body.classList.add('ios-standalone');
+          return new Uint8Array(data);
+        },
+        alloc: (size) => new Uint8Array(size),
+        isBuffer: (obj) => obj instanceof Uint8Array,
+        concat: (buffers) => {
+          const totalLength = buffers.reduce((len, buf) => len + buf.length, 0);
+          const result = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const buf of buffers) {
+            result.set(buf, offset);
+            offset += buf.length;
           }
+          return result;
         }
-      });
-    } else if (window.location.hostname === 'localhost') {
-      console.log('Service Worker registration skipped on localhost.');
-      // Optionally, explicitly unregister any SW that might have been registered on localhost previously
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for(let registration of registrations) {
-          registration.unregister()
-            .then(function() { console.log('Localhost: Old service worker unregistered', registration); })
-            .catch(function(err) { console.error('Localhost: Failed to unregister old service worker', err); });
-        }
-      });
+      };
+    }
+    
+    // Polyfill process.env for Node.js compatibility
+    if (typeof globalThis.process === 'undefined') {
+      globalThis.process = { 
+        env: { NODE_ENV: 'production' },
+        browser: true
+      };
     }
   </script>
+  <script type="module" src="/src/main.jsx"></script>
+  <script type="module" src="/src/sw-registration.js"></script>
   <noscript>You need to enable JavaScript to run this app.</noscript>
 </body>
 
