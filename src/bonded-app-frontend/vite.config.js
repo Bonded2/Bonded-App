@@ -40,6 +40,24 @@ export default defineConfig({
         }
         warn(warning);
       },
+      plugins: [
+        // Custom plugin to prevent minification of TensorFlow modules
+        {
+          name: 'tensorflow-no-minify',
+          generateBundle(options, bundle) {
+            Object.keys(bundle).forEach(fileName => {
+              if (fileName.includes('tensorflow')) {
+                const chunk = bundle[fileName];
+                if (chunk.type === 'chunk') {
+                  // Mark TensorFlow chunks to skip aggressive optimizations
+                  chunk.isEntry = false;
+                  chunk.isDynamicEntry = true;
+                }
+              }
+            });
+          }
+        }
+      ],
       output: {
         manualChunks: (id) => {
           // More granular TensorFlow chunking to prevent circular dependencies
@@ -116,7 +134,7 @@ export default defineConfig({
     target: 'es2020',
     sourcemap: false,
     chunkSizeWarningLimit: 2048,
-    // Use esbuild with careful settings to prevent variable initialization issues
+    // Use esbuild with TensorFlow-safe settings
     minify: 'esbuild',
     esbuild: {
       // Keep names to prevent initialization issues
@@ -125,9 +143,9 @@ export default defineConfig({
       drop: isDev ? [] : ['console', 'debugger'],
       // Use modern target to avoid transpilation issues
       target: 'es2020',
-      // Preserve function and class names to prevent circular dependency issues
+      // Completely disable minification for TensorFlow to prevent initialization issues
       minifyIdentifiers: false,
-      minifySyntax: true,
+      minifySyntax: false, // Disable syntax minification to prevent variable reordering
       minifyWhitespace: true,
       // Prevent TDZ (Temporal Dead Zone) issues with let/const hoisting
       tsconfigRaw: {
@@ -186,13 +204,17 @@ export default defineConfig({
     __DEV__: isDev,
   },
   optimizeDeps: {
-    exclude: ['core-js', 'simple-peer'],
-    include: [
-      '@tensorflow/tfjs-core',
-      '@tensorflow/tfjs-backend-webgl', 
-      '@tensorflow/tfjs-backend-cpu',
+    exclude: [
+      'core-js', 
+      'simple-peer',
+      // Exclude TensorFlow from optimization to prevent initialization issues
       '@tensorflow/tfjs',
-      'nsfwjs',
+      '@tensorflow/tfjs-core',
+      '@tensorflow/tfjs-backend-cpu',
+      '@tensorflow/tfjs-backend-webgl',
+      'nsfwjs'
+    ],
+    include: [
       'jspdf',
       'buffer',
       'borc',
@@ -209,8 +231,6 @@ export default defineConfig({
       // Preserve the order of imports and prevent hoisting issues
       keepNames: true,
       minifyIdentifiers: false
-    },
-    // Force dependency optimization to respect the order
-    force: true
+    }
   }
 });

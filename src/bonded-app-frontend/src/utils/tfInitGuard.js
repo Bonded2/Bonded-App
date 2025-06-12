@@ -47,23 +47,28 @@ async function initializeTensorFlow() {
     // Small delay to prevent race conditions
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Step 2: Load backends in parallel but handle failures gracefully
-    console.log('📦 Loading TensorFlow backends...');
-    const [cpuBackend, webglBackend] = await Promise.allSettled([
-      import('@tensorflow/tfjs-backend-cpu'),
-      import('@tensorflow/tfjs-backend-webgl')
-    ]);
-    
-    if (cpuBackend.status === 'rejected') {
-      console.warn('⚠️ CPU backend failed to load:', cpuBackend.reason);
+    // Step 2: Load backends sequentially to prevent race conditions
+    console.log('📦 Loading CPU backend first...');
+    let cpuBackend = null;
+    try {
+      cpuBackend = await import('@tensorflow/tfjs-backend-cpu');
+      console.log('✅ CPU backend loaded');
+      // Longer delay after CPU backend
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      console.warn('⚠️ CPU backend failed to load:', error);
     }
     
-    if (webglBackend.status === 'rejected') {
-      console.warn('⚠️ WebGL backend failed to load:', webglBackend.reason);
+    console.log('📦 Loading WebGL backend...');
+    let webglBackend = null;
+    try {
+      webglBackend = await import('@tensorflow/tfjs-backend-webgl');
+      console.log('✅ WebGL backend loaded');
+      // Delay after WebGL backend
+      await new Promise(resolve => setTimeout(resolve, 200));
+    } catch (error) {
+      console.warn('⚠️ WebGL backend failed to load:', error);
     }
-    
-    // Another small delay
-    await new Promise(resolve => setTimeout(resolve, 100));
     
     // Step 3: Load main TensorFlow module
     console.log('📦 Loading main TensorFlow module...');
@@ -78,16 +83,18 @@ async function initializeTensorFlow() {
       const currentBackend = tf.getBackend();
       console.log(`🎯 Current backend: ${currentBackend}`);
       
-      // Prefer WebGL if available, fallback to CPU
-      if (currentBackend !== 'webgl' && webglBackend.status === 'fulfilled') {
-        try {
-          await tf.setBackend('webgl');
-          console.log('✅ WebGL backend configured successfully');
-        } catch (webglError) {
-          console.warn('⚠️ WebGL configuration failed, using CPU:', webglError);
-          await tf.setBackend('cpu');
-        }
-      }
+             // Prefer WebGL if available, fallback to CPU
+       if (currentBackend !== 'webgl' && webglBackend) {
+         try {
+           await tf.setBackend('webgl');
+           console.log('✅ WebGL backend configured successfully');
+         } catch (webglError) {
+           console.warn('⚠️ WebGL configuration failed, using CPU:', webglError);
+           if (cpuBackend) {
+             await tf.setBackend('cpu');
+           }
+         }
+       }
     } catch (backendError) {
       console.warn('⚠️ Backend configuration failed:', backendError);
     }

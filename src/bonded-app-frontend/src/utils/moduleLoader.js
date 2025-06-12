@@ -129,13 +129,18 @@ class ModuleLoader {
 // Export singleton instance
 export const moduleLoader = new ModuleLoader();
 
-// Helper function for loading TensorFlow with proper initialization
+// Helper function for loading TensorFlow with CDN fallback
 export async function loadTensorFlow() {
   return moduleLoader.loadModule('tensorflow', async () => {
-    // Use the safety guard to prevent initialization issues
-    const { safeTensorFlowInit } = await import('./tfInitGuard.js');
-    return await safeTensorFlowInit();
-  }, { timeout: 60000, retries: 3 });
+    try {
+      // Use CDN loading first to avoid bundling issues completely
+      const { loadTensorFlowWithFallback } = await import('./tfCdnLoader.js');
+      return await loadTensorFlowWithFallback();
+    } catch (error) {
+      console.error('❌ TensorFlow initialization failed with all methods:', error);
+      throw new Error(`Failed to initialize TensorFlow: ${error.message}`);
+    }
+  }, { timeout: 60000, retries: 2 });
 }
 
 // Helper function for loading ONNX Runtime
