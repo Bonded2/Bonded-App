@@ -18,6 +18,22 @@ export async function loadTensorFlowFromCDN() {
     return tfFromCdn;
   }
   
+  // Check if TensorFlow was already loaded early in HTML
+  if (typeof window !== 'undefined' && window.tfLoadPromise) {
+    try {
+      console.log('🔄 Using early-loaded TensorFlow from HTML...');
+      const earlyTf = await window.tfLoadPromise;
+      if (earlyTf && typeof earlyTf.ready === 'function') {
+        await earlyTf.ready();
+        tfFromCdn = earlyTf;
+        console.log('✅ Early TensorFlow initialization complete');
+        return tfFromCdn;
+      }
+    } catch (error) {
+      console.warn('⚠️ Early TensorFlow load failed, trying fresh load:', error);
+    }
+  }
+  
   // Return existing promise if loading is in progress
   if (cdnLoadPromise) {
     return cdnLoadPromise;

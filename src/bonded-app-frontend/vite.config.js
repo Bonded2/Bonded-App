@@ -29,7 +29,14 @@ export default defineConfig({
     outDir: path.join(__dirname, "dist"),
     emptyOutDir: true,
     rollupOptions: {
-      external: [],
+      external: [
+        // Completely exclude TensorFlow from bundling
+        '@tensorflow/tfjs',
+        '@tensorflow/tfjs-core',
+        '@tensorflow/tfjs-backend-cpu',
+        '@tensorflow/tfjs-backend-webgl',
+        'nsfwjs'
+      ],
       onwarn(warning, warn) {
         // Suppress warnings about CommonJS default exports
         if (warning.code === 'MISSING_EXPORT' && 

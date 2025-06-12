@@ -11,15 +11,36 @@
   <link rel="icon" href="/favicon.ico" />
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   
-  <!-- Content Security Policy to allow required resources -->
+  <!-- Preload TensorFlow from CDN to avoid bundling issues -->
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js" as="script" crossorigin="anonymous" />
+  <script>
+    // Early TensorFlow loading to prevent initialization errors
+    window.tfLoadPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js';
+      script.crossOrigin = 'anonymous';
+      script.async = true;
+      script.onload = () => {
+        console.log('✅ TensorFlow CDN loaded early');
+        resolve(window.tf);
+      };
+      script.onerror = (error) => {
+        console.warn('⚠️ Early TensorFlow CDN load failed:', error);
+        resolve(null); // Don't reject, let the fallback handle it
+      };
+      document.head.appendChild(script);
+    });
+  </script>
+  
+  <!-- Content Security Policy to allow required resources including CDN -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    script-src 'self' 'unsafe-inline' blob: data:;
+    script-src 'self' 'unsafe-inline' blob: data: https://cdn.jsdelivr.net;
     style-src 'self' 'unsafe-inline' blob: data:;
     font-src 'self' data: blob:;
     img-src 'self' data: blob: https:;
     media-src 'self' data: blob:;
-    connect-src 'self' http://localhost:* https://*.icp0.io https://icp-api.io https://fonts.googleapis.com https://fonts.gstatic.com wss://localhost:* blob: data:;
+    connect-src 'self' http://localhost:* https://*.icp0.io https://icp-api.io https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net wss://localhost:* blob: data:;
     worker-src 'self' blob: data:;
     object-src 'none';
     base-uri 'self';
