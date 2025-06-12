@@ -14,25 +14,25 @@
   <!-- CSP disabled for development - will be added in production -->
   <!-- <meta http-equiv="Content-Security-Policy" content="..."> -->
   
-  <!-- Direct TensorFlow loading from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js" crossorigin="anonymous"></script>
+  <!-- Local TensorFlow loading (bypass CSP restrictions) -->
+  <script src="/libs/tensorflow.min.js"></script>
+  <script src="/libs/nsfwjs.min.js"></script>
   <script>
     // Mark TensorFlow as loaded
     window.tfLoadPromise = Promise.resolve(window.tf);
-    console.log('✅ TensorFlow and NSFWJS loaded directly from CDN');
+    console.log('✅ TensorFlow and NSFWJS loaded locally (bypasses CSP)');
     
     // Ensure global availability
     if (typeof window.tf !== 'undefined') {
       console.log('✅ TensorFlow confirmed available globally');
     } else {
-      console.warn('⚠️ TensorFlow not available after direct load');
+      console.warn('⚠️ TensorFlow not available after local load');
     }
     
     if (typeof window.nsfwjs !== 'undefined') {
       console.log('✅ NSFWJS confirmed available globally');
     } else {
-      console.warn('⚠️ NSFWJS not available after direct load');
+      console.warn('⚠️ NSFWJS not available after local load');
     }
   </script>
 
