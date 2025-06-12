@@ -132,24 +132,10 @@ export const moduleLoader = new ModuleLoader();
 // Helper function for loading TensorFlow with proper initialization
 export async function loadTensorFlow() {
   return moduleLoader.loadModule('tensorflow', async () => {
-    // Use dynamic import to avoid initialization issues
-    const tf = await import('@tensorflow/tfjs');
-    
-    // Wait for backend to be ready
-    await tf.ready();
-    
-    // Set backend preference
-    if (tf.getBackend() !== 'webgl') {
-      try {
-        await tf.setBackend('webgl');
-      } catch (error) {
-        console.warn('WebGL backend not available, falling back to CPU');
-        await tf.setBackend('cpu');
-      }
-    }
-    
-    return tf;
-  }, { timeout: 45000, retries: 2 });
+    // Use the safety guard to prevent initialization issues
+    const { safeTensorFlowInit } = await import('./tfInitGuard.js');
+    return await safeTensorFlowInit();
+  }, { timeout: 60000, retries: 3 });
 }
 
 // Helper function for loading ONNX Runtime

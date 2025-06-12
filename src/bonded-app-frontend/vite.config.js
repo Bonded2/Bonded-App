@@ -42,18 +42,27 @@ export default defineConfig({
       },
       output: {
         manualChunks: (id) => {
-          // Separate AI models into individual chunks to prevent circular dependencies
-          if (id.includes('tensorflow') || id.includes('tfjs')) {
-            return 'tensorflow';
+          // More granular TensorFlow chunking to prevent circular dependencies
+          if (id.includes('@tensorflow/tfjs-core')) {
+            return 'tensorflow-core';
+          }
+          if (id.includes('@tensorflow/tfjs-backend-webgl')) {
+            return 'tensorflow-webgl';
+          }
+          if (id.includes('@tensorflow/tfjs-backend-cpu')) {
+            return 'tensorflow-cpu';
+          }
+          if (id.includes('@tensorflow/tfjs') && !id.includes('backend') && !id.includes('core')) {
+            return 'tensorflow-main';
+          }
+          if (id.includes('nsfwjs')) {
+            return 'nsfwjs';
           }
           if (id.includes('onnxruntime') || id.includes('onnx')) {
             return 'onnxruntime';
           }
           if (id.includes('transformers') || id.includes('@xenova')) {
             return 'transformers';
-          }
-          if (id.includes('nsfwjs')) {
-            return 'nsfwjs';
           }
           if (id.includes('tesseract')) {
             return 'tesseract';
@@ -107,7 +116,7 @@ export default defineConfig({
     target: 'es2020',
     sourcemap: false,
     chunkSizeWarningLimit: 2048,
-    // Use esbuild instead of terser to prevent variable initialization issues
+    // Use esbuild with careful settings to prevent variable initialization issues
     minify: 'esbuild',
     esbuild: {
       // Keep names to prevent initialization issues
@@ -119,7 +128,14 @@ export default defineConfig({
       // Preserve function and class names to prevent circular dependency issues
       minifyIdentifiers: false,
       minifySyntax: true,
-      minifyWhitespace: true
+      minifyWhitespace: true,
+      // Prevent TDZ (Temporal Dead Zone) issues with let/const hoisting
+      tsconfigRaw: {
+        compilerOptions: {
+          experimentalDecorators: true,
+          useDefineForClassFields: false
+        }
+      }
     },
   },
   server: {
@@ -172,10 +188,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['core-js', 'simple-peer'],
     include: [
-      '@tensorflow/tfjs',
       '@tensorflow/tfjs-core',
-      '@tensorflow/tfjs-backend-webgl',
+      '@tensorflow/tfjs-backend-webgl', 
       '@tensorflow/tfjs-backend-cpu',
+      '@tensorflow/tfjs',
       'nsfwjs',
       'jspdf',
       'buffer',
@@ -189,7 +205,12 @@ export default defineConfig({
       define: {
         global: 'globalThis'
       },
-      target: 'es2020'
-    }
+      target: 'es2020',
+      // Preserve the order of imports and prevent hoisting issues
+      keepNames: true,
+      minifyIdentifiers: false
+    },
+    // Force dependency optimization to respect the order
+    force: true
   }
 });
