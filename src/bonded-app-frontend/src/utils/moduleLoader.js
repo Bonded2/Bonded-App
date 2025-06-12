@@ -155,15 +155,37 @@ export async function loadOnnxRuntime() {
   }, { timeout: 30000, retries: 2 });
 }
 
-// Helper function for loading NSFWJS
+// Helper function for loading NSFWJS from CDN
 export async function loadNSFWJS() {
   return moduleLoader.loadModule('nsfwjs', async () => {
     // Load TensorFlow first
     await loadTensorFlow();
     
-    // Then load NSFWJS
-    const nsfwjs = await import('nsfwjs');
-    return nsfwjs;
+    // Check if already loaded globally
+    if (typeof window !== 'undefined' && window.nsfwjs) {
+      return window.nsfwjs;
+    }
+    
+    // Load NSFWJS from CDN
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js';
+      script.crossOrigin = 'anonymous';
+      script.async = true;
+      script.onload = () => {
+        if (window.nsfwjs) {
+          console.log('✅ NSFWJS loaded from CDN via moduleLoader');
+          resolve(window.nsfwjs);
+        } else {
+          reject(new Error('NSFWJS not available after CDN load'));
+        }
+      };
+      script.onerror = (error) => {
+        console.warn('⚠️ NSFWJS CDN load failed via moduleLoader:', error);
+        reject(error);
+      };
+      document.head.appendChild(script);
+    });
   }, { timeout: 30000, retries: 2 });
 }
 

@@ -5,10 +5,38 @@
  * Runs 100% in-browser with MobileNet for privacy and offline capability
  */
 
-import * as nsfwjs from 'nsfwjs';
 import { openDB } from 'idb';
 import { modelOptimizationService } from './modelOptimization.js';
 import { wasmModelContainer } from './wasmModelContainer.js';
+
+// CDN-based NSFWJS loader to avoid bundling issues
+async function loadNSFWJS() {
+  // Check if already loaded globally
+  if (typeof window !== 'undefined' && window.nsfwjs) {
+    return window.nsfwjs;
+  }
+  
+  // Load from CDN
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js';
+    script.crossOrigin = 'anonymous';
+    script.async = true;
+    script.onload = () => {
+      if (window.nsfwjs) {
+        console.log('✅ NSFWJS loaded from CDN');
+        resolve(window.nsfwjs);
+      } else {
+        reject(new Error('NSFWJS not available after CDN load'));
+      }
+    };
+    script.onerror = (error) => {
+      console.warn('⚠️ NSFWJS CDN load failed:', error);
+      reject(error);
+    };
+    document.head.appendChild(script);
+  });
+}
 
 class NSFWDetectionService {
   constructor() {
@@ -118,6 +146,7 @@ class NSFWDetectionService {
       // Ultimate fallback to original NSFWJS (but only if no other option works)
       try {
         console.log('[NSFWDetection] Trying original NSFWJS as last resort...');
+        const nsfwjs = await loadNSFWJS();
         this.model = await nsfwjs.load(modelUrl);
         this.isLoaded = true;
         return true;
