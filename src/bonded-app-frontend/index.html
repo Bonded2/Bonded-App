@@ -14,26 +14,56 @@
   <!-- CSP disabled for development - will be added in production -->
   <!-- <meta http-equiv="Content-Security-Policy" content="..."> -->
   
-  <!-- Local TensorFlow loading (bypass CSP restrictions) -->
-  <script src="/libs/tensorflow.min.js"></script>
-  <script src="/libs/nsfwjs.min.js"></script>
+  <!-- CDN TensorFlow and NSFWJS loading (with CSP compatibility) -->
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
   <script>
-    // Mark TensorFlow as loaded
-    window.tfLoadPromise = Promise.resolve(window.tf);
-    console.log('✅ TensorFlow and NSFWJS loaded locally (bypasses CSP)');
+    // Enhanced TensorFlow initialization with proper error handling
+    window.tfInitPromise = new Promise((resolve, reject) => {
+      let checkCount = 0;
+      const maxChecks = 50;
+      
+      function checkTensorFlow() {
+        checkCount++;
+        
+        if (typeof window.tf !== 'undefined' && window.tf.ready) {
+          console.log('✅ TensorFlow loaded from CDN');
+          
+          // Initialize TensorFlow
+          window.tf.ready().then(() => {
+            console.log('✅ TensorFlow ready');
+            
+            // Check NSFWJS availability
+            if (typeof window.nsfwjs !== 'undefined') {
+              console.log('✅ NSFWJS confirmed available globally');
+              resolve({ tf: window.tf, nsfwjs: window.nsfwjs });
+            } else {
+              console.warn('⚠️ NSFWJS not available after load');
+              resolve({ tf: window.tf, nsfwjs: null });
+            }
+          }).catch(reject);
+          
+        } else if (checkCount < maxChecks) {
+          setTimeout(checkTensorFlow, 100);
+        } else {
+          console.error('❌ TensorFlow failed to load after timeout');
+          reject(new Error('TensorFlow failed to load'));
+        }
+      }
+      
+      // Start checking after a brief delay to allow scripts to load
+      setTimeout(checkTensorFlow, 100);
+    });
     
-    // Ensure global availability
-    if (typeof window.tf !== 'undefined') {
-      console.log('✅ TensorFlow confirmed available globally');
-    } else {
-      console.warn('⚠️ TensorFlow not available after local load');
-    }
-    
-    if (typeof window.nsfwjs !== 'undefined') {
-      console.log('✅ NSFWJS confirmed available globally');
-    } else {
-      console.warn('⚠️ NSFWJS not available after local load');
-    }
+    // Log initialization status
+    window.tfInitPromise.then((modules) => {
+      console.log('🎉 AI modules initialized:', { 
+        tensorflow: !!modules.tf, 
+        nsfwjs: !!modules.nsfwjs 
+      });
+    }).catch((error) => {
+      console.error('❌ AI module initialization failed:', error);
+    });
   </script>
 
   <!-- Primary Theme Color for browsers -->

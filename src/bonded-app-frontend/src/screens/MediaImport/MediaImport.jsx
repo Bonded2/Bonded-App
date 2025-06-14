@@ -4,6 +4,7 @@ import { TopAppBar } from '../../components/TopAppBar';
 import { MediaScannerModal } from "../../components/MediaScanner";
 import LocationPanel from '../../features/geolocation/LocationPanel';
 import { useGeoMetadata } from '../../features/geolocation/hooks/useGeoMetadata';
+import TelegramExportUpload from '../../components/TelegramExportUpload/TelegramExportUpload';
 import "./style.css";
 
 export const MediaImport = () => {

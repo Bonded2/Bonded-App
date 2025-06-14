@@ -298,59 +298,48 @@ class MediaAccessService {
    * @returns {Promise<Array>} Array of message objects
    */
   async fetchTelegramMessages(targetDate) {
-    if (!this.telegramConfig.enabled || !this.telegramConfig.botToken) {
+    if (!this.telegramConfig.enabled || !this.telegramConfig.botToken || !this.telegramConfig.chatId) {
       console.log('[MediaAccess] Telegram not configured');
       return [];
     }
-
     try {
-      const dateStr = targetDate.toISOString().split('T')[0];
-      
-      // Check cache first
-      const cachedMessages = await this.getCachedMessages(dateStr);
-      if (cachedMessages.length > 0) {
-        console.log(`[MediaAccess] Found ${cachedMessages.length} cached messages for ${dateStr}`);
-        return cachedMessages;
-      }
+      // Calculate date range for the target day (UTC)
+      const startOfDay = new Date(targetDate);
+      startOfDay.setUTCHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
 
-      // For MVP, return mock messages
-      const messages = await this.getMockTelegramMessages(targetDate);
-      
-      // Cache the results
-      await this.cacheMessages(dateStr, messages);
-      
-      console.log(`[MediaAccess] Fetched ${messages.length} messages for ${dateStr}`);
+      // Fetch updates from Telegram
+      const url = `https://api.telegram.org/bot${this.telegramConfig.botToken}/getUpdates`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Telegram API error');
+      const data = await response.json();
+
+      // Filter messages for the correct chat and date
+      const messages = [];
+      for (const update of data.result) {
+        if (
+          update.message &&
+          update.message.chat &&
+          update.message.chat.id == this.telegramConfig.chatId &&
+          update.message.date * 1000 >= startOfDay.getTime() &&
+          update.message.date * 1000 <= endOfDay.getTime()
+        ) {
+          messages.push({
+            id: update.message.message_id,
+            text: update.message.text,
+            timestamp: update.message.date * 1000,
+            date: targetDate.toISOString().split('T')[0],
+            from: update.message.from,
+          });
+        }
+      }
+      // Optionally cache messages here
       return messages;
-      
     } catch (error) {
       console.error('[MediaAccess] Telegram fetch failed:', error);
       return [];
     }
-  }
-
-  /**
-   * Get mock Telegram messages for MVP
-   * @param {Date} targetDate - Target date
-   * @returns {Promise<Array>} Mock messages
-   */
-  async getMockTelegramMessages(targetDate) {
-    // Simulate some messages for the target date
-    return [
-      {
-        id: 1,
-        text: "Good morning love! ❤️",
-        timestamp: targetDate.getTime() + (8 * 60 * 60 * 1000), // 8 AM
-        date: targetDate.toISOString().split('T')[0],
-        from: { first_name: "Partner" }
-      },
-      {
-        id: 2,
-        text: "Can't wait to see you tonight!",
-        timestamp: targetDate.getTime() + (14 * 60 * 60 * 1000), // 2 PM
-        date: targetDate.toISOString().split('T')[0],
-        from: { first_name: "User" }
-      }
-    ];
   }
 
   /**

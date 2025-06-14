@@ -129,15 +129,28 @@ class ModuleLoader {
 // Export singleton instance
 export const moduleLoader = new ModuleLoader();
 
-// Helper function for loading TensorFlow with CDN fallback
+// Helper function for loading TensorFlow using HTML-preloaded scripts
 export async function loadTensorFlow() {
   return moduleLoader.loadModule('tensorflow', async () => {
     try {
-      // Use CDN loading first to avoid bundling issues completely
-      const { loadTensorFlowWithFallback } = await import('./tfCdnLoader.js');
-      return await loadTensorFlowWithFallback();
+      // Use the promise-based initialization from HTML
+      if (typeof window !== 'undefined' && window.tfInitPromise) {
+        console.log('🔄 Using HTML-preloaded TensorFlow...');
+        const modules = await window.tfInitPromise;
+        if (modules.tf) {
+          return modules.tf;
+        }
+      }
+      
+      // Fallback: check if tf is available directly
+      if (typeof window !== 'undefined' && window.tf) {
+        await window.tf.ready();
+        return window.tf;
+      }
+      
+      throw new Error('TensorFlow not available');
     } catch (error) {
-      console.error('❌ TensorFlow initialization failed with all methods:', error);
+      console.error('❌ TensorFlow initialization failed:', error);
       throw new Error(`Failed to initialize TensorFlow: ${error.message}`);
     }
   }, { timeout: 60000, retries: 2 });
@@ -155,37 +168,32 @@ export async function loadOnnxRuntime() {
   }, { timeout: 30000, retries: 2 });
 }
 
-// Helper function for loading NSFWJS from CDN
+// Helper function for loading NSFWJS using HTML-preloaded scripts
 export async function loadNSFWJS() {
   return moduleLoader.loadModule('nsfwjs', async () => {
-    // Load TensorFlow first
-    await loadTensorFlow();
-    
-    // Check if already loaded globally
-    if (typeof window !== 'undefined' && window.nsfwjs) {
-      return window.nsfwjs;
-    }
-    
-    // Load NSFWJS from CDN
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js';
-      script.crossOrigin = 'anonymous';
-      script.async = true;
-      script.onload = () => {
-        if (window.nsfwjs) {
-          console.log('✅ NSFWJS loaded from CDN via moduleLoader');
-          resolve(window.nsfwjs);
-        } else {
-          reject(new Error('NSFWJS not available after CDN load'));
+    try {
+      // Ensure TensorFlow is loaded first
+      await loadTensorFlow();
+      
+      // Use the promise-based initialization from HTML
+      if (typeof window !== 'undefined' && window.tfInitPromise) {
+        console.log('🔄 Using HTML-preloaded NSFWJS...');
+        const modules = await window.tfInitPromise;
+        if (modules.nsfwjs) {
+          return modules.nsfwjs;
         }
-      };
-      script.onerror = (error) => {
-        console.warn('⚠️ NSFWJS CDN load failed via moduleLoader:', error);
-        reject(error);
-      };
-      document.head.appendChild(script);
-    });
+      }
+      
+      // Fallback: check if nsfwjs is available directly
+      if (typeof window !== 'undefined' && window.nsfwjs) {
+        return window.nsfwjs;
+      }
+      
+      throw new Error('NSFWJS not available');
+    } catch (error) {
+      console.error('❌ NSFWJS initialization failed:', error);
+      throw new Error(`Failed to initialize NSFWJS: ${error.message}`);
+    }
   }, { timeout: 30000, retries: 2 });
 }
 

@@ -103,55 +103,6 @@ class TimelineService {
   }
 
   /**
-   * Get mock timeline data for MVP demonstration
-   * @returns {Promise<Array>} Mock timeline data
-   */
-  async getMockTimelineData() {
-    // Simulate encrypted timeline items from canister
-    return [
-      {
-        id: 'evidence-2024-01-15-001',
-        timestamp: new Date('2024-01-15T10:30:00Z').getTime(),
-        type: 'daily_evidence',
-        uploadStatus: 'uploaded',
-        uploader: 'user',
-        encrypted: true,
-        // In real implementation, this would be encrypted blob
-        encryptedData: {
-          iv: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
-          ciphertext: new ArrayBuffer(1024),
-          hash: 'mock-hash-1'
-        },
-        metadata: {
-          originalDate: '2024-01-15',
-          hasPhoto: true,
-          messageCount: 5,
-          size: 2048576 // 2MB
-        }
-      },
-      {
-        id: 'evidence-2024-01-14-001',
-        timestamp: new Date('2024-01-14T10:30:00Z').getTime(),
-        type: 'daily_evidence',
-        uploadStatus: 'uploaded',
-        uploader: 'partner',
-        encrypted: true,
-        encryptedData: {
-          iv: new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
-          ciphertext: new ArrayBuffer(512),
-          hash: 'mock-hash-2'
-        },
-        metadata: {
-          originalDate: '2024-01-14',
-          hasPhoto: false,
-          messageCount: 8,
-          size: 1024
-        }
-      }
-    ];
-  }
-
-  /**
    * Decrypt timeline items for display
    * @param {Array} encryptedItems - Encrypted timeline items
    * @returns {Promise<Array>} Decrypted timeline items

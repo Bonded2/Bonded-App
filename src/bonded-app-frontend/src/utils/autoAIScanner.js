@@ -154,7 +154,7 @@ export class AutoAIScanner {
   }
 
   /**
-   * Get files from device gallery (mock implementation for MVP)
+   * Get files from device gallery
    */
   async getGalleryFiles() {
     // In production, this would use File System Access API or similar
