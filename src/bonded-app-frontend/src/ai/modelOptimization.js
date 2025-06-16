@@ -91,7 +91,8 @@ class ModelOptimizationService {
    * Load quantized ONNX model
    */
   async _loadONNXModel(modelConfig, options) {
-    const ort = await import('onnxruntime-web');
+    const { loadOnnxRuntime } = await import('../utils/moduleLoader.js');
+    const ort = await loadOnnxRuntime();
     
     // Configure execution providers based on device capabilities
     const executionProviders = this._getOptimalExecutionProviders(modelConfig.backend);

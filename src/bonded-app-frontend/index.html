@@ -14,56 +14,70 @@
   <!-- CSP disabled for development - will be added in production -->
   <!-- <meta http-equiv="Content-Security-Policy" content="..."> -->
   
-  <!-- CDN TensorFlow and NSFWJS loading (with CSP compatibility) -->
+  <!-- CDN AI libraries loading (with CSP compatibility) -->
   <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
   <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.4/dist/tesseract.min.js"></script>
+  <!-- Note: @xenova/transformers will be loaded dynamically when needed -->
   <script>
-    // Enhanced TensorFlow initialization with proper error handling
-    window.tfInitPromise = new Promise((resolve, reject) => {
+    // Enhanced AI libraries initialization with proper error handling
+    window.aiInitPromise = new Promise((resolve, reject) => {
       let checkCount = 0;
       const maxChecks = 50;
       
-      function checkTensorFlow() {
+      function checkAILibraries() {
         checkCount++;
         
-        if (typeof window.tf !== 'undefined' && window.tf.ready) {
-          console.log('✅ TensorFlow loaded from CDN');
+        const tfReady = typeof window.tf !== 'undefined' && window.tf.ready;
+        const nsfwReady = typeof window.nsfwjs !== 'undefined';
+        const ortReady = typeof window.ort !== 'undefined';
+        const tesseractReady = typeof window.Tesseract !== 'undefined';
+        
+        if (tfReady && nsfwReady && ortReady && tesseractReady) {
+          console.log('✅ All AI libraries loaded from CDN');
           
-          // Initialize TensorFlow
+          // Initialize TensorFlow first
           window.tf.ready().then(() => {
             console.log('✅ TensorFlow ready');
+            console.log('✅ NSFWJS confirmed available globally');
+            console.log('✅ ONNX Runtime confirmed available globally');
+            console.log('✅ Tesseract confirmed available globally');
             
-            // Check NSFWJS availability
-            if (typeof window.nsfwjs !== 'undefined') {
-              console.log('✅ NSFWJS confirmed available globally');
-              resolve({ tf: window.tf, nsfwjs: window.nsfwjs });
-            } else {
-              console.warn('⚠️ NSFWJS not available after load');
-              resolve({ tf: window.tf, nsfwjs: null });
-            }
+            resolve({ 
+              tf: window.tf, 
+              nsfwjs: window.nsfwjs,
+              ort: window.ort,
+              tesseract: window.Tesseract
+            });
           }).catch(reject);
           
         } else if (checkCount < maxChecks) {
-          setTimeout(checkTensorFlow, 100);
+          setTimeout(checkAILibraries, 100);
         } else {
-          console.error('❌ TensorFlow failed to load after timeout');
-          reject(new Error('TensorFlow failed to load'));
+          console.error('❌ AI libraries failed to load after timeout');
+          reject(new Error('AI libraries failed to load'));
         }
       }
       
       // Start checking after a brief delay to allow scripts to load
-      setTimeout(checkTensorFlow, 100);
+      setTimeout(checkAILibraries, 100);
     });
     
     // Log initialization status
-    window.tfInitPromise.then((modules) => {
+    window.aiInitPromise.then((modules) => {
       console.log('🎉 AI modules initialized:', { 
         tensorflow: !!modules.tf, 
-        nsfwjs: !!modules.nsfwjs 
+        nsfwjs: !!modules.nsfwjs,
+        onnxruntime: !!modules.ort,
+        tesseract: !!modules.tesseract
       });
     }).catch((error) => {
       console.error('❌ AI module initialization failed:', error);
     });
+    
+    // Legacy support - keep tfInitPromise for backward compatibility
+    window.tfInitPromise = window.aiInitPromise;
   </script>
 
   <!-- Primary Theme Color for browsers -->

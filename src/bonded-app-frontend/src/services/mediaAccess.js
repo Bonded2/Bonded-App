@@ -308,7 +308,7 @@ class MediaAccessService {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(targetDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-
+      
       // Fetch updates from Telegram
       const url = `https://api.telegram.org/bot${this.telegramConfig.botToken}/getUpdates`;
       const response = await fetch(url);

@@ -7,15 +7,40 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
+
+// Lazy service imports to prevent constructor issues during bundle evaluation
+let servicesCache = null;
+
+const getServices = async () => {
+  if (servicesCache) return servicesCache;
+  
+  try {
+    const [
+      { evidenceProcessor, timelineService, schedulerService, mediaAccessService, aiEvidenceFilter },
+      { canisterIntegration },
+      { encryptionService }
+    ] = await Promise.all([
+      import('../services/index.js'),
+      import('../services/canisterIntegration.js'),
+      import('../crypto/encryption.js')
+    ]);
+    
+    servicesCache = {
   evidenceProcessor, 
   timelineService, 
   schedulerService, 
   mediaAccessService,
-  aiEvidenceFilter 
-} from '../services/index.js';
-import { canisterIntegration } from '../services/canisterIntegration.js';
-import { encryptionService } from '../crypto/encryption.js';
+      aiEvidenceFilter,
+      canisterIntegration,
+      encryptionService
+    };
+    
+    return servicesCache;
+  } catch (error) {
+    console.error('[useBondedServices] Failed to load services:', error);
+    throw error;
+  }
+};
 
 export const useBondedServices = () => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -44,13 +69,16 @@ export const useBondedServices = () => {
     try {
       console.log('[useBondedServices] Initializing production services...');
       
+      // Load services lazily
+      const services = await getServices();
+      
       // Initialize encryption service first
-      await encryptionService.initialize();
+      await services.encryptionService.initialize();
       setEncryptionReady(true);
       console.log('[useBondedServices] Encryption service initialized');
       
       // Initialize canister integration
-      const authStatus = await canisterIntegration.initialize();
+      const authStatus = await services.canisterIntegration.initialize();
       setAuthState(authStatus);
       setCanisterConnected(true);
       console.log('[useBondedServices] Canister integration initialized');
@@ -82,47 +110,49 @@ export const useBondedServices = () => {
    */
   const loadInitialData = async () => {
     try {
+      const services = await getServices();
+      
       // Load encrypted timeline from canisters
       let timelineData = [];
       if (canisterConnected && authState.isAuthenticated) {
         try {
-          timelineData = await canisterIntegration.fetchTimeline();
+          timelineData = await services.canisterIntegration.fetchTimeline();
           console.log(`[useBondedServices] Loaded ${timelineData.length} items from canister`);
         } catch (canisterErr) {
           console.warn('[useBondedServices] Canister fetch failed, using local data:', canisterErr);
-          timelineData = await timelineService.fetchTimeline();
+          timelineData = await services.timelineService.fetchTimeline();
         }
       } else {
-        timelineData = await timelineService.fetchTimeline();
+        timelineData = await services.timelineService.fetchTimeline();
       }
       
       setTimeline(timelineData);
       
       // Load statistics
-      const stats = evidenceProcessor.getStatistics();
+      const stats = services.evidenceProcessor.getStatistics();
       setStatistics(stats);
       
       // Load settings from canisters if available
       let userSettings = {};
       if (canisterConnected && authState.isAuthenticated) {
         try {
-          userSettings = await canisterIntegration.getUserSettings();
+          userSettings = await services.canisterIntegration.getUserSettings();
         } catch (settingsErr) {
           console.warn('[useBondedServices] Settings fetch failed, using defaults:', settingsErr);
         }
       }
       
       // Merge with local settings
-      const schedulerSettings = schedulerService.getSettings();
-      const aiSettings = aiEvidenceFilter.getSettings();
-      const mediaConfig = mediaAccessService.getConfiguration();
+      const schedulerSettings = services.schedulerService.getSettings();
+      const aiSettings = services.aiEvidenceFilter.getSettings();
+      const mediaConfig = services.mediaAccessService.getConfiguration();
       
       setSettings({
         scheduler: { ...schedulerSettings, ...userSettings.scheduler },
         ai: { ...aiSettings, ...userSettings.ai },
         media: { ...mediaConfig, ...userSettings.media },
-        encryption: encryptionService.getSettings(),
-        canister: canisterIntegration.getConnectionInfo()
+        encryption: services.encryptionService.getSettings(),
+        canister: services.canisterIntegration.getConnectionInfo()
       });
       
     } catch (err) {
@@ -136,15 +166,17 @@ export const useBondedServices = () => {
    */
   const loadLocalData = async () => {
     try {
-      const timelineData = await timelineService.fetchTimeline();
+      const services = await getServices();
+      
+      const timelineData = await services.timelineService.fetchTimeline();
       setTimeline(timelineData);
       
-      const stats = evidenceProcessor.getStatistics();
+      const stats = services.evidenceProcessor.getStatistics();
       setStatistics(stats);
       
-      const schedulerSettings = schedulerService.getSettings();
-      const aiSettings = aiEvidenceFilter.getSettings();
-      const mediaConfig = mediaAccessService.getConfiguration();
+      const schedulerSettings = services.schedulerService.getSettings();
+      const aiSettings = services.aiEvidenceFilter.getSettings();
+      const mediaConfig = services.mediaAccessService.getConfiguration();
       
       setSettings({
         scheduler: schedulerSettings,
@@ -168,19 +200,20 @@ export const useBondedServices = () => {
     setError(null);
     
     try {
+      const services = await getServices();
       let timelineData = [];
       
       // Try canister first if available
       if (canisterConnected && authState.isAuthenticated) {
         try {
-          timelineData = await canisterIntegration.fetchTimeline({ forceRefresh });
+          timelineData = await services.canisterIntegration.fetchTimeline({ forceRefresh });
           console.log('[useBondedServices] Timeline refreshed from canister');
         } catch (canisterErr) {
           console.warn('[useBondedServices] Canister refresh failed:', canisterErr);
-          timelineData = await timelineService.fetchTimeline({ forceRefresh });
+          timelineData = await services.timelineService.fetchTimeline({ forceRefresh });
         }
       } else {
-        timelineData = await timelineService.fetchTimeline({ forceRefresh });
+        timelineData = await services.timelineService.fetchTimeline({ forceRefresh });
       }
       
       setTimeline(timelineData);
@@ -201,18 +234,20 @@ export const useBondedServices = () => {
     setError(null);
     
     try {
+      const services = await getServices();
+      
       // Process evidence locally first
-      const result = await evidenceProcessor.processDailyEvidence(targetDate);
+      const result = await services.evidenceProcessor.processDailyEvidence(targetDate);
       
       // If successful and we have encryption + canister, upload encrypted
       if (result.success && encryptionReady && canisterConnected && authState.isAuthenticated) {
         try {
           // Encrypt the evidence
-          const encryptedData = await encryptionService.encryptEvidence(result.evidence);
+          const encryptedData = await services.encryptionService.encryptEvidence(result.evidence);
           
           // Upload to canister
           const relationshipId = 'mock-relationship-id'; // TODO: Get from actual relationship context
-          const uploadResult = await canisterIntegration.uploadEvidence(
+          const uploadResult = await services.canisterIntegration.uploadEvidence(
             relationshipId,
             encryptedData,
             {
@@ -236,7 +271,7 @@ export const useBondedServices = () => {
       }
       
       // Update statistics
-      const stats = evidenceProcessor.getStatistics();
+      const stats = services.evidenceProcessor.getStatistics();
       setStatistics(stats);
       
       // Refresh timeline if successful
@@ -263,12 +298,14 @@ export const useBondedServices = () => {
     setError(null);
     
     try {
+      const services = await getServices();
+      
       // Add encryption verification to export if available
       if (encryptionReady && options.includeVerification) {
         for (const item of selectedItems) {
           if (item.hash) {
             try {
-              const verified = await encryptionService.verifyIntegrity(item.data, item.hash);
+              const verified = await services.encryptionService.verifyIntegrity(item.data, item.hash);
               item.verified = verified;
             } catch (verifyErr) {
               console.warn(`[useBondedServices] Verification failed for item ${item.id}:`, verifyErr);
@@ -278,7 +315,7 @@ export const useBondedServices = () => {
         }
       }
       
-      const result = await timelineService.exportToPDF(selectedItems, options);
+      const result = await services.timelineService.exportToPDF(selectedItems, options);
       return result;
       
     } catch (err) {
@@ -295,12 +332,14 @@ export const useBondedServices = () => {
    */
   const updateAISettings = useCallback(async (newSettings) => {
     try {
-      await aiEvidenceFilter.updateSettings(newSettings);
+      const services = await getServices();
+      
+      await services.aiEvidenceFilter.updateSettings(newSettings);
       
       // Sync to canister if available
       if (canisterConnected && authState.isAuthenticated) {
         try {
-          await canisterIntegration.updateUserSettings({
+          await services.canisterIntegration.updateUserSettings({
             ai: newSettings
           });
         } catch (syncErr) {
@@ -326,12 +365,14 @@ export const useBondedServices = () => {
    */
   const updateSchedulerSettings = useCallback(async (newSettings) => {
     try {
-      await schedulerService.updateSettings(newSettings);
+      const services = await getServices();
+      
+      await services.schedulerService.updateSettings(newSettings);
       
       // Sync to canister if available
       if (canisterConnected && authState.isAuthenticated) {
         try {
-          await canisterIntegration.updateUserSettings({
+          await services.canisterIntegration.updateUserSettings({
             scheduler: newSettings
           });
         } catch (syncErr) {
@@ -357,16 +398,18 @@ export const useBondedServices = () => {
    */
   const configureMediaAccess = useCallback(async (config) => {
     try {
+      const services = await getServices();
+      
       if (config.photoLibrary) {
-        await mediaAccessService.requestPhotoLibraryAccess();
+        await services.mediaAccessService.requestPhotoLibraryAccess();
       }
       
       if (config.telegram) {
-        await mediaAccessService.configureTelegram(config.telegram);
+        await services.mediaAccessService.configureTelegram(config.telegram);
       }
       
       // Update local settings state
-      const mediaConfig = mediaAccessService.getConfiguration();
+      const mediaConfig = services.mediaAccessService.getConfiguration();
       setSettings(prev => ({
         ...prev,
         media: mediaConfig
@@ -384,10 +427,12 @@ export const useBondedServices = () => {
    */
   const testConnectivity = useCallback(async () => {
     try {
-      const canisterStatus = await canisterIntegration.testConnectivity();
+      const services = await getServices();
+      
+      const canisterStatus = await services.canisterIntegration.testConnectivity();
       setCanisterConnected(canisterStatus.connected);
       
-      const encryptionStatus = await encryptionService.testEncryption();
+      const encryptionStatus = await services.encryptionService.testEncryption();
       setEncryptionReady(encryptionStatus.ready);
       
       return {
@@ -412,8 +457,10 @@ export const useBondedServices = () => {
     setIsLoading(true);
     
     try {
-      timelineService.updateFilters(filters);
-      const filteredTimeline = timelineService.applyFilters(timeline);
+      const services = await getServices();
+      
+      services.timelineService.updateFilters(filters);
+      const filteredTimeline = services.timelineService.applyFilters(timeline);
       setTimeline(filteredTimeline);
       
     } catch (err) {
@@ -427,8 +474,9 @@ export const useBondedServices = () => {
   /**
    * Check if daily upload is due
    */
-  const isUploadDue = useCallback(() => {
-    return schedulerService.isUploadDue();
+  const isUploadDue = useCallback(async () => {
+    const services = await getServices();
+    return services.schedulerService.isUploadDue();
   }, []);
 
   /**
@@ -436,10 +484,12 @@ export const useBondedServices = () => {
    */
   const classifyContent = useCallback(async (content) => {
     try {
+      const services = await getServices();
+      
       if (content.type === 'image') {
-        return await aiEvidenceFilter.filterImage(content.data);
+        return await services.aiEvidenceFilter.filterImage(content.data);
       } else if (content.type === 'text') {
-        return await aiEvidenceFilter.filterText(content.data);
+        return await services.aiEvidenceFilter.filterText(content.data);
       } else {
         throw new Error('Unsupported content type');
       }
@@ -459,10 +509,12 @@ export const useBondedServices = () => {
     setError(null);
     
     try {
+      const services = await getServices();
+      
       // Clear canister data first if available
       if (canisterConnected && authState.isAuthenticated) {
         try {
-          await canisterIntegration.deleteAllUserData();
+          await services.canisterIntegration.deleteAllUserData();
           console.log('[useBondedServices] Canister data deleted');
         } catch (canisterErr) {
           console.warn('[useBondedServices] Canister deletion failed:', canisterErr);
@@ -471,14 +523,14 @@ export const useBondedServices = () => {
       
       // Clear encryption keys
       if (encryptionReady) {
-        await encryptionService.clearKeys();
+        await services.encryptionService.clearKeys();
       }
       
       // Clear all service data
-      await evidenceProcessor.cleanup();
-      await timelineService.clearCache();
-      await mediaAccessService.clearCache();
-      await aiEvidenceFilter.clearCache();
+      await services.evidenceProcessor.cleanup();
+      await services.timelineService.clearCache();
+      await services.mediaAccessService.clearCache();
+      await services.aiEvidenceFilter.clearCache();
       
       // Reset local state
       setTimeline([]);
@@ -537,20 +589,11 @@ export const useBondedServices = () => {
     // Utilities
     isUploadDue,
     
-    // Production services (for advanced use)
-    canisterIntegration,
-    encryptionService,
+    // Production services (for advanced use) - lazy loaded
+    getServices,
     
-    // Direct service access (for compatibility)
-    services: {
-      evidenceProcessor,
-      timelineService,
-      schedulerService,
-      mediaAccessService,
-      aiEvidenceFilter,
-      canisterIntegration,
-      encryptionService
-    }
+    // Direct service access (for compatibility) - lazy loaded
+    services: servicesCache
   };
 };
 

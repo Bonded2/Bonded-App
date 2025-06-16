@@ -6,8 +6,7 @@
  * Privacy-first: All processing happens locally, no data sent to servers
  */
 
-// Import ONNX Runtime using module loader to prevent initialization issues
-import { loadOnnxRuntime } from '../utils/moduleLoader.js';
+// ONNX Runtime will be loaded dynamically to prevent initialization issues
 
 /**
  * Face Detection Service using ONNX models
@@ -43,8 +42,9 @@ export class FaceDetectionService {
     try {
       console.log('🔄 Loading ONNX models for face detection...');
       
-      // Configure ONNX Runtime Web
-      ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/';
+      // Load ONNX Runtime from CDN using module loader
+      const { loadOnnxRuntime } = await import('../utils/moduleLoader.js');
+      const ort = await loadOnnxRuntime();
       
       // Load YOLOv5n model for face detection
       console.log('Loading YOLOv5n model...');

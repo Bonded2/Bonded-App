@@ -84,11 +84,10 @@ class WASMModelContainer {
    * Initialize ONNX Runtime WASM container
    */
   async _initONNXContainer(container) {
-    const ort = await import('onnxruntime-web');
+    const { loadOnnxRuntime } = await import('../utils/moduleLoader.js');
+    const ort = await loadOnnxRuntime();
     
-    // Configure WASM with memory limits
-    ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency || 4, 4);
-    ort.env.wasm.simd = true;
+    // ONNX Runtime is already configured via moduleLoader
     
     // Create isolated memory space
     const memorySize = Math.min(container.config.memoryMB * 1024 * 1024, this.resourceLimits.maxMemory);
@@ -241,7 +240,8 @@ class WASMModelContainer {
    */
   async _runONNXInference(container, inputData, options) {
     const session = container.wasmModule;
-    const ort = await import('onnxruntime-web');
+    const { loadOnnxRuntime } = await import('../utils/moduleLoader.js');
+    const ort = await loadOnnxRuntime();
     
     // Prepare input tensor
     const inputName = session.inputNames[0];

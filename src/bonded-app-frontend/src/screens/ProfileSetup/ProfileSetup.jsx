@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Select from 'react-select';
-import AsyncSelect from 'react-select/async';
+import { CountrySelect, AsyncCountrySelect } from '../../components/CountrySelect/CountrySelect';
 import { getUserData, updateUserData } from "../../utils/userState";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import { useBondedServices } from "../../hooks/useBondedServices";
@@ -14,21 +13,6 @@ import {
   validateLocationConsistency 
 } from "../../utils/locationService";
 import "./style.css";
-
-// Custom styles for react-select with flags
-const customSelectStyles = {
-  option: (provided, state) => ({
-    ...provided,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '10px 15px',
-  }),
-  singleValue: (provided) => ({
-    ...provided,
-    display: 'flex',
-    alignItems: 'center',
-  }),
-};
 
 // Flag formatter for country options
 const formatOptionLabel = ({ label, flag }) => (
@@ -509,17 +493,16 @@ export const ProfileSetup = () => {
                 
                 <div className="form-field">
                   <label className="select-label">Nationality</label>
-                  <Select
+                  <CountrySelect
                     name="nationality"
                     options={countries}
                     value={formData.nationality}
                     onChange={(option) => handleSelectChange("nationality", option)}
                     placeholder="Select your nationality"
                     className={`select-control ${formErrors.nationality ? 'select-error' : ''}`}
-                    classNamePrefix="react-select"
                     isLoading={isLoading}
                     formatOptionLabel={formatOptionLabel}
-                    styles={customSelectStyles}
+                    error={!!formErrors.nationality}
                   />
                   {formErrors.nationality && (
                     <div className="error-message">{formErrors.nationality}</div>
@@ -539,17 +522,16 @@ export const ProfileSetup = () => {
                 
                 <div className="form-field">
                   <label className="select-label">Current Country</label>
-                  <Select
+                  <CountrySelect
                     name="currentCountry"
                     options={countries}
                     value={formData.currentCountry}
                     onChange={(option) => handleSelectChange("currentCountry", option)}
                     placeholder="Select your current country"
                     className={`select-control ${formErrors.currentCountry ? 'select-error' : ''}`}
-                    classNamePrefix="react-select"
                     isLoading={isLoading}
                     formatOptionLabel={formatOptionLabel}
-                    styles={customSelectStyles}
+                    error={!!formErrors.currentCountry}
                   />
                   {formErrors.currentCountry && (
                     <div className="error-message">{formErrors.currentCountry}</div>
@@ -558,18 +540,16 @@ export const ProfileSetup = () => {
                 
                 <div className="form-field">
                   <label className="select-label">Current City</label>
-                  <AsyncSelect
-                    cacheOptions
-                    defaultOptions
+                  <AsyncCountrySelect
                     loadOptions={loadCities}
                     name="currentCity"
                     value={formData.currentCity}
                     onChange={(option) => handleSelectChange("currentCity", option)}
                     placeholder="Select or type your city"
                     className={`select-control ${formErrors.currentCity ? 'select-error' : ''}`}
-                    classNamePrefix="react-select"
                     isDisabled={!formData.currentCountry}
                     noOptionsMessage={() => formData.currentCountry ? "No cities found" : "Select a country first"}
+                    error={!!formErrors.currentCity}
                   />
                   {formErrors.currentCity && (
                     <div className="error-message">{formErrors.currentCity}</div>

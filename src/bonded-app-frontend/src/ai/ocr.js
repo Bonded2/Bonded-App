@@ -371,4 +371,6 @@ class OCRService {
   }
 }
 
+// Export class and singleton instance
+export { OCRService };
 export const ocrService = new OCRService(); 

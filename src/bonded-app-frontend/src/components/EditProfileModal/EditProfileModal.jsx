@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { getUserData, updateUserData } from "../../utils/userState";
 import { CustomTextField } from "../CustomTextField/CustomTextField";
-import Select from 'react-select';
-import AsyncSelect from 'react-select/async';
+import { CountrySelect, AsyncCountrySelect } from '../CountrySelect/CountrySelect';
 import { 
   getAllCountries, 
   getCitiesByCountry, 
@@ -11,21 +10,6 @@ import {
   detectVPN 
 } from "../../utils/locationService";
 import "./style.css";
-
-// Custom styles for react-select with flags
-const customSelectStyles = {
-  option: (provided, state) => ({
-    ...provided,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '10px 15px',
-  }),
-  singleValue: (provided) => ({
-    ...provided,
-    display: 'flex',
-    alignItems: 'center',
-  }),
-};
 
 // Flag formatter for country options
 const formatOptionLabel = ({ label, flag }) => (
@@ -327,16 +311,14 @@ export const EditProfileModal = ({ onClose }) => {
             
             <div className="form-field">
               <label className="select-label">Nationality</label>
-              <Select
+              <CountrySelect
                 name="nationality"
                 options={countries}
                 value={userData.nationality}
                 onChange={(option) => handleSelectChange("nationality", option)}
                 placeholder="Select your nationality"
                 className="select-control"
-                classNamePrefix="react-select"
                 formatOptionLabel={formatOptionLabel}
-                styles={customSelectStyles}
               />
             </div>
             
@@ -352,31 +334,26 @@ export const EditProfileModal = ({ onClose }) => {
               
               <div className="form-field">
                 <label className="select-label">Current Country</label>
-                <Select
+                <CountrySelect
                   name="currentCountry"
                   options={countries}
                   value={userData.currentCountry}
                   onChange={(option) => handleSelectChange("currentCountry", option)}
                   placeholder="Select your country of residence"
                   className="select-control"
-                  classNamePrefix="react-select"
                   formatOptionLabel={formatOptionLabel}
-                  styles={customSelectStyles}
                 />
               </div>
               
               <div className="form-field">
                 <label className="select-label">Current City</label>
-                <AsyncSelect
-                  cacheOptions
-                  defaultOptions
+                <AsyncCountrySelect
                   loadOptions={loadCities}
                   name="currentCity"
                   value={userData.currentCity}
                   onChange={(option) => handleSelectChange("currentCity", option)}
                   placeholder="Select or type your city"
                   className="select-control"
-                  classNamePrefix="react-select"
                   isDisabled={!userData.currentCountry}
                   noOptionsMessage={() => userData.currentCountry ? "No cities found" : "Select a country first"}
                 />

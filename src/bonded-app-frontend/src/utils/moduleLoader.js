@@ -129,14 +129,14 @@ class ModuleLoader {
 // Export singleton instance
 export const moduleLoader = new ModuleLoader();
 
-// Helper function for loading TensorFlow using HTML-preloaded scripts
+// Helper function for loading TensorFlow using CDN
 export async function loadTensorFlow() {
   return moduleLoader.loadModule('tensorflow', async () => {
     try {
-      // Use the promise-based initialization from HTML
-      if (typeof window !== 'undefined' && window.tfInitPromise) {
-        console.log('🔄 Using HTML-preloaded TensorFlow...');
-        const modules = await window.tfInitPromise;
+      // Use the CDN-loaded version from HTML
+      if (typeof window !== 'undefined' && window.aiInitPromise) {
+        console.log('🔄 Using CDN-loaded TensorFlow...');
+        const modules = await window.aiInitPromise;
         if (modules.tf) {
           return modules.tf;
         }
@@ -149,36 +149,55 @@ export async function loadTensorFlow() {
       }
       
       throw new Error('TensorFlow not available');
-    } catch (error) {
+      } catch (error) {
       console.error('❌ TensorFlow initialization failed:', error);
       throw new Error(`Failed to initialize TensorFlow: ${error.message}`);
-    }
+      }
   }, { timeout: 60000, retries: 2 });
 }
 
-// Helper function for loading ONNX Runtime
+// Helper function for loading ONNX Runtime using CDN
 export async function loadOnnxRuntime() {
   return moduleLoader.loadModule('onnxruntime', async () => {
-    const ort = await import('onnxruntime-web');
-    
+    try {
+      // Use the CDN-loaded version from HTML
+      if (typeof window !== 'undefined' && window.aiInitPromise) {
+        console.log('🔄 Using CDN-loaded ONNX Runtime...');
+        const modules = await window.aiInitPromise;
+        if (modules.ort) {
     // Configure ONNX Runtime
-    ort.env.wasm.wasmPaths = '/';
-    
-    return ort;
+          modules.ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency || 4, 4);
+          modules.ort.env.wasm.simd = true;
+          return modules.ort;
+        }
+      }
+      
+      // Fallback: check if ort is available directly
+      if (typeof window !== 'undefined' && window.ort) {
+        window.ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency || 4, 4);
+        window.ort.env.wasm.simd = true;
+        return window.ort;
+      }
+      
+      throw new Error('ONNX Runtime not available');
+    } catch (error) {
+      console.error('❌ ONNX Runtime initialization failed:', error);
+      throw new Error(`Failed to initialize ONNX Runtime: ${error.message}`);
+    }
   }, { timeout: 30000, retries: 2 });
 }
 
-// Helper function for loading NSFWJS using HTML-preloaded scripts
+// Helper function for loading NSFWJS using CDN
 export async function loadNSFWJS() {
   return moduleLoader.loadModule('nsfwjs', async () => {
     try {
       // Ensure TensorFlow is loaded first
-      await loadTensorFlow();
-      
-      // Use the promise-based initialization from HTML
-      if (typeof window !== 'undefined' && window.tfInitPromise) {
-        console.log('🔄 Using HTML-preloaded NSFWJS...');
-        const modules = await window.tfInitPromise;
+    await loadTensorFlow();
+    
+      // Use the CDN-loaded version from HTML
+      if (typeof window !== 'undefined' && window.aiInitPromise) {
+        console.log('🔄 Using CDN-loaded NSFWJS...');
+        const modules = await window.aiInitPromise;
         if (modules.nsfwjs) {
           return modules.nsfwjs;
         }
@@ -197,18 +216,67 @@ export async function loadNSFWJS() {
   }, { timeout: 30000, retries: 2 });
 }
 
-// Helper function for loading Transformers
+// Helper function for loading Transformers (disabled due to onnxruntime conflicts)
 export async function loadTransformers() {
   return moduleLoader.loadModule('transformers', async () => {
-    const transformers = await import('@xenova/transformers');
-    return transformers;
-  }, { timeout: 30000, retries: 2 });
+    try {
+      console.log('⚠️ Transformers.js disabled due to onnxruntime-web conflicts');
+      console.log('📦 Using fallback text classification methods instead');
+      
+      // Return a compatible interface with fallback methods
+      return {
+        pipeline: async (task, model) => {
+          console.warn(`Transformers pipeline for ${task} not available, using fallback`);
+          // Return a mock pipeline that always returns safe results
+          return {
+            predict: async (text) => {
+              // Simple keyword-based fallback for text classification
+              const explicitKeywords = ['sex', 'explicit', 'nsfw', 'nude', 'naked'];
+              const hasExplicit = explicitKeywords.some(keyword => 
+                text.toLowerCase().includes(keyword)
+              );
+              
+              return [{
+                label: hasExplicit ? 'EXPLICIT' : 'SAFE',
+                score: hasExplicit ? 0.9 : 0.1
+              }];
+            }
+          };
+        },
+        env: {
+          allowLocalModels: false,
+          allowRemoteModels: false
+        }
+      };
+    } catch (error) {
+      console.error('❌ Transformers fallback failed:', error);
+      throw new Error(`Failed to initialize Transformers fallback: ${error.message}`);
+    }
+  }, { timeout: 5000, retries: 1 });
 }
 
-// Helper function for loading Tesseract
+// Helper function for loading Tesseract using CDN
 export async function loadTesseract() {
   return moduleLoader.loadModule('tesseract', async () => {
-    const tesseract = await import('tesseract.js');
-    return tesseract;
+    try {
+      // Use the CDN-loaded version from HTML
+      if (typeof window !== 'undefined' && window.aiInitPromise) {
+        console.log('🔄 Using CDN-loaded Tesseract...');
+        const modules = await window.aiInitPromise;
+        if (modules.tesseract) {
+          return modules.tesseract;
+        }
+      }
+      
+      // Fallback: check if Tesseract is available directly
+      if (typeof window !== 'undefined' && window.Tesseract) {
+        return window.Tesseract;
+      }
+      
+      throw new Error('Tesseract not available');
+    } catch (error) {
+      console.error('❌ Tesseract initialization failed:', error);
+      throw new Error(`Failed to initialize Tesseract: ${error.message}`);
+    }
   }, { timeout: 30000, retries: 2 });
 } 

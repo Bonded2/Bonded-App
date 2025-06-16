@@ -9,11 +9,10 @@ import { openDB } from 'idb';
 import { modelOptimizationService } from './modelOptimization.js';
 import { wasmModelContainer } from './wasmModelContainer.js';
 
-// Use the centralized module loader for NSFWJS
-import { loadNSFWJS as loadNSFWJSFromLoader } from '../utils/moduleLoader.js';
-
+// NSFWJS will be loaded dynamically to prevent initialization issues
 async function loadNSFWJS() {
   try {
+    const { loadNSFWJS: loadNSFWJSFromLoader } = await import('../utils/moduleLoader.js');
     return await loadNSFWJSFromLoader();
   } catch (error) {
     console.error('❌ Failed to load NSFWJS via module loader:', error);
