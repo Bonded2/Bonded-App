@@ -38,8 +38,6 @@ src/bonded-app-frontend/public/models/
 # markdown files
 *.md
 !README.md
-AI_IMPLEMENTATION.md
-README_MVP_IMPLEMENTATION.md
 
 # service worker
 src/bonded-app-frontend/service-worker.js
