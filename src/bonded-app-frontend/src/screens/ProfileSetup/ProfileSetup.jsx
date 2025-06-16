@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CountrySelect, AsyncCountrySelect } from '../../components/CountrySelect/CountrySelect';
-import { getUserData, updateUserData } from "../../utils/userState";
+import { getUserData, updateUserData, registerUser } from "../../services/icpUserService";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import { useBondedServices } from "../../hooks/useBondedServices";
 import { 
@@ -344,7 +344,7 @@ export const ProfileSetup = () => {
         .toUpperCase()
         .slice(0, 2);
 
-      // Save user data locally
+      // Prepare user data for ICP registration
       const userData = {
         ...formData,
         avatar,
@@ -353,25 +353,16 @@ export const ProfileSetup = () => {
         profileComplete: true,
         profileCompletedAt: Date.now()
       };
-      
-      updateUserData(userData);
 
-      // Update user settings in canister if available
-      if (isInitialized && canisterIntegration) {
-        try {
-          await canisterIntegration.updateUserSettings({
-            geolocationEnabled: true,
-            aiFiltersEnabled: true,
-            nsfwFilter: true,
-            explicitTextFilter: true,
-            uploadSchedule: 'daily'
-          });
-          console.log('User settings saved to canister');
-        } catch (error) {
-          console.warn('Failed to save settings to canister:', error);
-          // Continue anyway - settings can be updated later
-        }
-      }
+      console.log('[ProfileSetup] Registering user on ICP canister...');
+      
+      // Register user on ICP canister (this replaces browser storage)
+      await registerUser(userData);
+      
+      // Update user profile data on ICP
+      await updateUserData(userData);
+
+      console.log('[ProfileSetup] User successfully registered on ICP blockchain');
 
       // Navigate to partner invite
       navigate("/partner-invite");

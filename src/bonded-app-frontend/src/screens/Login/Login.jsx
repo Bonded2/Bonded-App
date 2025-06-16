@@ -76,13 +76,10 @@ export const Login = () => {
       // For demo purposes, accept any email/password combination
       // In production, this would verify credentials against your backend
       
-      // Store user session
-      localStorage.setItem("bonded_user_session", JSON.stringify({
-        email: email,
-        loginMethod: "email",
-        loginTime: Date.now(),
-        sessionId: `session_${Date.now()}`
-      }));
+      // For email/password login, we would integrate with ICP authentication
+      // For now, this is a placeholder - in production, this would go through
+      // Internet Identity or a similar ICP authentication method
+      console.log('[Login] Email/password login - would integrate with ICP auth');
 
       // Initialize Bonded services after successful login
       await initializeServices();
@@ -128,13 +125,9 @@ export const Login = () => {
 
             console.log("User principal:", principal);
 
-            // Store user session
-            localStorage.setItem("bonded_user_session", JSON.stringify({
-              principal: principal,
-              loginMethod: "internet_identity",
-              loginTime: Date.now(),
-              sessionId: `ii_session_${Date.now()}`
-            }));
+            // Load user session from ICP canister
+            const { loadUserSession } = await import("../../services/icpUserService");
+            await loadUserSession();
 
             // Initialize Bonded services after successful login
             await initializeServices();

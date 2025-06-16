@@ -6,7 +6,7 @@ import { StyleOutlined } from "../../icons/StyleOutlined";
 import { LocationOn2 } from "../../icons/LocationOn2";
 import { Chat4 } from "../../icons/Chat4";
 import { EditProfileModal } from "../EditProfileModal";
-import { getUserData, logoutUser } from "../../utils/userState";
+import { getUserData, logoutUser } from "../../services/icpUserService";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import { aiClassificationService } from "../../utils/aiClassification";
 import "./style.css";

@@ -407,7 +407,11 @@ class CanisterIntegrationService {
         console.log('[CanisterIntegration] Relationship creation successful:', result.Ok);
         return { 
           success: true, 
-          relationshipId: result.Ok,
+          data: {
+            relationship_id: result.Ok.relationship_id,
+            user_key_share: result.Ok.user_key_share,
+            public_key: result.Ok.public_key
+          },
           message: 'Relationship invitation sent successfully'
         };
       } else {
@@ -458,21 +462,9 @@ class CanisterIntegrationService {
     await this.ensureInitialized();
     
     try {
-      // Format settings for Candid interface
-      const candidSettings = {
-        ai_filters_enabled: settings.aiFiltersEnabled ?? true,
-        nsfw_filter: settings.nsfwFilter ?? true,
-        explicit_text_filter: settings.explicitTextFilter ?? true,
-        upload_schedule: settings.uploadSchedule || 'daily',
-        geolocation_enabled: settings.geolocationEnabled ?? true,
-        notification_preferences: settings.notificationPreferences || [],
-      };
+      console.log('[CanisterIntegration] Updating user settings:', settings);
       
-      console.log('[CanisterIntegration] Updating user settings:', candidSettings);
-      
-      const result = await this.bondedBackend.update_user_settings(
-        candidSettings
-      );
+      const result = await this.bondedBackend.update_user_settings(settings);
       
       // Handle Rust Result type
       if ('Ok' in result) {
@@ -484,7 +476,7 @@ class CanisterIntegrationService {
       
     } catch (error) {
       console.error('[CanisterIntegration] Settings update failed:', error);
-      throw new Error(`Settings update failed: ${error.message}`);
+      return { success: false, error: error.message };
     }
   }
 
@@ -504,50 +496,34 @@ class CanisterIntegrationService {
       if ('Ok' in result) {
         // Convert from Candid format to our format
         const settings = result.Ok;
-        const formattedSettings = {
-          aiFiltersEnabled: settings.ai_filters_enabled,
-          nsfwFilter: settings.nsfw_filter,
-          explicitTextFilter: settings.explicit_text_filter,
-          uploadSchedule: settings.upload_schedule,
-          geolocationEnabled: settings.geolocation_enabled,
-          notificationPreferences: settings.notification_preferences,
+        console.log('[CanisterIntegration] Settings fetch successful');
+        return { 
+          success: true, 
+          data: {
+            ai_filters_enabled: settings.ai_filters_enabled,
+            nsfw_filter: settings.nsfw_filter,
+            explicit_text_filter: settings.explicit_text_filter,
+            upload_schedule: settings.upload_schedule,
+            geolocation_enabled: settings.geolocation_enabled,
+            notification_preferences: settings.notification_preferences,
+            updated_at: settings.updated_at,
+            profile_metadata: settings.profile_metadata || ''
+          }
         };
-        
-        console.log('[CanisterIntegration] Settings fetch successful:', formattedSettings);
-        return formattedSettings;
       } else {
-        // Return default settings if not found
-        const defaultSettings = {
-          aiFiltersEnabled: true,
-          nsfwFilter: true,
-          explicitTextFilter: true,
-          uploadSchedule: 'daily',
-          geolocationEnabled: true,
-          notificationPreferences: [],
-        };
-        
-        console.log('[CanisterIntegration] No settings found, returning defaults');
-        return defaultSettings;
+        console.log('[CanisterIntegration] No settings found (new user)');
+        return { success: false, error: result.Err };
       }
       
     } catch (error) {
       console.error('[CanisterIntegration] Settings fetch failed:', error);
-      
-      // Return default settings on error for graceful degradation
-      return {
-        aiFiltersEnabled: true,
-        nsfwFilter: true,
-        explicitTextFilter: true,
-        uploadSchedule: 'daily',
-        geolocationEnabled: true,
-        notificationPreferences: [],
-      };
+      return { success: false, error: error.message };
     }
   }
 
   /**
    * Get user's relationships
-   * @returns {Promise<Array>} User relationships
+   * @returns {Promise<Object>} User relationships
    */
   async getUserRelationships() {
     await this.ensureInitialized();
@@ -564,22 +540,88 @@ class CanisterIntegrationService {
           id: rel.id,
           partner1: rel.partner1.toString(),
           partner2: rel.partner2.length > 0 ? rel.partner2[0].toString() : null,
-          status: Object.keys(rel.status)[0].toLowerCase(), // Convert variant to string
-          createdAt: Number(rel.created_at) * 1000, // Convert to milliseconds
-          bondedKeyShare: new Uint8Array(rel.bonded_key_share)
+          status: Object.keys(rel.status)[0], // Convert variant to string
+          created_at: rel.created_at,
+          evidence_count: rel.evidence_count,
+          last_activity: rel.last_activity,
+          bonded_key_share: new Uint8Array(rel.bonded_key_share)
         }));
         
         console.log('[CanisterIntegration] Relationships fetch successful:', relationships.length, 'relationships');
-        return relationships;
+        return { success: true, data: relationships };
+      } else {
+        console.log('[CanisterIntegration] No relationships found (new user)');
+        return { success: false, error: result.Err };
+      }
+      
+    } catch (error) {
+      console.error('[CanisterIntegration] Relationships fetch failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Register a new user
+   * @param {string} email - User's email (optional)
+   * @returns {Promise<Object>} Registration result
+   */
+  async registerUser(email = null) {
+    await this.ensureInitialized();
+    
+    try {
+      console.log('[CanisterIntegration] Registering user...');
+      
+      const result = await this.bondedBackend.register_user(email ? [email] : []);
+      
+      // Handle Rust Result type
+      if ('Ok' in result) {
+        console.log('[CanisterIntegration] User registration successful');
+        return { success: true, message: result.Ok };
       } else {
         throw new Error(result.Err);
       }
       
     } catch (error) {
-      console.error('[CanisterIntegration] Relationships fetch failed:', error);
+      console.error('[CanisterIntegration] User registration failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get user profile
+   * @returns {Promise<Object>} User profile
+   */
+  async getUserProfile() {
+    await this.ensureInitialized();
+    
+    try {
+      console.log('[CanisterIntegration] Fetching user profile...');
       
-      // Return empty array for graceful degradation
-      return [];
+      const result = await this.bondedBackend.get_user_profile();
+      
+      // Handle Rust Result type
+      if ('Ok' in result) {
+        const profile = result.Ok;
+        console.log('[CanisterIntegration] User profile fetch successful');
+        return { 
+          success: true, 
+          data: {
+            principal: profile.principal,
+            created_at: profile.created_at,
+            relationships: profile.relationships,
+            total_evidence_uploaded: profile.total_evidence_uploaded,
+            kyc_verified: profile.kyc_verified,
+            last_seen: profile.last_seen
+          }
+        };
+      } else {
+        console.log('[CanisterIntegration] User profile not found (new user)');
+        return { success: false, error: result.Err };
+      }
+      
+    } catch (error) {
+      console.error('[CanisterIntegration] User profile fetch failed:', error);
+      return { success: false, error: error.message };
     }
   }
 

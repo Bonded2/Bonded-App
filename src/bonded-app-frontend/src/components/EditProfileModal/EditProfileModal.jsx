@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getUserData, updateUserData } from "../../utils/userState";
+import { getUserData, updateUserData } from "../../services/icpUserService";
 import { CustomTextField } from "../CustomTextField/CustomTextField";
 import { CountrySelect, AsyncCountrySelect } from '../CountrySelect/CountrySelect';
 import { 
