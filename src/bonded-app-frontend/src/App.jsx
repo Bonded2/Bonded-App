@@ -20,6 +20,7 @@ import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
 import { AISettings } from "./screens/AISettings/AISettings";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
+import { NetworkStatusIndicator } from "./components/NetworkStatusIndicator";
 import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
 import GeoMetadataProvider from "./features/geolocation/GeoMetadataProvider";
 export class ErrorBoundary extends React.Component {
@@ -267,6 +268,7 @@ export const App = () => {
     <ErrorBoundary>
       <GeoMetadataProvider>
         <OfflineIndicator />
+        <NetworkStatusIndicator />
         <RouterProvider router={router} />
         <PWAInstallPrompt />
       </GeoMetadataProvider>

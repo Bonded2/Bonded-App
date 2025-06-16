@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
-import { saveRegistrationData } from "../../utils/userState";
+import icpUserService from "../../services/icpUserService";
+import { AuthClient } from "@dfinity/auth-client";
 import "./style.css";
 
 export const Register = () => {
@@ -10,6 +11,21 @@ export const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [authClient, setAuthClient] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Initialize auth client
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const client = await AuthClient.create();
+        setAuthClient(client);
+      } catch (error) {
+        console.error("Failed to initialize auth client:", error);
+      }
+    };
+    initAuth();
+  }, []);
 
   const handleNameChange = (e) => {
     setFullName(e.target.value);
@@ -23,7 +39,7 @@ export const Register = () => {
     setPassword(e.target.value);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Basic validation
@@ -36,12 +52,88 @@ export const Register = () => {
       setErrors(newErrors);
       return;
     }
+
+    if (!authClient) {
+      setErrors({ submit: "Authentication service not ready. Please refresh the page." });
+      return;
+    }
     
-    // Save user registration data
-    saveRegistrationData(fullName, email);
+    setIsLoading(true);
+    setErrors({});
     
-    // Continue to next screen
-    navigate("/getting-started");
+    try {
+      // Store registration data temporarily in sessionStorage
+      // This will be used after authentication to complete registration
+      const registrationData = {
+        fullName,
+        email,
+        password, // In production, this should be hashed
+        timestamp: Date.now()
+      };
+      sessionStorage.setItem('pendingRegistration', JSON.stringify(registrationData));
+      
+      // Configure the login options
+      const loginOptions = {
+        identityProvider: window.location.hostname.includes('icp0.io') 
+          ? "https://identity.ic0.app"
+          : (process.env.DFX_NETWORK === "local" 
+            ? `http://localhost:4943/?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
+            : "https://identity.ic0.app"),
+        maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days in nanoseconds
+        onSuccess: async () => {
+          try {
+            // Get the identity from the auth client
+            const identity = authClient.getIdentity();
+            const principal = identity.getPrincipal().toString();
+            
+            // Initialize ICP user service
+            await icpUserService.initialize();
+            
+            // Get the stored registration data
+            const storedData = sessionStorage.getItem('pendingRegistration');
+            if (storedData) {
+              const userData = JSON.parse(storedData);
+              
+              // Create profile metadata JSON
+              const profileMetadata = JSON.stringify({
+                fullName: userData.fullName,
+                email: userData.email,
+                avatar: userData.fullName
+                  .split(' ')
+                  .map(part => part[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2)
+              });
+              
+              // Register user on ICP canister
+              await icpUserService.registerUser(profileMetadata);
+              
+              // Clear the temporary data
+              sessionStorage.removeItem('pendingRegistration');
+            }
+            
+            // For first-time users after registration, always go to partner invite first
+            // This is the correct flow: Register → Invite → Profile Setup → KYC → Timeline
+            navigate("/partner-invite");
+          } catch (error) {
+            setErrors({ submit: "Registration successful, but setup failed. Please try again." });
+          } finally {
+            setIsLoading(false);
+          }
+        },
+        onError: (error) => {
+          setErrors({ submit: "Internet Identity authentication failed. Please try again." });
+          setIsLoading(false);
+        }
+      };
+      
+      // Start the authentication process
+      await authClient.login(loginOptions);
+    } catch (error) {
+      setErrors({ submit: "Failed to start authentication. Please try again." });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -54,6 +146,13 @@ export const Register = () => {
         />
 
         <h1 className="create-account-title">Create an account</h1>
+
+        {errors.submit && (
+          <div className="error-banner" role="alert" aria-live="polite">
+            <span className="error-icon">⚠️</span>
+            {errors.submit}
+          </div>
+        )}
 
         <form className="register-form" onSubmit={handleSubmit}>
           <CustomTextField
@@ -88,10 +187,17 @@ export const Register = () => {
             className={`form-field ${errors.password ? "input-error" : ""}`}
           />
 
-          <button type="submit" className="create-account-button">
+          <button 
+            type="submit" 
+            className={`create-account-button ${isLoading ? "loading" : ""}`}
+            disabled={isLoading}
+          >
             <div className="button-layout">
               <div className="button-content">
-                <div className="button-label">Create an account</div>
+                {isLoading && <div className="loading-spinner"></div>}
+                <div className="button-label">
+                  {isLoading ? "Authenticating..." : "Create an account"}
+                </div>
               </div>
             </div>
           </button>

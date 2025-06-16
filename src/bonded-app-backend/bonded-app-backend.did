@@ -60,6 +60,7 @@ type UpdateSettingsRequest = record {
   nsfw_filter : opt bool;
   geolocation_enabled : opt bool;
   ai_filters_enabled : opt bool;
+  profile_metadata : opt text;
 };
 type UserProfile = record {
   total_evidence_uploaded : nat64;
@@ -77,6 +78,7 @@ type UserSettings = record {
   nsfw_filter : bool;
   geolocation_enabled : bool;
   ai_filters_enabled : bool;
+  profile_metadata : opt text;
 };
 service : () -> {
   accept_relationship : (text) -> (BondedResult);

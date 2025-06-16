@@ -65,6 +65,7 @@ pub struct UserSettings {
     pub upload_schedule: String,
     pub geolocation_enabled: bool,
     pub notification_preferences: Vec<String>,
+    pub profile_metadata: Option<String>,
     pub updated_at: u64,
 }
 
@@ -126,6 +127,7 @@ pub struct UpdateSettingsRequest {
     pub upload_schedule: Option<String>,
     pub geolocation_enabled: Option<bool>,
     pub notification_preferences: Option<Vec<String>>,
+    pub profile_metadata: Option<String>,
 }
 
 // =======================

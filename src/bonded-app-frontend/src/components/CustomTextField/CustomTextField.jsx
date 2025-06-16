@@ -9,7 +9,9 @@ export const CustomTextField = ({
   onChange,
   supportingText,
   required = false,
-  className = ""
+  className = "",
+  name,
+  error = false
 }) => {
   const [focused, setFocused] = useState(false);
   
@@ -22,11 +24,12 @@ export const CustomTextField = ({
   };
   
   return (
-    <div className={`custom-text-field ${className} ${focused ? 'focused' : ''}`}>
+    <div className={`custom-text-field ${className} ${focused ? 'focused' : ''} ${error ? 'error' : ''}`}>
       <div className="input-container">
         <label className="input-label">{label}{required && <span className="required">*</span>}</label>
         <input
           type={type}
+          name={name}
           value={value}
           onChange={onChange}
           placeholder={placeholder}

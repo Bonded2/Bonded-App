@@ -11,7 +11,7 @@
  */
 import { aiEvidenceFilter } from '../ai/evidenceFilter.js';
 import { encryptionService } from '../crypto/encryption.js';
-import { canisterIntegration } from './canisterIntegration.js';
+import canisterIntegration from './canisterIntegration.js';
 import { mediaAccessService } from './mediaAccess.js';
 import { openDB } from 'idb';
 class EvidenceProcessor {

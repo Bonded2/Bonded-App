@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getUserData, updateUserData } from "../../services/icpUserService";
+import icpUserService from "../../services/icpUserService";
 import { CustomTextField } from "../CustomTextField/CustomTextField";
 import { CountrySelect, AsyncCountrySelect } from '../CountrySelect/CountrySelect';
 import { 
@@ -35,16 +35,43 @@ export const EditProfileModal = ({ onClose }) => {
   const [vpnDetected, setVpnDetected] = useState(false);
   // Load user data and countries on mount
   useEffect(() => {
-    const loadUserData = () => {
-      const currentUserData = getUserData();
-      setUserData({
-        fullName: currentUserData.fullName || "",
-        email: currentUserData.email || "",
-        dateOfBirth: currentUserData.dateOfBirth || "",
-        nationality: currentUserData.nationality || null,
-        currentCity: currentUserData.currentCity || null,
-        currentCountry: currentUserData.currentCountry || null
-      });
+    const loadUserData = async () => {
+      try {
+        await icpUserService.initialize();
+        const currentUser = icpUserService.getCurrentUser();
+        
+        if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
+          const profileData = JSON.parse(currentUser.settings.profile_metadata);
+          setUserData({
+            fullName: profileData.fullName || "",
+            email: profileData.email || "",
+            dateOfBirth: profileData.dateOfBirth || "",
+            nationality: profileData.nationality || null,
+            currentCity: profileData.currentCity || null,
+            currentCountry: profileData.currentCountry || null
+          });
+        } else {
+          // Set empty defaults if no profile data
+          setUserData({
+            fullName: "",
+            email: "",
+            dateOfBirth: "",
+            nationality: null,
+            currentCity: null,
+            currentCountry: null
+          });
+        }
+      } catch (error) {
+        // Set empty defaults if loading fails
+        setUserData({
+          fullName: "",
+          email: "",
+          dateOfBirth: "",
+          nationality: null,
+          currentCity: null,
+          currentCountry: null
+        });
+      }
     };
     const loadCountries = async () => {
       try {
@@ -192,9 +219,17 @@ export const EditProfileModal = ({ onClose }) => {
         .toUpperCase()
         .slice(0, 2);
       // Save user profile data with all fields
-      updateUserData({
+      const profileData = {
         ...userData,
         avatar
+      };
+      
+      // Create profile metadata JSON for ICP canister
+      const profileMetadata = JSON.stringify(profileData);
+      
+      // Update user settings with profile metadata
+      await icpUserService.updateUserSettings({
+        profile_metadata: profileMetadata
       });
       // Show success message
       setShowSuccess(true);

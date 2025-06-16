@@ -23,8 +23,24 @@ export const Login = () => {
         // Check if user is already authenticated
         const isAuthenticated = await client.isAuthenticated();
         if (isAuthenticated) {
-          // User is already logged in, redirect to timeline
-          navigate("/timeline");
+          // User is already logged in, check their onboarding status
+          try {
+            const icpUserServiceModule = await import("../../services/icpUserService.js");
+            await icpUserServiceModule.default.initialize();
+            
+            const hasCompletedOnboarding = await icpUserServiceModule.default.hasCompletedOnboarding();
+            
+            if (hasCompletedOnboarding) {
+              // Returning user with complete profile - go to timeline
+              navigate("/timeline");
+            } else {
+              // User is authenticated but hasn't completed onboarding - continue flow
+              navigate("/partner-invite");
+            }
+          } catch (error) {
+            // If we can't check status, assume they need to complete onboarding
+            navigate("/partner-invite");
+          }
         }
       } catch (error) {
         setError("Authentication service unavailable. Please try again later.");
@@ -63,17 +79,36 @@ export const Login = () => {
       // For email/password login, we would integrate with ICP authentication
       // For now, this is a placeholder - in production, this would go through
       // Internet Identity or a similar ICP authentication method
-      // Initialize Bonded services after successful login
+      // Check if user has completed onboarding
       try {
-        await initializeServices();
-      } catch (initError) {
-        // Continue to timeline even if services fail to initialize
-        // Services can be initialized later
+        const icpUserServiceModule = await import("../../services/icpUserService.js");
+        await icpUserServiceModule.default.initialize();
+        
+        const hasCompletedOnboarding = await icpUserServiceModule.default.hasCompletedOnboarding();
+        
+        if (hasCompletedOnboarding) {
+          // Initialize Bonded services for returning users
+          try {
+            await initializeServices();
+          } catch (initError) {
+            // Continue even if services fail to initialize
+          }
+          // Navigate to timeline for returning users
+          setTimeout(() => {
+            navigate("/timeline");
+          }, 300);
+        } else {
+          // New user - start onboarding flow
+          setTimeout(() => {
+            navigate("/partner-invite");
+          }, 300);
+        }
+      } catch (error) {
+        // If we can't check status, assume new user
+        setTimeout(() => {
+          navigate("/partner-invite");
+        }, 300);
       }
-      // Navigate to timeline with a small delay for UX
-      setTimeout(() => {
-        navigate("/timeline");
-      }, 300);
     } catch (error) {
       setError(error.message || "Login failed. Please check your credentials and try again.");
     } finally {
@@ -102,18 +137,34 @@ export const Login = () => {
             // Load user session from ICP canister
             try {
               const icpUserServiceModule = await import("../../services/icpUserService.js");
-              await icpUserServiceModule.loadUserSession();
+              await icpUserServiceModule.default.initialize();
+              
+              // Check if user has completed profile setup
+              const currentUser = await icpUserServiceModule.default.getCurrentUser();
+              
+              if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
+                const profileData = JSON.parse(currentUser.settings.profile_metadata);
+                
+                // If profile is complete, go to timeline (returning user)
+                if (profileData.profileComplete) {
+                  // Initialize Bonded services for returning users
+                  try {
+                    await initializeServices();
+                  } catch (initError) {
+                    // Continue to timeline even if services fail to initialize
+                  }
+                  navigate("/timeline");
+                  return;
+                }
+              }
+              
+              // If no complete profile, this is a new user - redirect to partner invite
+              navigate("/partner-invite");
+              
             } catch (sessionError) {
-              // Continue without session - user can still use the app
+              // If we can't load user data, assume new user and go to partner invite
+              navigate("/partner-invite");
             }
-            // Initialize Bonded services after successful login
-            try {
-              await initializeServices();
-            } catch (initError) {
-              // Continue to timeline even if services fail to initialize
-            }
-            // Navigate to timeline
-            navigate("/timeline");
           } catch (error) {
             setError("Authentication successful, but setup failed. Please try again.");
           } finally {

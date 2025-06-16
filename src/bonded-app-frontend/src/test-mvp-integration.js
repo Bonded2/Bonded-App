@@ -9,7 +9,7 @@
  * 5. Timeline generation
  * 6. Frontend-backend integration
  */
-import { canisterIntegration } from './services/canisterIntegration.js';
+import canisterIntegration from './services/canisterIntegration.js';
 import { FaceDetectionService } from './ai/faceDetection.js';
 import { NSFWDetectionService } from './ai/nsfwDetection.js';
 import { TextClassificationService } from './ai/textClassification.js';

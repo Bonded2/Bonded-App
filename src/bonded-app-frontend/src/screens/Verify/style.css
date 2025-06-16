@@ -162,4 +162,43 @@
     width: 65px;
     object-fit: contain;
   }
+
+  /* Error banner styling */
+  .verify .error-banner {
+    background-color: rgba(255, 255, 0, 0.1);
+    border: 1px solid #FFFF00;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 312px;
+    box-sizing: border-box;
+  }
+
+  .verify .error-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .verify .error-banner {
+    color: #FFFF00;
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  /* Loading state */
+  .verify .verify-button.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  .verify .verify-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
   

@@ -30,9 +30,9 @@ export const PartnerInvite = () => {
       // Handle invalid email, perhaps show an error message
     }
   };
-  const navigateToProfileSetup = () => {
-    // Assuming successful invite, navigate to profile setup
-    navigate("/profile-setup");
+  const navigateToVerification = () => {
+    // After successful invite, navigate directly to verification
+    navigate("/verify");
   };
   return (
     <div className="partner-invite-screen">
@@ -81,9 +81,9 @@ export const PartnerInvite = () => {
         </form>
         {isEmailAccepted && (
           <div className="invite-success-message">
-            <p>Invite sent to {partnerEmail}! You can proceed to set up your profile.</p>
-            <button onClick={navigateToProfileSetup} className="proceed-button">
-              Set Up My Profile
+            <p>Invite sent to {partnerEmail}! You can proceed to identity verification.</p>
+            <button onClick={navigateToVerification} className="proceed-button">
+              Continue to Verification
             </button>
           </div>
         )}

@@ -3,14 +3,22 @@
     "bonded-app-backend": {
       "candid": "src/bonded-app-backend/bonded-app-backend.did",
       "package": "bonded-app-backend",
-      "type": "rust"
+      "type": "rust",
+      "declarations": {
+        "output": "src/declarations/bonded-app-backend",
+        "node_compatibility": true
+      }
     },
     "bonded-app-frontend": {
       "source": [
         "src/bonded-app-frontend/dist"
       ],
       "type": "assets",
-      "workspace": "bonded-app-frontend"
+      "workspace": "bonded-app-frontend",
+      "declarations": {
+        "output": "src/declarations/bonded-app-frontend",
+        "node_compatibility": true
+      }
     }
   },
   "defaults": {

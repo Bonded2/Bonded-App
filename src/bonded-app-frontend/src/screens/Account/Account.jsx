@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowBack } from "../../icons/ArrowBack";
 import { EditProfileModal } from "../../components/EditProfileModal";
-import { getUserData, logoutUser, updateUserData } from "../../utils/userState";
+import icpUserService from "../../services/icpUserService";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import "./style.css";
 const AccountTopBar = ({ onBackClick }) => {
@@ -39,11 +39,38 @@ export const Account = () => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-  // Load user data
+  // Load user data from ICP
   useEffect(() => {
-    const loadUserData = () => {
-      const data = getUserData();
-      setUserData(data);
+    const loadUserData = async () => {
+      try {
+        await icpUserService.initialize();
+        const currentUser = icpUserService.getCurrentUser();
+        
+        if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
+          const profileData = JSON.parse(currentUser.settings.profile_metadata);
+          setUserData(profileData);
+        } else {
+          // If no profile data, show empty profile
+          setUserData({
+            fullName: "",
+            email: "",
+            dateOfBirth: "",
+            nationality: null,
+            currentCity: null,
+            currentCountry: null
+          });
+        }
+      } catch (error) {
+        // If ICP data fails, show empty profile
+        setUserData({
+          fullName: "",
+          email: "",
+          dateOfBirth: "",
+          nationality: null,
+          currentCity: null,
+          currentCountry: null
+        });
+      }
     };
     loadUserData();
   }, []);
@@ -53,17 +80,40 @@ export const Account = () => {
   const handleEditProfile = () => {
     setShowEditModal(true);
   };
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = async () => {
     setShowEditModal(false);
-    // Refresh user data
-    const data = getUserData();
-    setUserData(data);
+    // Refresh user data from ICP
+    try {
+      const currentUser = icpUserService.getCurrentUser();
+      if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
+        const profileData = JSON.parse(currentUser.settings.profile_metadata);
+        setUserData(profileData);
+      }
+    } catch (error) {
+      // Handle error silently
+    }
   };
-  const handleDeleteAccount = () => {
+  const handleDeleteAccount = async () => {
     if (showDeleteConfirm) {
-      // Delete account and log out the user
-      logoutUser();
-      navigate('/');
+      // Delete account first while user is still authenticated, then log out
+      try {
+        // Delete the account while still authenticated
+        await icpUserService.deleteAccount();
+        // Now log out the user
+        await icpUserService.logout();
+        // Navigate to home
+        navigate('/');
+      } catch (error) {
+        console.error('Failed to delete account:', error);
+        // Even if deletion fails, log out and navigate (for UX)
+        try {
+          await icpUserService.logout();
+          navigate('/');
+        } catch (logoutError) {
+          console.error('Failed to logout after delete error:', logoutError);
+          navigate('/');
+        }
+      }
     } else {
       setShowDeleteConfirm(true);
       setShowUnbondConfirm(false);

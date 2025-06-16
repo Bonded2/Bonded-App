@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CountrySelect, AsyncCountrySelect } from '../../components/CountrySelect/CountrySelect';
-import { getUserData, updateUserData, registerUser } from "../../services/icpUserService";
+import icpUserService from "../../services/icpUserService";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import { useBondedServices } from "../../hooks/useBondedServices";
 import { 
@@ -52,18 +52,34 @@ export const ProfileSetup = () => {
   // Load countries and check for VPN on mount
   useEffect(() => {
     const loadUserData = async () => {
-      // Try to pre-populate with any existing data
-      const currentUserData = getUserData();
-      if (currentUserData.fullName) {
-        setFormData({
-          fullName: currentUserData.fullName || "",
-          email: currentUserData.email || "",
-          dateOfBirth: currentUserData.dateOfBirth || "",
-          nationality: currentUserData.nationality || null,
-          currentCity: currentUserData.currentCity || null,
-          currentCountry: currentUserData.currentCountry || null,
-          profilePhoto: null
-        });
+      // Try to pre-populate with any existing data from ICP
+      try {
+        await icpUserService.initialize();
+        const currentUser = await icpUserService.getCurrentUser();
+        
+        if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
+          const profileData = JSON.parse(currentUser.settings.profile_metadata);
+          
+          // If profile is already complete, redirect to timeline
+          if (profileData.profileComplete) {
+            navigate("/timeline");
+            return;
+          }
+          
+          if (profileData.fullName && profileData.fullName !== 'User') {
+            setFormData({
+              fullName: profileData.fullName || "",
+              email: profileData.email || "",
+              dateOfBirth: profileData.dateOfBirth || "",
+              nationality: profileData.nationality || null,
+              currentCity: profileData.currentCity || null,
+              currentCountry: profileData.currentCountry || null,
+              profilePhoto: null
+            });
+          }
+        }
+      } catch (error) {
+        // If ICP data fails, start with empty form
       }
     };
     const loadCountries = async () => {
@@ -302,12 +318,16 @@ export const ProfileSetup = () => {
         profileComplete: true,
         profileCompletedAt: Date.now()
       };
-      // Register user on ICP canister (this replaces browser storage)
-      await registerUser(userData);
-      // Update user profile data on ICP
-      await updateUserData(userData);
-      // Navigate to partner invite
-      navigate("/partner-invite");
+      
+      // Create profile metadata JSON for ICP canister
+      const profileMetadata = JSON.stringify(userData);
+      
+      // Update user settings with profile metadata on ICP canister
+      await icpUserService.updateUserSettings({
+        profile_metadata: [profileMetadata]
+      });
+      // Navigate to KYC verification screen
+      navigate("/verify");
     } catch (error) {
       setFormErrors({ 
         submit: 'Failed to complete profile setup. Please try again.' 
@@ -559,9 +579,9 @@ export const ProfileSetup = () => {
                   <button 
                     type="button" 
                     className="submit-button"
-                    onClick={() => navigate("/partner-invite")}
+                    onClick={() => navigate("/verify")}
                   >
-                    Continue to Partner Setup
+                    Continue to Verification
                   </button>
                 )}
               </div>

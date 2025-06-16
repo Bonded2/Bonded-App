@@ -6,7 +6,7 @@ import { StyleOutlined } from "../../icons/StyleOutlined";
 import { LocationOn2 } from "../../icons/LocationOn2";
 import { Chat4 } from "../../icons/Chat4";
 import { EditProfileModal } from "../EditProfileModal";
-import { getUserData, logoutUser } from "../../services/icpUserService";
+import icpUserService from "../../services/icpUserService";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import { aiClassificationService } from "../../utils/aiClassification";
 import "./style.css";
@@ -25,12 +25,36 @@ export const MenuFrame = ({ onClose }) => {
   });
   // Load user data when component mounts
   useEffect(() => {
-    const userInfo = getUserData();
-    setUserData({
-      fullName: userInfo.fullName || "User",
-      email: userInfo.email || "user@example.com",
-      avatar: userInfo.avatar || "U",
-    });
+    const loadUserInfo = async () => {
+      try {
+        await icpUserService.initialize();
+        const currentUser = icpUserService.getCurrentUser();
+        
+        if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
+          const profileData = JSON.parse(currentUser.settings.profile_metadata);
+          setUserData({
+            fullName: profileData.fullName || "User",
+            email: profileData.email || "user@example.com",
+            avatar: profileData.avatar || "U",
+          });
+        } else {
+          // Keep default values if no profile data
+          setUserData({
+            fullName: "User",
+            email: "user@example.com",
+            avatar: "U",
+          });
+        }
+      } catch (error) {
+        // Keep default values if loading fails
+        setUserData({
+          fullName: "User",
+          email: "user@example.com",
+          avatar: "U",
+        });
+      }
+    };
+    loadUserInfo();
     // Initialize AI status
     updateAiStatus();
     // Set up AI scanner observer
@@ -53,10 +77,17 @@ export const MenuFrame = ({ onClose }) => {
       autoScanEnabled: scanStatus.settings.autoScanEnabled
     });
   };
-  const handleLogout = () => {
-    logoutUser();
-    onClose();
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await icpUserService.logout();
+      onClose();
+      navigate('/');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still navigate away even if logout fails
+      onClose();
+      navigate('/');
+    }
   };
   const handleBackClick = () => {
     if (onClose) {
@@ -69,12 +100,19 @@ export const MenuFrame = ({ onClose }) => {
   const handleCloseEditModal = () => {
     setShowEditModal(false);
     // Refresh user data after edit
-    const userInfo = getUserData();
-    setUserData({
-      fullName: userInfo.fullName || "User",
-      email: userInfo.email || "user@example.com",
-      avatar: userInfo.avatar || "U",
-    });
+    try {
+      const currentUser = icpUserService.getCurrentUser();
+      if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
+        const profileData = JSON.parse(currentUser.settings.profile_metadata);
+        setUserData({
+          fullName: profileData.fullName || "User",
+          email: profileData.email || "user@example.com",
+          avatar: profileData.avatar || "U",
+        });
+      }
+    } catch (error) {
+      // Keep existing data if refresh fails
+    }
   };
   const handleStartAIScan = async () => {
     try {

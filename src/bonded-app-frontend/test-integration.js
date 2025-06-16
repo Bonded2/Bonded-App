@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Simple integration test for Bonded ICP backend
-import { canisterIntegration } from './src/services/canisterIntegration.js';
+import canisterIntegration from './src/services/canisterIntegration.js';
 async function runTests() {
   try {
     // Initialize the service

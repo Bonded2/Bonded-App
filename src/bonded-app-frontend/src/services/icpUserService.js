@@ -10,355 +10,333 @@
  * - User settings persistence on blockchain
  * - Relationship management through canisters
  */
-import { canisterIntegration } from './canisterIntegration.js';
-import { AuthClient } from '@dfinity/auth-client';
+import canisterIntegration from './canisterIntegration.js';
+
+/**
+ * ICP User Service
+ * High-level user management service that uses the canister integration
+ */
 class ICPUserService {
   constructor() {
-    this.authClient = null;
     this.currentUser = null;
-    this.isAuthenticated = false;
-    this.userProfile = null;
-    this.userSettings = null;
-    this.relationships = [];
-    // Initialize auth client
-    this.initializeAuth();
+    this.isInitialized = false;
   }
+
   /**
-   * Initialize authentication client
+   * Initialize the service
    */
-  async initializeAuth() {
+  async initialize() {
+    if (this.isInitialized) return;
+    
     try {
-      this.authClient = await AuthClient.create();
+      await canisterIntegration.initialize();
+      
       // Check if user is already authenticated
-      if (await this.authClient.isAuthenticated()) {
-        await this.loadUserSession();
+      if (await canisterIntegration.isLoggedIn()) {
+        await this.loadCurrentUser();
       }
+      
+      this.isInitialized = true;
+      console.log('ICPUserService initialized');
     } catch (error) {
+      console.error('Failed to initialize ICPUserService:', error);
+      throw error;
     }
   }
+
   /**
-   * Load user session from ICP canister
+   * Login with Internet Identity
    */
-  async loadUserSession() {
+  async login() {
     try {
-      if (!this.authClient || !await this.authClient.isAuthenticated()) {
-        throw new Error('User not authenticated');
-      }
-      // Get user identity
-      const identity = this.authClient.getIdentity();
-      const principal = identity.getPrincipal();
-      this.currentUser = {
-        principal: principal.toString(),
-        identity: identity
-      };
-      this.isAuthenticated = true;
-      // Initialize canister integration with authenticated identity
-      await canisterIntegration.initialize();
-      // Load user profile from canister
-      await this.loadUserProfile();
-      // Load user settings from canister
-      await this.loadUserSettings();
-      // Load user relationships from canister
-      await this.loadUserRelationships();
+      await canisterIntegration.login();
+      await this.loadCurrentUser();
       return this.currentUser;
     } catch (error) {
-      this.isAuthenticated = false;
-      this.currentUser = null;
+      console.error('Login failed:', error);
       throw error;
     }
   }
+
   /**
-   * Register new user on ICP canister
-   */
-  async registerUser(userData = {}) {
-    try {
-      if (!this.isAuthenticated) {
-        throw new Error('User must be authenticated to register');
-      }
-      // Register user in backend canister
-      const registrationResult = await canisterIntegration.registerUser(userData.email);
-      if (!registrationResult.success) {
-        throw new Error(registrationResult.error || 'Registration failed');
-      }
-      // Update user profile with provided data
-      if (Object.keys(userData).length > 0) {
-        await this.updateUserProfile(userData);
-      }
-      return { success: true, principal: this.currentUser.principal };
-    } catch (error) {
-      throw error;
-    }
-  }
-  /**
-   * Load user profile from ICP canister
-   */
-  async loadUserProfile() {
-    try {
-      const profileResult = await canisterIntegration.getUserProfile();
-      if (profileResult.success) {
-        this.userProfile = {
-          principal: profileResult.data.principal.toString(),
-          createdAt: Number(profileResult.data.created_at),
-          relationships: profileResult.data.relationships,
-          totalEvidenceUploaded: Number(profileResult.data.total_evidence_uploaded),
-          kycVerified: profileResult.data.kyc_verified,
-          lastSeen: Number(profileResult.data.last_seen),
-          // Add frontend-specific fields with defaults
-          fullName: this.userProfile?.fullName || 'User',
-          email: this.userProfile?.email || '',
-          avatar: this.userProfile?.avatar || this.getInitials(this.userProfile?.fullName || 'User'),
-          dateOfBirth: this.userProfile?.dateOfBirth || '',
-          nationality: this.userProfile?.nationality || null,
-          currentCity: this.userProfile?.currentCity || null,
-          currentCountry: this.userProfile?.currentCountry || null
-        };
-      } else {
-        // User not found in canister - this is expected for new users
-        this.userProfile = this.getDefaultUserProfile();
-      }
-      return this.userProfile;
-    } catch (error) {
-      this.userProfile = this.getDefaultUserProfile();
-      return this.userProfile;
-    }
-  }
-  /**
-   * Update user profile on ICP canister
-   */
-  async updateUserProfile(profileData) {
-    try {
-      // Update local profile data
-      this.userProfile = { ...this.userProfile, ...profileData };
-      // For MVP, we store extended profile data in user settings
-      // since the canister UserProfile has limited fields
-      const extendedProfileData = {
-        fullName: profileData.fullName,
-        email: profileData.email,
-        dateOfBirth: profileData.dateOfBirth,
-        nationality: profileData.nationality,
-        currentCity: profileData.currentCity,
-        currentCountry: profileData.currentCountry
-      };
-      // Store in user settings as metadata
-      await this.updateUserSettings({
-        profile_metadata: JSON.stringify(extendedProfileData)
-      });
-      return { success: true };
-    } catch (error) {
-      throw error;
-    }
-  }
-  /**
-   * Load user settings from ICP canister
-   */
-  async loadUserSettings() {
-    try {
-      const settingsResult = await canisterIntegration.getUserSettings();
-      if (settingsResult.success) {
-        this.userSettings = {
-          aiFiltersEnabled: settingsResult.data.ai_filters_enabled,
-          nsfwFilter: settingsResult.data.nsfw_filter,
-          explicitTextFilter: settingsResult.data.explicit_text_filter,
-          uploadSchedule: settingsResult.data.upload_schedule,
-          geolocationEnabled: settingsResult.data.geolocation_enabled,
-          notificationPreferences: settingsResult.data.notification_preferences,
-          updatedAt: Number(settingsResult.data.updated_at)
-        };
-        // Load extended profile data from settings metadata if available
-        const profileMetadata = settingsResult.data.profile_metadata;
-        if (profileMetadata) {
-          try {
-            const extendedProfile = JSON.parse(profileMetadata);
-            this.userProfile = { ...this.userProfile, ...extendedProfile };
-          } catch (e) {
-          }
-        }
-      } else {
-        // Default settings for new users
-        this.userSettings = this.getDefaultUserSettings();
-      }
-      return this.userSettings;
-    } catch (error) {
-      this.userSettings = this.getDefaultUserSettings();
-      return this.userSettings;
-    }
-  }
-  /**
-   * Update user settings on ICP canister
-   */
-  async updateUserSettings(settingsData) {
-    try {
-      // Update local settings
-      this.userSettings = { ...this.userSettings, ...settingsData };
-      // Convert to canister format
-      const canisterSettings = {
-        ai_filters_enabled: settingsData.aiFiltersEnabled !== undefined ? [settingsData.aiFiltersEnabled] : [],
-        nsfw_filter: settingsData.nsfwFilter !== undefined ? [settingsData.nsfwFilter] : [],
-        explicit_text_filter: settingsData.explicitTextFilter !== undefined ? [settingsData.explicitTextFilter] : [],
-        upload_schedule: settingsData.uploadSchedule ? [settingsData.uploadSchedule] : [],
-        geolocation_enabled: settingsData.geolocationEnabled !== undefined ? [settingsData.geolocationEnabled] : [],
-        notification_preferences: settingsData.notificationPreferences ? [settingsData.notificationPreferences] : [],
-        profile_metadata: settingsData.profile_metadata ? [settingsData.profile_metadata] : []
-      };
-      const updateResult = await canisterIntegration.updateUserSettings(canisterSettings);
-      if (!updateResult.success) {
-        throw new Error(updateResult.error || 'Settings update failed');
-      }
-      return { success: true };
-    } catch (error) {
-      throw error;
-    }
-  }
-  /**
-   * Load user relationships from ICP canister
-   */
-  async loadUserRelationships() {
-    try {
-      const relationshipsResult = await canisterIntegration.getUserRelationships();
-      if (relationshipsResult.success) {
-        this.relationships = relationshipsResult.data.map(rel => ({
-          id: rel.id,
-          partner1: rel.partner1.toString(),
-          partner2: rel.partner2 ? rel.partner2.toString() : null,
-          status: rel.status,
-          createdAt: Number(rel.created_at),
-          evidenceCount: Number(rel.evidence_count),
-          lastActivity: Number(rel.last_activity)
-        }));
-      } else {
-        this.relationships = [];
-      }
-      return this.relationships;
-    } catch (error) {
-      this.relationships = [];
-      return this.relationships;
-    }
-  }
-  /**
-   * Create a new relationship
-   */
-  async createRelationship(partnerPrincipal) {
-    try {
-      const relationshipResult = await canisterIntegration.createRelationship(partnerPrincipal);
-      if (!relationshipResult.success) {
-        throw new Error(relationshipResult.error || 'Relationship creation failed');
-      }
-      // Reload relationships
-      await this.loadUserRelationships();
-      return relationshipResult.data;
-    } catch (error) {
-      throw error;
-    }
-  }
-  /**
-   * Logout user and clear session
+   * Logout
    */
   async logout() {
     try {
-      if (this.authClient) {
-        await this.authClient.logout();
-      }
-      // Clear local state
+      await canisterIntegration.logout();
       this.currentUser = null;
-      this.isAuthenticated = false;
-      this.userProfile = null;
-      this.userSettings = null;
-      this.relationships = [];
-      return { success: true };
+      console.log('User logged out');
     } catch (error) {
+      console.error('Logout failed:', error);
       throw error;
     }
   }
+
   /**
-   * Get current user data (replaces getUserData from userState.js)
+   * Register a new user
    */
-  getUserData() {
-    if (!this.isAuthenticated || !this.userProfile) {
-      return this.getDefaultUserProfile();
-    }
-    return this.userProfile;
-  }
-  /**
-   * Update user data (replaces updateUserData from userState.js)
-   */
-  async updateUserData(data) {
+  async registerUser(profileMetadata = null) {
     try {
-      await this.updateUserProfile(data);
-      return true;
+      const result = await canisterIntegration.registerUser(profileMetadata);
+      await this.loadCurrentUser();
+      return result;
     } catch (error) {
-      return false;
+      console.error('User registration failed:', error);
+      throw error;
     }
   }
+
+  /**
+   * Load current user data
+   */
+  async loadCurrentUser() {
+    try {
+      // Ensure we're authenticated first
+      if (!await canisterIntegration.isLoggedIn()) {
+        throw new Error('User not authenticated');
+      }
+
+      const [profile, settings] = await Promise.all([
+        canisterIntegration.getUserProfile().catch(() => null), // Profile might not exist for new users
+        canisterIntegration.getUserSettings().catch(() => null) // Settings might not exist yet
+      ]);
+
+      this.currentUser = {
+        principal: canisterIntegration.getPrincipal()?.toString(),
+        profile,
+        settings,
+        isAuthenticated: true
+      };
+
+      return this.currentUser;
+    } catch (error) {
+      console.error('Failed to load current user:', error);
+      // For new users or auth issues, create minimal user object
+      this.currentUser = {
+        principal: canisterIntegration.getPrincipal()?.toString(),
+        profile: null,
+        settings: null,
+        isAuthenticated: await canisterIntegration.isLoggedIn()
+      };
+      return this.currentUser;
+    }
+  }
+
+  /**
+   * Get current user data
+   */
+  getCurrentUser() {
+    return this.currentUser;
+  }
+
   /**
    * Check if user is authenticated
    */
-  isUserAuthenticated() {
-    return this.isAuthenticated && this.currentUser !== null;
+  async isAuthenticated() {
+    return await canisterIntegration.isLoggedIn();
   }
+
   /**
-   * Get user's current relationship (if any)
+   * Check if user has completed the full onboarding flow
    */
-  getCurrentRelationship() {
-    return this.relationships.find(rel => rel.status === 'Active') || null;
+  async hasCompletedOnboarding() {
+    try {
+      if (!this.currentUser) {
+        await this.loadCurrentUser();
+      }
+
+      if (!this.currentUser || !this.currentUser.settings || !this.currentUser.settings.profile_metadata) {
+        return false;
+      }
+
+      const profileData = JSON.parse(this.currentUser.settings.profile_metadata);
+      return profileData.profileComplete === true;
+    } catch (error) {
+      console.error('Failed to check onboarding status:', error);
+      return false;
+    }
   }
+
   /**
-   * Get default user profile
+   * Get user profile
    */
-  getDefaultUserProfile() {
-    return {
-      fullName: 'User',
-      email: '',
-      avatar: 'U',
-      dateOfBirth: '',
-      nationality: null,
-      currentCity: null,
-      currentCountry: null,
-      principal: this.currentUser?.principal || '',
-      createdAt: Date.now(),
-      relationships: [],
-      totalEvidenceUploaded: 0,
-      kycVerified: false,
-      lastSeen: Date.now()
-    };
+  async getUserProfile() {
+    try {
+      const profile = await canisterIntegration.getUserProfile();
+      if (this.currentUser) {
+        this.currentUser.profile = profile;
+      }
+      return profile;
+    } catch (error) {
+      console.error('Failed to get user profile:', error);
+      throw error;
+    }
   }
+
   /**
-   * Get default user settings
+   * Get user settings
    */
-  getDefaultUserSettings() {
-    return {
-      aiFiltersEnabled: true,
-      nsfwFilter: true,
-      explicitTextFilter: true,
-      uploadSchedule: 'daily',
-      geolocationEnabled: true,
-      notificationPreferences: ['upload_reminders', 'partner_requests'],
-      updatedAt: Date.now()
-    };
+  async getUserSettings() {
+    try {
+      const settings = await canisterIntegration.getUserSettings();
+      if (this.currentUser) {
+        this.currentUser.settings = settings;
+      }
+      return settings;
+    } catch (error) {
+      console.error('Failed to get user settings:', error);
+      throw error;
+    }
   }
+
   /**
-   * Get initials from name
+   * Update user settings
    */
-  getInitials(name) {
-    if (!name) return 'U';
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  async updateUserSettings(settings) {
+    try {
+      const result = await canisterIntegration.updateUserSettings(settings);
+      
+      // Reload user data to get updated settings
+      await this.loadCurrentUser();
+      
+      return result;
+    } catch (error) {
+      console.error('Failed to update user settings:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a relationship
+   */
+  async createRelationship(partnerPrincipal) {
+    try {
+      return await canisterIntegration.createRelationship(partnerPrincipal);
+    } catch (error) {
+      console.error('Failed to create relationship:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Accept a relationship
+   */
+  async acceptRelationship(relationshipId) {
+    try {
+      return await canisterIntegration.acceptRelationship(relationshipId);
+    } catch (error) {
+      console.error('Failed to accept relationship:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get user relationships
+   */
+  async getUserRelationships() {
+    try {
+      return await canisterIntegration.getUserRelationships();
+    } catch (error) {
+      console.error('Failed to get user relationships:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload evidence
+   */
+  async uploadEvidence(relationshipId, encryptedData, metadata) {
+    try {
+      return await canisterIntegration.uploadEvidence(relationshipId, encryptedData, metadata);
+    } catch (error) {
+      console.error('Failed to upload evidence:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get timeline
+   */
+  async getTimeline(query) {
+    try {
+      return await canisterIntegration.getTimelineWithFilters(query);
+    } catch (error) {
+      console.error('Failed to get timeline:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update face embedding
+   */
+  async updateFaceEmbedding(embedding) {
+    try {
+      return await canisterIntegration.updateFaceEmbedding(embedding);
+    } catch (error) {
+      console.error('Failed to update face embedding:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete user account
+   */
+  async deleteAccount() {
+    try {
+      const result = await canisterIntegration.deleteUserAccount();
+      this.currentUser = null;
+      return result;
+    } catch (error) {
+      console.error('Failed to delete account:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get canister statistics (for debugging)
+   */
+  async getCanisterStats() {
+    try {
+      return await canisterIntegration.getCanisterStats();
+    } catch (error) {
+      console.error('Failed to get canister stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Health check
+   */
+  async healthCheck() {
+    try {
+      return await canisterIntegration.healthCheck();
+    } catch (error) {
+      console.error('Health check failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get principal
+   */
+  getPrincipal() {
+    return canisterIntegration.getPrincipal();
+  }
+
+  /**
+   * Who am I (for debugging)
+   */
+  async whoami() {
+    try {
+      return await canisterIntegration.whoami();
+    } catch (error) {
+      console.error('Whoami failed:', error);
+      throw error;
+    }
   }
 }
-// Create singleton instance
-export const icpUserService = new ICPUserService();
-// Export convenience functions for backward compatibility
-export const getUserData = () => icpUserService.getUserData();
-export const updateUserData = (data) => icpUserService.updateUserData(data);
-export const logoutUser = () => icpUserService.logout();
-export const getInitials = (name) => icpUserService.getInitials(name);
-// Export additional ICP-specific functions
-export const registerUser = (userData) => icpUserService.registerUser(userData);
-export const loadUserSession = () => icpUserService.loadUserSession();
-export const isUserAuthenticated = () => icpUserService.isUserAuthenticated();
-export const getCurrentRelationship = () => icpUserService.getCurrentRelationship();
-export const createRelationship = (partnerPrincipal) => icpUserService.createRelationship(partnerPrincipal);
+
+// Create and export singleton instance
+const icpUserService = new ICPUserService();
+
 export default icpUserService; 

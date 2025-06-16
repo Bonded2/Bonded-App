@@ -5,7 +5,7 @@
  * Handles decryption of evidence items for display and PDF generation
  */
 import { encryptionService } from '../crypto/encryption.js';
-import { canisterIntegration } from './canisterIntegration.js';
+import canisterIntegration from './canisterIntegration.js';
 import { openDB } from 'idb';
 // import jsPDF from 'jspdf'; // Temporarily disabled for build
 class TimelineService {

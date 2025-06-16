@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bonded-app-v2-csp-fixed';
+const CACHE_NAME = 'bonded-app-v3-cors-auth-fixed';
 const OFFLINE_URL = '/offline.html';
 // Core app assets that should be cached for offline use
 const urlsToCache = [
@@ -63,9 +63,12 @@ self.addEventListener('fetch', event => {
       event.request.url.includes('/tracking') ||
       event.request.url.includes('/gtm.js') ||
       event.request.url.includes('ipwho.is') ||
+      event.request.url.includes('restcountries.com') ||
       event.request.url.includes('nominatim.openstreetmap.org') ||
       event.request.url.includes('127.0.0.1:4943') ||
-      event.request.url.includes('localhost:4943')) {
+      event.request.url.includes('localhost:4943') ||
+      event.request.url.includes('.icp0.io') ||
+      event.request.url.includes('ic0.app')) {
     return;
   }
   // Handle navigation requests (HTML pages)

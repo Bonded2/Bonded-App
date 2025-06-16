@@ -43,6 +43,7 @@ pub fn register_user(email: Option<String>) -> BondedResult<String> {
         upload_schedule: "daily".to_string(),
         geolocation_enabled: true,
         notification_preferences: vec!["email".to_string()],
+        profile_metadata: None,
         updated_at: current_time(),
     };
     
@@ -72,6 +73,7 @@ pub fn update_user_settings(request: UpdateSettingsRequest) -> BondedResult<Stri
             upload_schedule: "daily".to_string(),
             geolocation_enabled: true,
             notification_preferences: vec!["email".to_string()],
+            profile_metadata: None,
             updated_at: current_time(),
         });
     
@@ -93,6 +95,9 @@ pub fn update_user_settings(request: UpdateSettingsRequest) -> BondedResult<Stri
     }
     if let Some(notifications) = request.notification_preferences {
         current_settings.notification_preferences = notifications;
+    }
+    if let Some(profile_metadata) = request.profile_metadata {
+        current_settings.profile_metadata = Some(profile_metadata);
     }
     
     current_settings.updated_at = current_time();
