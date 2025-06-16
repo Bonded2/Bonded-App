@@ -3,10 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { InfoModal } from "../../components/InfoModal";
 import { DeleteModal } from "../../components/DeleteModal";
 import "./style.css";
-
 // LocalStorage key for timestamp content - same as in TimestampFolder
 const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
-
 export const ImagePreview = ({ onClose, item: propItem }) => {
   const navigate = useNavigate();
   const { itemId } = useParams();
@@ -14,27 +12,22 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
-  
   // Find the correct item either from props or localStorage
   useEffect(() => {
     const loadItem = () => {
       setLoading(true);
-      
       // If item was passed directly via props, use it
       if (propItem) {
         setItem(propItem);
         setLoading(false);
         return;
       }
-      
       // Otherwise find the item in localStorage by ID
       try {
         // Get all content from localStorage
         const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
-        
         // Search for the item with matching ID across all dates
         let foundItem = null;
-        
         // Iterate through all dates
         Object.values(allContent).forEach(dateItems => {
           // Check each item in this date
@@ -43,7 +36,6 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
             foundItem = matchingItem;
           }
         });
-        
         if (foundItem) {
           setItem(foundItem);
         } else {
@@ -59,7 +51,6 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
           });
         }
       } catch (err) {
-        console.error("Error loading item:", err);
         // Set a default placeholder on error
         setItem({
           id: "error",
@@ -74,10 +65,8 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
         setLoading(false);
       }
     };
-    
     loadItem();
   }, [propItem, itemId]);
-
   const handleClose = () => {
     if (onClose) {
       onClose();
@@ -85,39 +74,30 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
       navigate(-1); // Go back to the previous screen
     }
   };
-
   const handleInfoClick = () => {
     setShowInfoModal(true);
   };
-
   const handleDeleteClick = () => {
     setShowDeleteModal(true);
   };
-  
   const handleConfirmDelete = () => {
     if (!item) return;
-    
     try {
       // Get all content from localStorage
       const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
-      
       // Find which date contains this item
       Object.keys(allContent).forEach(date => {
         // Filter out the deleted item
         allContent[date] = allContent[date].filter(i => i.id !== item.id);
       });
-      
       // Save back to localStorage
       localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
-      
       // Navigate back
       handleClose();
     } catch (err) {
-      console.error("Error deleting item:", err);
       alert("Failed to delete item. Please try again.");
     }
   };
-
   if (loading) {
     return (
       <div className="image-preview-screen">
@@ -128,7 +108,6 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
       </div>
     );
   }
-
   if (!item) {
     return (
       <div className="image-preview-screen">
@@ -139,7 +118,6 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
       </div>
     );
   }
-
   return (
     <div className="image-preview-screen">
       <div className="image-preview-container">
@@ -152,20 +130,16 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
           </div>
           <div className="preview-title">{item.name}</div>
         </div>
-        
         {/* Main image container */}
         <div className="image-container">
           <img src={item.imageUrl} alt={item.name} className="preview-image" />
-          
           {/* Verification indicators for immigration documents */}
           {item.source === "Immigration Document" && (
             <div className="verification-badge">Official Document</div>
           )}
-          
           {/* Date indicator for evidence timeline */}
           <div className="date-indicator">{item.date}</div>
         </div>
-        
         {/* Bottom action bar */}
         <div className="image-actions-bar">
           <div className="action-button info-button" onClick={handleInfoClick}>
@@ -181,10 +155,8 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
             <span>Delete</span>
           </div>
         </div>
-        
         {/* Info Modal */}
         {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} item={item} />}
-        
         {/* Delete Modal */}
         {showDeleteModal && (
           <DeleteModal 

@@ -6,7 +6,6 @@ import LocationPanel from '../../features/geolocation/LocationPanel';
 import { useGeoMetadata } from '../../features/geolocation/hooks/useGeoMetadata';
 import TelegramExportUpload from '../../components/TelegramExportUpload/TelegramExportUpload';
 import "./style.css";
-
 export const MediaImport = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -14,17 +13,14 @@ export const MediaImport = () => {
   const [recentFiles, setRecentFiles] = useState([]);
   const [importSuccess, setImportSuccess] = useState(false);
   const { metadata, refreshMetadata } = useGeoMetadata();
-  
   // Refresh geolocation when component mounts
   useEffect(() => {
     refreshMetadata();
   }, [refreshMetadata]);
-  
   // Handle opening modal
   const handleOpenMediaScanner = () => {
     setIsModalOpen(true);
   };
-  
   // Navigate to timeline
   const handleViewTimeline = () => {
     navigate('/timeline-created', { 
@@ -37,92 +33,68 @@ export const MediaImport = () => {
       }
     });
   };
-  
   // Handle files added to timeline
   const handleFilesAdded = (filesWithMetadata) => {
-    console.log('Files added to timeline with metadata:', filesWithMetadata.length, 'files');
-    
     // Group files by date for timeline organization
     const groupedByDate = {};
-    
     filesWithMetadata.forEach(fileData => {
       const file = fileData.file;
-      
       // Use the file's timestamp or lastModified date
       const timestamp = fileData.timestamp || file.lastModified;
       const date = new Date(timestamp);
-      
       // Format for grouping: use more specific format to avoid all files going into one day
       // Convert to YYYY-MM-DD format but ensure it's using local timezone
       const dateKey = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format for grouping
-      
       if (!groupedByDate[dateKey]) {
         groupedByDate[dateKey] = [];
       }
-      
       groupedByDate[dateKey].push(fileData);
     });
-    
-    console.log('Files grouped by date:', Object.keys(groupedByDate).length, 'unique dates:', 
-               Object.keys(groupedByDate).join(', '));
-               
     // Save to localStorage in the same format TimelineCreated expects
     try {
       // Get existing content
       const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
       const TIMELINE_DATA_KEY = 'bonded_timeline_data';
-      
       const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
       const existingTimelineData = JSON.parse(localStorage.getItem(TIMELINE_DATA_KEY) || '[]');
       const newTimelineEntries = [];
-      
       let updatedExistingEntries = 0;
       let newlyCreatedEntries = 0;
       let totalFilesProcessed = 0;
-      
       // Process each date group
       Object.keys(groupedByDate).forEach(dateKey => {
         const files = groupedByDate[dateKey];
         totalFilesProcessed += files.length;
-        
         // Format date in the display format expected by the timeline
         const displayDate = formatDateForDisplay(new Date(dateKey));
-        
         // Check if this date already exists in timeline
         const existingEntryIndex = existingTimelineData.findIndex(item => {
           // If dates match exactly or close enough
           return item.date === displayDate;
         });
-        
         // Find a valid file for thumbnail
         const validFileForThumbnail = findValidFileForThumbnail(files);
         let imageUrl = null;
-        
         if (validFileForThumbnail) {
           try {
             // Ensure the file is valid before creating URL
             if (validFileForThumbnail.file instanceof Blob) {
               imageUrl = URL.createObjectURL(validFileForThumbnail.file);
             } else {
-              console.warn("Invalid file for thumbnail - not a Blob:", validFileForThumbnail);
             }
           } catch (err) {
-            console.warn("Couldn't create URL for thumbnail:", err);
             imageUrl = null;
           }
         }
-        
         if (existingEntryIndex >= 0) {
           // Update existing entry
           const existingEntry = existingTimelineData[existingEntryIndex];
           existingEntry.photos = (existingEntry.photos || 0) + files.length;
           updatedExistingEntries++;
-          
           // Update image only if none exists and we have a valid new one
           if (!existingEntry.image && imageUrl) {
             existingEntry.image = imageUrl;
           }
-          
           // Get location from files
           const location = getLocationFromFiles(files);
           if (location && !existingEntry.location) {
@@ -142,14 +114,11 @@ export const MediaImport = () => {
             source: 'device media',
             uploadStatus: 'completed',
           };
-          
           newTimelineEntries.push(newEntry);
           newlyCreatedEntries++;
         }
-        
         // Update content for this date
         const dateContent = allContent[displayDate] || [];
-        
         // Add new files as content items
         const newContentItems = files.map(fileData => {
           // Try to create object URL safely
@@ -158,12 +127,9 @@ export const MediaImport = () => {
             if (fileData.file instanceof Blob) {
               fileImageUrl = URL.createObjectURL(fileData.file);
             } else {
-              console.warn("Skipping URL creation for invalid file:", fileData.file?.name || "unknown file");
             }
           } catch (err) {
-            console.warn("Could not create URL for file:", fileData.file?.name || "unknown file", err);
           }
-          
           return {
             id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: getFileType(fileData.file?.type || "unknown"),
@@ -177,10 +143,8 @@ export const MediaImport = () => {
             path: fileData.file?.path || 'Imported'
           };
         });
-        
         allContent[displayDate] = [...dateContent, ...newContentItems];
       });
-      
       // Combine existing timeline with new entries and sort
       const updatedTimelineData = [...existingTimelineData, ...newTimelineEntries]
         .sort((a, b) => {
@@ -188,55 +152,36 @@ export const MediaImport = () => {
           const timestampB = b.timestamp || new Date(b.date).getTime();
           return timestampB - timestampA; // Newest first
         });
-      
       // Save to localStorage
       localStorage.setItem(TIMELINE_DATA_KEY, JSON.stringify(updatedTimelineData));
       localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
-      
-      console.log('Timeline data processing results:', {
-        totalFilesProcessed,
-        uniqueDates: Object.keys(groupedByDate).length,
-        updatedExistingEntries,
-        newlyCreatedEntries,
-        totalTimelineEntries: updatedTimelineData.length
-      });
     } catch (err) {
-      console.error("Error saving timeline data:", err);
     }
-    
     // In a real app, this would store the files in your backend
     // For this demo, we'll store them in state to display
     setRecentFiles(prev => [...filesWithMetadata, ...prev].slice(0, 10));
-    
     // Set success state
     setImportSuccess(true);
-    
     // Close the modal
     setIsModalOpen(false);
   };
-  
   /**
    * Find a valid file that can be used for creating a thumbnail
    */
   const findValidFileForThumbnail = (files) => {
     if (!files || files.length === 0) return null;
-    
     // First try to find an image file
     const imageFile = files.find(file => 
       file && file.file instanceof Blob && file.file.type.startsWith('image/')
     );
-    
     // If found, return it
     if (imageFile) return imageFile;
-    
     // Otherwise find any valid blob
     const validFile = files.find(file => 
       file && file.file instanceof Blob
     );
-    
     return validFile || null;
   };
-  
   /**
    * Format a date for display in the timeline
    */
@@ -244,7 +189,6 @@ export const MediaImport = () => {
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('en-GB', options);
   };
-  
   /**
    * Get file type based on MIME type
    */
@@ -259,7 +203,6 @@ export const MediaImport = () => {
       return 'file';
     }
   };
-  
   /**
    * Extract location information from files
    */
@@ -270,14 +213,12 @@ export const MediaImport = () => {
         file.metadata?.resolvedLocation?.city || 
         file.metadata?.ipLocation?.city
       );
-      
       if (fileWithLocation) {
         const metadata = fileWithLocation.metadata;
         // Prefer device location over IP location
         if (metadata.resolvedLocation?.city) {
           const city = metadata.resolvedLocation.city;
           const country = metadata.resolvedLocation.countryName;
-          
           // Format as "City, Country" or just "City" if country is not available
           if (country && country !== city) {
             return `${city}, ${country}`;
@@ -286,22 +227,18 @@ export const MediaImport = () => {
         } else if (metadata.ipLocation?.city) {
           const city = metadata.ipLocation.city;
           const country = metadata.ipLocation.countryName;
-          
           if (country && country !== city) {
             return `${city}, ${country}`;
           }
           return city;
         }
       }
-      
       // Default location if none found
       return "Imported Media";
     } catch (error) {
-      console.error("Error extracting location from files:", error);
       return "Imported Media";
     }
   };
-  
   // Common styles
   const cardStyle = {
     backgroundColor: "rgba(255, 255, 255, 0.9)",
@@ -310,7 +247,6 @@ export const MediaImport = () => {
     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
     marginBottom: "1.5rem"
   };
-
   const headingStyle = {
     fontSize: "1.25rem",
     fontWeight: "600",
@@ -318,7 +254,6 @@ export const MediaImport = () => {
     fontFamily: "Trocchi, serif",
     color: "#2C4CDF"
   };
-
   const buttonStyle = {
     backgroundColor: "#B9FF46",
     color: "#2C4CDF",
@@ -328,18 +263,15 @@ export const MediaImport = () => {
     cursor: "pointer",
     transition: "background-color 0.2s ease"
   };
-
   const secondaryButtonStyle = {
     ...buttonStyle,
     backgroundColor: "#2C4CDF",
     color: "white",
     marginLeft: "0.5rem"
   };
-
   return (
     <div className="media-scanner-utility">
       <TopAppBar title="Media Import" showBackButton={true} />
-      
       <div className="content p-4">
         <div className="flex flex-col space-y-6">
           {importSuccess && (
@@ -364,7 +296,6 @@ export const MediaImport = () => {
               </button>
             </div>
           )}
-        
           <div style={cardStyle}>
             <h2 style={headingStyle}>Import Media to Timeline</h2>
             <p style={{color: "#333333", marginBottom: "1rem"}}>
@@ -373,7 +304,6 @@ export const MediaImport = () => {
             <p style={{color: "#666666", marginBottom: "1.5rem", fontSize: "0.875rem"}}>
               All files will be automatically tagged with your current location metadata to help verify your relationship status.
             </p>
-            
             <div style={{display: "flex"}}>
               <button 
                 onClick={handleOpenMediaScanner}
@@ -383,7 +313,6 @@ export const MediaImport = () => {
               >
                 Open Media Scanner
               </button>
-              
               <button 
                 onClick={handleViewTimeline}
                 style={secondaryButtonStyle}
@@ -394,7 +323,6 @@ export const MediaImport = () => {
               </button>
             </div>
           </div>
-          
           {recentFiles.length > 0 && (
             <div style={cardStyle}>
               <h2 style={headingStyle}>Recently Added Files</h2>
@@ -428,7 +356,6 @@ export const MediaImport = () => {
               </div>
             </div>
           )}
-          
           <div style={cardStyle}>
             <div className="flex justify-between items-center mb-4">
               <h2 style={headingStyle}>Location Information</h2>
@@ -441,7 +368,6 @@ export const MediaImport = () => {
                 {showGeolocationData ? 'Hide Details' : 'Show Details'}
               </button>
             </div>
-            
             {showGeolocationData ? (
               <LocationPanel />
             ) : (
@@ -449,7 +375,6 @@ export const MediaImport = () => {
                 <p style={{color: "#333333", marginBottom: "0.5rem"}}>
                   Your current location data will be attached to any files you import.
                 </p>
-                
                 {metadata && (
                   <div style={{
                     backgroundColor: "rgba(44, 76, 223, 0.1)", 
@@ -486,7 +411,6 @@ export const MediaImport = () => {
           </div>
         </div>
       </div>
-      
       {isModalOpen && (
         <MediaScannerModal
           onClose={() => setIsModalOpen(false)}

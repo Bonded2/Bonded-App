@@ -10,7 +10,6 @@ import {
   detectVPN 
 } from "../../utils/locationService";
 import "./style.css";
-
 // Flag formatter for country options
 const formatOptionLabel = ({ label, flag }) => (
   <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -18,7 +17,6 @@ const formatOptionLabel = ({ label, flag }) => (
     <span>{label}</span>
   </div>
 );
-
 export const EditProfileModal = ({ onClose }) => {
   const [userData, setUserData] = useState({
     fullName: "",
@@ -28,7 +26,6 @@ export const EditProfileModal = ({ onClose }) => {
     currentCity: null,
     currentCountry: null
   });
-
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -36,7 +33,6 @@ export const EditProfileModal = ({ onClose }) => {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [vpnDetected, setVpnDetected] = useState(false);
-
   // Load user data and countries on mount
   useEffect(() => {
     const loadUserData = () => {
@@ -50,16 +46,13 @@ export const EditProfileModal = ({ onClose }) => {
         currentCountry: currentUserData.currentCountry || null
       });
     };
-
     const loadCountries = async () => {
       try {
         const countryList = await getAllCountries();
         setCountries(countryList);
       } catch (error) {
-        console.error("Failed to load countries:", error);
       }
     };
-
     // Check for VPN
     const checkVPN = async () => {
       try {
@@ -69,23 +62,19 @@ export const EditProfileModal = ({ onClose }) => {
           setLocationError("VPN or proxy detected. Please disable it to use location features.");
         }
       } catch (error) {
-        console.error("VPN detection error:", error);
         // Don't set VPN detected on error to allow location features
       }
     };
-
     loadUserData();
     loadCountries();
     checkVPN();
   }, []);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUserData(prev => ({
       ...prev,
       [name]: value
     }));
-    
     // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
@@ -94,13 +83,11 @@ export const EditProfileModal = ({ onClose }) => {
       }));
     }
   };
-
   const handleSelectChange = (name, selectedOption) => {
     setUserData(prev => ({
       ...prev,
       [name]: selectedOption
     }));
-    
     // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({
@@ -108,7 +95,6 @@ export const EditProfileModal = ({ onClose }) => {
         [name]: ""
       }));
     }
-
     // If country is selected, reset the city
     if (name === 'currentCountry') {
       setUserData(prev => ({
@@ -117,57 +103,45 @@ export const EditProfileModal = ({ onClose }) => {
       }));
     }
   };
-
   // Load cities based on selected country
   const loadCities = async (inputValue) => {
     if (!userData.currentCountry?.value) {
       return [];
     }
-
     try {
       const cities = await getCitiesByCountry(userData.currentCountry.value);
-      
       // Filter by input value if provided
       if (inputValue) {
         return cities.filter(city => 
           city.label.toLowerCase().includes(inputValue.toLowerCase())
         );
       }
-      
       return cities;
     } catch (error) {
-      console.error("Error loading cities:", error);
       return [];
     }
   };
-
   // Use browser geolocation to get current location
   const handleUseCurrentLocation = async () => {
     if (vpnDetected) {
       setLocationError("Please disable your VPN to use current location.");
       return;
     }
-
     setIsLoadingLocation(true);
     setLocationError(null);
-
     try {
       // Get GPS coordinates
       const coordinates = await getCurrentLocation();
-      
       // Reverse geocode to get city and country
       const locationData = await reverseGeocode(coordinates);
-      
       // Find the country in our list
       const country = countries.find(c => c.value === locationData.country);
-      
       if (country) {
         // Update country first
         setUserData(prev => ({
           ...prev,
           currentCountry: country
         }));
-        
         // Then load cities and set the city
         const cities = await getCitiesByCountry(country.value);
         const city = cities.find(c => c.label === locationData.city) || {
@@ -175,14 +149,12 @@ export const EditProfileModal = ({ onClose }) => {
           label: locationData.city,
           region: locationData.region
         };
-        
         setUserData(prev => ({
           ...prev,
           currentCity: city
         }));
       }
     } catch (error) {
-      console.error("Geolocation error:", error);
       setLocationError(
         error.code === 1 
           ? "Location permission denied. Please enable location access in your browser settings."
@@ -192,33 +164,25 @@ export const EditProfileModal = ({ onClose }) => {
       setIsLoadingLocation(false);
     }
   };
-
   const validateForm = () => {
     const newErrors = {};
-    
     if (!userData.fullName.trim()) {
       newErrors.fullName = "Name is required";
     }
-    
     if (!userData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(userData.email)) {
       newErrors.email = "Email is invalid";
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       return;
     }
-    
     setIsSubmitting(true);
-    
     try {
       // Update the avatar based on the name
       const avatar = userData.fullName
@@ -227,27 +191,22 @@ export const EditProfileModal = ({ onClose }) => {
         .join('')
         .toUpperCase()
         .slice(0, 2);
-      
       // Save user profile data with all fields
       updateUserData({
         ...userData,
         avatar
       });
-      
       // Show success message
       setShowSuccess(true);
-      
       // Close after delay
       setTimeout(() => {
         onClose();
       }, 1500);
     } catch (error) {
-      console.error("Error updating profile:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const handleModalClick = (e) => {
     // Prevent closing when clicking inside modal content
     if (e.target.closest('.edit-profile-content')) {
@@ -255,16 +214,13 @@ export const EditProfileModal = ({ onClose }) => {
     }
     onClose();
   };
-
   return (
     <div className="edit-profile-modal" onClick={handleModalClick}>
       <div className="edit-profile-content">
         <button className="close-button" onClick={onClose} aria-label="Close modal">
           <span className="close-icon">&times;</span>
         </button>
-        
         <h2 className="edit-profile-title">Edit Profile</h2>
-        
         {showSuccess ? (
           <div className="success-message">
             <div className="checkmark-circle">✓</div>
@@ -283,7 +239,6 @@ export const EditProfileModal = ({ onClose }) => {
                 className={errors.fullName ? "error" : ""}
               />
             </div>
-            
             <div className="form-field">
               <CustomTextField
                 label="Email"
@@ -296,7 +251,6 @@ export const EditProfileModal = ({ onClose }) => {
                 className={errors.email ? "error" : ""}
               />
             </div>
-            
             <div className="form-field">
               <CustomTextField
                 label="Date of Birth"
@@ -308,7 +262,6 @@ export const EditProfileModal = ({ onClose }) => {
                 className={errors.dateOfBirth ? "error" : ""}
               />
             </div>
-            
             <div className="form-field">
               <label className="select-label">Nationality</label>
               <CountrySelect
@@ -321,17 +274,14 @@ export const EditProfileModal = ({ onClose }) => {
                 formatOptionLabel={formatOptionLabel}
               />
             </div>
-            
             <div className="location-section">
               <h3>Current Location</h3>
-              
               {locationError && (
                 <div className="location-error">
                   <span className="error-icon">⚠️</span>
                   {locationError}
                 </div>
               )}
-              
               <div className="form-field">
                 <label className="select-label">Current Country</label>
                 <CountrySelect
@@ -344,7 +294,6 @@ export const EditProfileModal = ({ onClose }) => {
                   formatOptionLabel={formatOptionLabel}
                 />
               </div>
-              
               <div className="form-field">
                 <label className="select-label">Current City</label>
                 <AsyncCountrySelect
@@ -358,7 +307,6 @@ export const EditProfileModal = ({ onClose }) => {
                   noOptionsMessage={() => userData.currentCountry ? "No cities found" : "Select a country first"}
                 />
               </div>
-              
               <button
                 type="button"
                 className={`location-button ${isLoadingLocation ? 'loading' : ''} ${vpnDetected ? 'disabled' : ''}`}
@@ -368,7 +316,6 @@ export const EditProfileModal = ({ onClose }) => {
                 {isLoadingLocation ? 'Detecting location...' : '📍 Use Current Location'}
               </button>
             </div>
-            
             {vpnDetected && (
               <div className="vpn-warning">
                 <p>
@@ -377,7 +324,6 @@ export const EditProfileModal = ({ onClose }) => {
                 </p>
               </div>
             )}
-            
             <div className="form-actions">
               <button 
                 type="button" 

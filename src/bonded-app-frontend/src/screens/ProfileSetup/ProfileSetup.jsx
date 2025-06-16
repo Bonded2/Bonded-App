@@ -13,7 +13,6 @@ import {
   validateLocationConsistency 
 } from "../../utils/locationService";
 import "./style.css";
-
 // Flag formatter for country options
 const formatOptionLabel = ({ label, flag }) => (
   <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -21,11 +20,9 @@ const formatOptionLabel = ({ label, flag }) => (
     <span>{label}</span>
   </div>
 );
-
 export const ProfileSetup = () => {
   const navigate = useNavigate();
   const { canisterIntegration, isInitialized } = useBondedServices();
-  
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -35,7 +32,6 @@ export const ProfileSetup = () => {
     currentCountry: null,
     profilePhoto: null
   });
-  
   const [formErrors, setFormErrors] = useState({});
   const [countries, setCountries] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +49,6 @@ export const ProfileSetup = () => {
     message: 'Location verification pending'
   });
   const [step, setStep] = useState(1); // Multi-step form: 1=Basic Info, 2=KYC
-
   // Load countries and check for VPN on mount
   useEffect(() => {
     const loadUserData = async () => {
@@ -71,19 +66,16 @@ export const ProfileSetup = () => {
         });
       }
     };
-
     const loadCountries = async () => {
       try {
         setIsLoading(true);
         const countryList = await getAllCountries();
         setCountries(countryList);
       } catch (error) {
-        console.error("Failed to load countries:", error);
       } finally {
         setIsLoading(false);
       }
     };
-
     // Check for VPN
     const checkVPN = async () => {
       try {
@@ -91,7 +83,6 @@ export const ProfileSetup = () => {
           status: 'checking',
           message: 'Checking your connection security...'
         });
-        
         const vpnInfo = await detectVPN();
         if (vpnInfo.isVPN) {
           setVpnDetected(true);
@@ -107,39 +98,32 @@ export const ProfileSetup = () => {
           });
         }
       } catch (error) {
-        console.error("VPN detection error:", error);
         setSecurityStatus({
           status: 'error',
           message: 'Could not verify connection security'
         });
       }
     };
-
     loadUserData();
     loadCountries();
     checkVPN();
   }, []);
-
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    
     // Clear error when user types
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: "" });
     }
   };
-
   // Handle select changes (country, nationality)
   const handleSelectChange = (name, selectedOption) => {
     setFormData({ ...formData, [name]: selectedOption });
-    
     // Clear error when user selects
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: "" });
     }
-
     // If country is selected, reset city
     if (name === 'currentCountry') {
       setFormData(prev => ({
@@ -148,73 +132,59 @@ export const ProfileSetup = () => {
       }));
     }
   };
-
   // Load cities based on country selection
   const loadCities = async (inputValue) => {
     if (!formData.currentCountry?.value) {
       return [];
     }
-
     try {
       const cities = await getCitiesByCountry(formData.currentCountry.value);
-      
       // Filter by input value if provided
       if (inputValue) {
         return cities.filter(city => 
           city.label.toLowerCase().includes(inputValue.toLowerCase())
         );
       }
-      
       return cities;
     } catch (error) {
-      console.error("Error loading cities:", error);
       return [];
     }
   };
-
   // Use browser geolocation to get current location
   const handleUseCurrentLocation = async () => {
     if (vpnDetected) {
       setLocationError("Please disable your VPN to use current location.");
       return;
     }
-
     setIsLoadingLocation(true);
     setLocationError(null);
-
     try {
       // Get GPS coordinates
       const coordinates = await getCurrentLocation();
-      
       // Verify location consistency
       const validationResult = await validateLocationConsistency(coordinates);
-      
       if (!validationResult.isConsistent) {
         setLocationError(validationResult.message);
         setIsLoadingLocation(false);
         return;
       }
-
       // Reverse geocode to get location details
       const locationData = await reverseGeocode({
         lat: coordinates.latitude,
         lng: coordinates.longitude
       });
-      
       if (locationData && locationData.country && locationData.countryName) {
         // Find matching country in our list
         const matchingCountry = countries.find(country => 
           country.label.toLowerCase().includes(locationData.countryName.toLowerCase()) ||
           country.value.toLowerCase() === locationData.country.toLowerCase()
         );
-        
         if (matchingCountry) {
           setFormData(prev => ({
             ...prev,
             currentCountry: matchingCountry,
             currentCity: { label: locationData.city, value: locationData.city }
           }));
-          
           setLocationError(null);
         } else {
           setLocationError("Could not match detected location with available countries.");
@@ -222,29 +192,23 @@ export const ProfileSetup = () => {
       } else {
         setLocationError("Could not determine your location. Please select manually.");
       }
-      
     } catch (error) {
-      console.error("Location detection error:", error);
       setLocationError("Location detection failed. Please select your location manually.");
     } finally {
       setIsLoadingLocation(false);
     }
   };
-
   // Form validation
   const validateForm = () => {
     const errors = {};
-    
     if (!formData.fullName.trim()) {
       errors.fullName = "Full name is required";
     }
-    
     if (!formData.email.trim()) {
       errors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = "Please enter a valid email address";
     }
-    
     if (!formData.dateOfBirth) {
       errors.dateOfBirth = "Date of birth is required";
     } else {
@@ -255,23 +219,18 @@ export const ProfileSetup = () => {
         errors.dateOfBirth = "You must be at least 18 years old";
       }
     }
-    
     if (!formData.nationality) {
       errors.nationality = "Nationality is required";
     }
-    
     if (!formData.currentCountry) {
       errors.currentCountry = "Current country is required";
     }
-    
     if (!formData.currentCity) {
       errors.currentCity = "Current city is required";
     }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
-
   // Start KYC verification process
   const startKYCVerification = async () => {
     try {
@@ -280,20 +239,16 @@ export const ProfileSetup = () => {
         message: 'Starting identity verification...',
         verificationId: null
       });
-
       // For production, integrate with Yoti, iProov, or similar KYC provider
       // This is a simplified implementation for demonstration
-      
       // Simulate KYC API call
       const kycResponse = await simulateKYCVerification(formData);
-      
       if (kycResponse.success) {
         setKycStatus({
           status: 'completed',
           message: 'Identity verification completed successfully',
           verificationId: kycResponse.verificationId
         });
-        
         // Complete profile setup
         await completeProfileSetup();
       } else {
@@ -303,9 +258,7 @@ export const ProfileSetup = () => {
           verificationId: null
         });
       }
-      
     } catch (error) {
-      console.error('KYC verification failed:', error);
       setKycStatus({
         status: 'failed',
         message: 'Identity verification service unavailable. Please try again later.',
@@ -313,12 +266,10 @@ export const ProfileSetup = () => {
       });
     }
   };
-
   // Simulate KYC verification (replace with real KYC provider integration)
   const simulateKYCVerification = async (userData) => {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 3000));
-    
     // For demo purposes, always succeed
     // In production, this would call Yoti, iProov, or similar service
     return {
@@ -332,7 +283,6 @@ export const ProfileSetup = () => {
       }
     };
   };
-
   // Complete profile setup
   const completeProfileSetup = async () => {
     try {
@@ -343,7 +293,6 @@ export const ProfileSetup = () => {
         .join('')
         .toUpperCase()
         .slice(0, 2);
-
       // Prepare user data for ICP registration
       const userData = {
         ...formData,
@@ -353,38 +302,25 @@ export const ProfileSetup = () => {
         profileComplete: true,
         profileCompletedAt: Date.now()
       };
-
-      console.log('[ProfileSetup] Registering user on ICP canister...');
-      
       // Register user on ICP canister (this replaces browser storage)
       await registerUser(userData);
-      
       // Update user profile data on ICP
       await updateUserData(userData);
-
-      console.log('[ProfileSetup] User successfully registered on ICP blockchain');
-
       // Navigate to partner invite
       navigate("/partner-invite");
-      
     } catch (error) {
-      console.error('Profile setup completion failed:', error);
       setFormErrors({ 
         submit: 'Failed to complete profile setup. Please try again.' 
       });
     }
   };
-
   // Handle form submission with production-ready flow
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
     if (!validateForm()) {
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       if (step === 1) {
         // Move to KYC step
@@ -393,9 +329,7 @@ export const ProfileSetup = () => {
         // Start KYC verification
         await startKYCVerification();
       }
-      
     } catch (error) {
-      console.error('Profile setup failed:', error);
       setFormErrors({ 
         submit: 'Failed to save profile. Please try again.' 
       });
@@ -403,7 +337,6 @@ export const ProfileSetup = () => {
       setIsSubmitting(false);
     }
   };
-
   return (
     <div className="profile-setup-screen">
       <div className="profile-setup-content">
@@ -411,7 +344,6 @@ export const ProfileSetup = () => {
         <p className="profile-subtitle">
           Tell us about yourself to get started with Bonded
         </p>
-        
         {/* Security Status Indicator */}
         <div className={`security-status ${securityStatus.status}`}>
           <div className="security-icon">
@@ -422,7 +354,6 @@ export const ProfileSetup = () => {
           </div>
           <div className="security-message">{securityStatus.message}</div>
         </div>
-
         {/* Step Progress Indicator */}
         <div className="step-progress">
           <div className={`step ${step >= 1 ? 'active' : ''} ${step > 1 ? 'completed' : ''}`}>
@@ -434,13 +365,11 @@ export const ProfileSetup = () => {
             <div className="step-label">Verification</div>
           </div>
         </div>
-
         <form className="profile-form" onSubmit={handleSubmit}>
           {step === 1 && (
             <>
               <div className="form-section">
                 <h2 className="section-title">Personal Information</h2>
-                
                 <div className="form-field">
                   <CustomTextField
                     label="Full Name"
@@ -453,7 +382,6 @@ export const ProfileSetup = () => {
                     required
                   />
                 </div>
-                
                 <div className="form-field">
                   <CustomTextField
                     label="Email"
@@ -467,7 +395,6 @@ export const ProfileSetup = () => {
                     required
                   />
                 </div>
-                
                 <div className="form-field">
                   <CustomTextField
                     label="Date of Birth"
@@ -481,7 +408,6 @@ export const ProfileSetup = () => {
                     required
                   />
                 </div>
-                
                 <div className="form-field">
                   <label className="select-label">Nationality</label>
                   <CountrySelect
@@ -500,17 +426,14 @@ export const ProfileSetup = () => {
                   )}
                 </div>
               </div>
-              
               <div className="form-section location-section">
                 <h2 className="section-title">Current Location</h2>
-                
                 {locationError && (
                   <div className="location-error">
                     <span className="error-icon">⚠️</span>
                     {locationError}
                   </div>
                 )}
-                
                 <div className="form-field">
                   <label className="select-label">Current Country</label>
                   <CountrySelect
@@ -528,7 +451,6 @@ export const ProfileSetup = () => {
                     <div className="error-message">{formErrors.currentCountry}</div>
                   )}
                 </div>
-                
                 <div className="form-field">
                   <label className="select-label">Current City</label>
                   <AsyncCountrySelect
@@ -546,7 +468,6 @@ export const ProfileSetup = () => {
                     <div className="error-message">{formErrors.currentCity}</div>
                   )}
                 </div>
-                
                 <button
                   type="button"
                   className={`location-button ${isLoadingLocation ? 'loading' : ''} ${vpnDetected ? 'disabled' : ''}`}
@@ -555,7 +476,6 @@ export const ProfileSetup = () => {
                 >
                   {isLoadingLocation ? 'Detecting location...' : '📍 Use Current Location'}
                 </button>
-                
                 {vpnDetected && (
                   <div className="vpn-warning">
                     <p>
@@ -565,7 +485,6 @@ export const ProfileSetup = () => {
                   </div>
                 )}
               </div>
-              
               <div className="form-actions">
                 <button type="submit" className="submit-button" disabled={vpnDetected || isSubmitting}>
                   {isSubmitting ? 'Processing...' : 'Continue to Verification'}
@@ -573,7 +492,6 @@ export const ProfileSetup = () => {
               </div>
             </>
           )}
-
           {step === 2 && (
             <div className="form-section kyc-section">
               <h2 className="section-title">Identity Verification</h2>
@@ -581,7 +499,6 @@ export const ProfileSetup = () => {
                 To ensure the security and authenticity of your relationship evidence, 
                 we need to verify your identity using industry-standard KYC procedures.
               </p>
-
               {/* KYC Status Display */}
               <div className={`kyc-status ${kycStatus.status}`}>
                 <div className="kyc-icon">
@@ -592,7 +509,6 @@ export const ProfileSetup = () => {
                 </div>
                 <div className="kyc-message">{kycStatus.message}</div>
               </div>
-
               {kycStatus.status === 'pending' && (
                 <div className="kyc-info">
                   <h3>What you'll need:</h3>
@@ -601,7 +517,6 @@ export const ProfileSetup = () => {
                     <li>📷 Access to your device camera for selfie verification</li>
                     <li>⏱️ About 2-3 minutes to complete the process</li>
                   </ul>
-                  
                   <div className="privacy-notice">
                     <p>
                       <strong>Privacy Notice:</strong> Your identity verification is processed securely 
@@ -611,7 +526,6 @@ export const ProfileSetup = () => {
                   </div>
                 </div>
               )}
-
               {kycStatus.status === 'failed' && (
                 <div className="kyc-retry">
                   <p>Don't worry - you can try the verification process again.</p>
@@ -624,7 +538,6 @@ export const ProfileSetup = () => {
                   </button>
                 </div>
               )}
-
               <div className="form-actions">
                 <button 
                   type="button" 
@@ -633,7 +546,6 @@ export const ProfileSetup = () => {
                 >
                   Back
                 </button>
-                
                 {kycStatus.status === 'pending' && (
                   <button 
                     type="submit" 
@@ -643,7 +555,6 @@ export const ProfileSetup = () => {
                     {isSubmitting ? 'Starting Verification...' : 'Start Identity Verification'}
                   </button>
                 )}
-
                 {kycStatus.status === 'completed' && (
                   <button 
                     type="button" 
@@ -656,7 +567,6 @@ export const ProfileSetup = () => {
               </div>
             </div>
           )}
-
           {formErrors.submit && (
             <div className="error-banner">
               <span className="error-icon">⚠️</span>

@@ -6,11 +6,9 @@
  * 
  * No mock data - connects to real ICP canisters for production use
  */
-
 import { HttpAgent, Actor } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 import { AuthClient } from '@dfinity/auth-client';
-
 // Unified Bonded Backend Canister IDL - matches the deployed Rust canister
 const bondedBackendIDL = ({ IDL }) => {
   // Common types
@@ -23,7 +21,6 @@ const bondedBackendIDL = ({ IDL }) => {
   const BondedResult_6 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
   const BondedResult_7 = IDL.Variant({ 'Ok' : IDL.Vec(IDL.Rec()), 'Err' : IDL.Text });
   const BondedResult_8 = IDL.Variant({ 'Ok' : IDL.Rec(), 'Err' : IDL.Text });
-
   // Request/Response types
   const CreateRelationshipRequest = IDL.Record({ 'partner_principal' : IDL.Principal });
   const CreateRelationshipResponse = IDL.Record({
@@ -31,7 +28,6 @@ const bondedBackendIDL = ({ IDL }) => {
     'relationship_id' : IDL.Text,
     'user_key_share' : IDL.Vec(IDL.Nat8),
   });
-
   // Evidence types
   const EvidenceMetadata = IDL.Record({
     'tags' : IDL.Vec(IDL.Text),
@@ -40,7 +36,6 @@ const bondedBackendIDL = ({ IDL }) => {
     'timestamp' : IDL.Nat64,
     'location' : IDL.Opt(IDL.Text),
   });
-
   const Evidence = IDL.Record({
     'id' : IDL.Text,
     'encrypted_data' : IDL.Vec(IDL.Nat8),
@@ -51,14 +46,12 @@ const bondedBackendIDL = ({ IDL }) => {
     'relationship_id' : IDL.Text,
     'upload_timestamp' : IDL.Nat64,
   });
-
   // Relationship types
   const RelationshipStatus = IDL.Variant({ 
     'Terminated' : IDL.Null, 
     'Active' : IDL.Null, 
     'Pending' : IDL.Null 
   });
-
   const Relationship = IDL.Record({
     'id' : IDL.Text,
     'status' : RelationshipStatus,
@@ -69,7 +62,6 @@ const bondedBackendIDL = ({ IDL }) => {
     'last_activity' : IDL.Nat64,
     'evidence_count' : IDL.Nat64,
   });
-
   // Timeline types
   const TimelineQuery = IDL.Record({
     'category_filter' : IDL.Opt(IDL.Text),
@@ -78,13 +70,11 @@ const bondedBackendIDL = ({ IDL }) => {
     'start_date' : IDL.Opt(IDL.Nat64),
     'relationship_id' : IDL.Text,
   });
-
   const TimelineResponse = IDL.Record({
     'evidence' : IDL.Vec(Evidence),
     'total_count' : IDL.Nat64,
     'has_more' : IDL.Bool,
   });
-
   // User types
   const UserProfile = IDL.Record({
     'total_evidence_uploaded' : IDL.Nat64,
@@ -94,7 +84,6 @@ const bondedBackendIDL = ({ IDL }) => {
     'last_seen' : IDL.Nat64,
     'relationships' : IDL.Vec(IDL.Text),
   });
-
   // Settings types
   const UpdateSettingsRequest = IDL.Record({
     'notification_preferences' : IDL.Opt(IDL.Vec(IDL.Text)),
@@ -104,7 +93,6 @@ const bondedBackendIDL = ({ IDL }) => {
     'geolocation_enabled' : IDL.Opt(IDL.Bool),
     'ai_filters_enabled' : IDL.Opt(IDL.Bool),
   });
-
   const UserSettings = IDL.Record({
     'updated_at' : IDL.Nat64,
     'notification_preferences' : IDL.Vec(IDL.Text),
@@ -114,7 +102,6 @@ const bondedBackendIDL = ({ IDL }) => {
     'geolocation_enabled' : IDL.Bool,
     'ai_filters_enabled' : IDL.Bool,
   });
-
   // Update result types to use proper records
   BondedResult_1.fill(CreateRelationshipResponse);
   BondedResult_3.fill(Evidence);
@@ -123,7 +110,6 @@ const bondedBackendIDL = ({ IDL }) => {
   BondedResult_6.fill(UserProfile);
   BondedResult_7.fill(IDL.Vec(Relationship));
   BondedResult_8.fill(UserSettings);
-
   return IDL.Service({
     'accept_relationship' : IDL.Func([IDL.Text], [BondedResult], []),
     'create_relationship' : IDL.Func([CreateRelationshipRequest], [BondedResult_1], []),
@@ -149,7 +135,6 @@ const bondedBackendIDL = ({ IDL }) => {
     'whoami' : IDL.Func([], [IDL.Principal], ['query']),
   });
 };
-
 class CanisterIntegrationService {
   constructor() {
     this.agent = null;
@@ -157,10 +142,8 @@ class CanisterIntegrationService {
     this.authClient = null;
     this.identity = null;
     this.isInitialized = false;
-    
     // Unified backend canister ID - get from environment or use deployed local ID
     this.backendCanisterId = process.env.REACT_APP_BONDED_BACKEND_CANISTER_ID || 'uxrrr-q7777-77774-qaaaq-cai';
-    
     // Network configuration
     this.networkConfig = {
       local: {
@@ -172,106 +155,104 @@ class CanisterIntegrationService {
         identityProvider: 'https://identity.ic0.app'
       }
     };
-    
     this.isLocal = process.env.DFX_NETWORK === 'local' || process.env.NODE_ENV === 'development';
   }
-
   /**
    * Initialize the agent and canister connections with proper authentication
    */
   async initialize() {
     if (this.isInitialized) return;
-
     try {
-      console.log('[CanisterIntegration] Initializing with production settings...');
-      
       // Initialize AuthClient for identity management
       this.authClient = await AuthClient.create();
-      
       // Get the current identity (if authenticated)
       this.identity = this.authClient.getIdentity();
-      
       // Configure the HTTP agent
       const config = this.isLocal ? this.networkConfig.local : this.networkConfig.mainnet;
-      
       this.agent = new HttpAgent({
         host: config.host,
         identity: this.identity
       });
-
       // For local development, fetch the root key
       if (this.isLocal) {
-        console.log('[CanisterIntegration] Fetching root key for local development...');
         await this.agent.fetchRootKey();
       }
-
       // Initialize unified backend canister
       await this.initializeBackendCanister();
-      
       this.isInitialized = true;
-      console.log('[CanisterIntegration] Backend initialization successful');
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Backend initialization failed:', error);
       // Don't throw on initialization failure - allow graceful degradation
       this.isInitialized = false;
     }
   }
-
   /**
    * Initialize unified backend canister actor
    */
   async initializeBackendCanister() {
     try {
-      console.log('[CanisterIntegration] Creating unified backend canister actor...', {
-        canisterId: this.backendCanisterId,
-        isLocal: this.isLocal
-      });
-      
       // Create unified backend canister actor
       this.bondedBackend = Actor.createActor(bondedBackendIDL, {
         agent: this.agent,
         canisterId: this.backendCanisterId,
       });
-      
-      console.log('[CanisterIntegration] Backend canister actor created successfully');
-      
       // Test connectivity with a simple query
       await this.testConnectivity();
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Failed to create backend canister actor:', error);
       throw error;
     }
   }
-
   /**
    * Test connectivity to backend canister
+   * @returns {Promise<Object>} Connectivity test results
    */
   async testConnectivity() {
     try {
-      console.log('[CanisterIntegration] Testing backend canister connectivity...');
-      
+      if (!this.bondedBackend) {
+        return {
+          connected: false,
+          status: 'not_initialized',
+          error: 'Backend canister not initialized'
+        };
+      }
       // Test with a simple health check query
       const healthResult = await this.bondedBackend.health_check();
-      console.log('[CanisterIntegration] Health check result:', healthResult);
-      
       // Test greet function
       const greetResult = await this.bondedBackend.greet('ICP Backend');
-      console.log('[CanisterIntegration] Greet result:', greetResult);
-      
       // Test canister stats
       const statsResult = await this.bondedBackend.get_canister_stats();
-      console.log('[CanisterIntegration] Stats result:', statsResult);
-      
-      console.log('[CanisterIntegration] Connectivity test passed');
-      
+      return {
+        connected: true,
+        status: 'healthy',
+        healthCheck: healthResult,
+        greetResult: greetResult,
+        stats: statsResult
+      };
     } catch (error) {
-      console.warn('[CanisterIntegration] Connectivity test failed (this is expected if not authenticated):', error);
-      // Don't throw - authentication might not be ready yet
+      return {
+        connected: false,
+        status: 'error',
+        error: error.message
+      };
     }
   }
-
+  /**
+   * Delete all user data (kill switch)
+   * @returns {Promise<Object>} Deletion result
+   */
+  async deleteAllUserData() {
+    await this.ensureInitialized();
+    try {
+      const result = await this.bondedBackend.delete_user_account();
+      // Handle Rust Result type
+      if ('Ok' in result) {
+        return { success: true, message: result.Ok };
+      } else {
+        throw new Error(result.Err);
+      }
+    } catch (error) {
+      throw new Error(`User data deletion failed: ${error.message}`);
+    }
+  }
   /**
    * Upload encrypted evidence to the backend canister
    * @param {string} relationshipId - Relationship identifier
@@ -281,11 +262,9 @@ class CanisterIntegrationService {
    */
   async uploadEvidence(relationshipId, encryptedData, metadata) {
     await this.ensureInitialized();
-    
     try {
       // Convert ArrayBuffer to Uint8Array for Candid
       const dataArray = new Uint8Array(encryptedData);
-      
       // Format metadata for Candid interface
       const candidMetadata = {
         timestamp: BigInt(Math.floor(metadata.timestamp || Date.now())), // Use provided timestamp or current
@@ -294,61 +273,47 @@ class CanisterIntegrationService {
         description: metadata.description ? [metadata.description] : [], // Optional field
         tags: metadata.tags || [],
       };
-      
-      console.log('[CanisterIntegration] Uploading evidence to backend canister...', {
-        relationshipId,
-        dataSize: dataArray.length,
-        metadata: candidMetadata
-      });
-      
       const result = await this.bondedBackend.upload_evidence(
         relationshipId,
         Array.from(dataArray), // Convert to regular array for Candid
         candidMetadata
       );
-      
       // Handle Rust Result type
       if ('Ok' in result) {
-        console.log('[CanisterIntegration] Evidence upload successful:', result.Ok);
         return { success: true, evidenceId: result.Ok };
       } else {
         throw new Error(result.Err);
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Evidence upload failed:', error);
       throw new Error(`Upload failed: ${error.message}`);
     }
   }
-
   /**
    * Fetch timeline data from the backend canister
-   * @param {string} relationshipId - Relationship identifier
+   * @param {string} relationshipId - Relationship identifier (optional for MVP)
    * @param {Object} options - Fetch options (page, filters)
    * @returns {Promise<Array>} Timeline items
    */
-  async fetchTimeline(relationshipId, options = {}) {
+  async fetchTimeline(relationshipId = null, options = {}) {
     await this.ensureInitialized();
-    
     try {
       const { page = 1, limit = 50 } = options;
+      // Check if backend is properly initialized
+      if (!this.bondedBackend) {
+        return [];
+      }
       
-      console.log('[CanisterIntegration] Fetching timeline from backend canister...', {
-        relationshipId,
-        page,
-        limit
-      });
+      // For MVP, use a default relationship ID if none provided
+      const effectiveRelationshipId = relationshipId || 'default-relationship';
       
       const result = await this.bondedBackend.get_timeline(
-        relationshipId,
+        effectiveRelationshipId,
         page,
         limit
       );
-      
       // Handle Rust Result type
       if ('Ok' in result) {
         const timelineData = result.Ok;
-        
         // Convert the result to the expected format
         const timelineItems = (timelineData.items || []).map(evidence => ({
           id: evidence.id,
@@ -362,26 +327,19 @@ class CanisterIntegrationService {
           hash: evidence.hash,
           encryptedData: new Uint8Array(evidence.encrypted_data) // Convert back to Uint8Array
         }));
-        
-        console.log('[CanisterIntegration] Timeline fetch successful:', timelineItems.length, 'items');
         return timelineItems;
       } else {
         throw new Error(result.Err);
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Timeline fetch failed:', error);
-      
       // For graceful degradation, return empty array if canister is unavailable
       if (error.message?.includes('Canister') || error.message?.includes('rejected')) {
-        console.warn('[CanisterIntegration] Canister unavailable, returning empty timeline');
         return [];
       }
-      
-      throw new Error(`Timeline fetch failed: ${error.message}`);
+      // Always return empty array for graceful degradation
+      return [];
     }
   }
-
   /**
    * Create a new relationship
    * @param {string} partnerPrincipal - Partner's principal ID
@@ -389,22 +347,16 @@ class CanisterIntegrationService {
    */
   async createRelationship(partnerPrincipal) {
     await this.ensureInitialized();
-    
     try {
       // Convert string to Principal if needed
       const partnerPrincipalObj = typeof partnerPrincipal === 'string' 
         ? Principal.fromText(partnerPrincipal) 
         : partnerPrincipal;
-      
-      console.log('[CanisterIntegration] Creating relationship with partner:', partnerPrincipalObj.toString());
-      
       const result = await this.bondedBackend.create_relationship(
         partnerPrincipalObj
       );
-      
       // Handle Rust Result type
       if ('Ok' in result) {
-        console.log('[CanisterIntegration] Relationship creation successful:', result.Ok);
         return { 
           success: true, 
           data: {
@@ -417,13 +369,10 @@ class CanisterIntegrationService {
       } else {
         throw new Error(result.Err);
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Relationship creation failed:', error);
       throw new Error(`Relationship creation failed: ${error.message}`);
     }
   }
-
   /**
    * Delete relationship and all evidence (kill switch)
    * @param {string} relationshipId - Relationship identifier
@@ -431,28 +380,20 @@ class CanisterIntegrationService {
    */
   async deleteRelationship(relationshipId) {
     await this.ensureInitialized();
-    
     try {
-      console.log('[CanisterIntegration] Terminating relationship:', relationshipId);
-      
       const result = await this.bondedBackend.terminate_relationship(
         relationshipId
       );
-      
       // Handle Rust Result type
       if ('Ok' in result) {
-        console.log('[CanisterIntegration] Relationship termination successful');
         return { success: true, message: result.Ok };
       } else {
         throw new Error(result.Err);
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Relationship termination failed:', error);
       throw new Error(`Relationship termination failed: ${error.message}`);
     }
   }
-
   /**
    * Update user settings
    * @param {Object} settings - Settings to update
@@ -460,43 +401,30 @@ class CanisterIntegrationService {
    */
   async updateUserSettings(settings) {
     await this.ensureInitialized();
-    
     try {
-      console.log('[CanisterIntegration] Updating user settings:', settings);
-      
       const result = await this.bondedBackend.update_user_settings(settings);
-      
       // Handle Rust Result type
       if ('Ok' in result) {
-        console.log('[CanisterIntegration] Settings update successful');
         return { success: true, message: result.Ok };
       } else {
         throw new Error(result.Err);
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Settings update failed:', error);
       return { success: false, error: error.message };
     }
   }
-
   /**
    * Get user settings
    * @returns {Promise<Object>} User settings
    */
   async getUserSettings() {
     await this.ensureInitialized();
-    
     try {
-      console.log('[CanisterIntegration] Fetching user settings...');
-      
       const result = await this.bondedBackend.get_user_settings();
-      
       // Handle Rust Result type
       if ('Ok' in result) {
         // Convert from Candid format to our format
         const settings = result.Ok;
-        console.log('[CanisterIntegration] Settings fetch successful');
         return { 
           success: true, 
           data: {
@@ -511,28 +439,20 @@ class CanisterIntegrationService {
           }
         };
       } else {
-        console.log('[CanisterIntegration] No settings found (new user)');
         return { success: false, error: result.Err };
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Settings fetch failed:', error);
       return { success: false, error: error.message };
     }
   }
-
   /**
    * Get user's relationships
    * @returns {Promise<Object>} User relationships
    */
   async getUserRelationships() {
     await this.ensureInitialized();
-    
     try {
-      console.log('[CanisterIntegration] Fetching user relationships...');
-      
       const result = await this.bondedBackend.get_user_relationships();
-      
       // Handle Rust Result type
       if ('Ok' in result) {
         // Convert from Candid format to our format
@@ -546,20 +466,14 @@ class CanisterIntegrationService {
           last_activity: rel.last_activity,
           bonded_key_share: new Uint8Array(rel.bonded_key_share)
         }));
-        
-        console.log('[CanisterIntegration] Relationships fetch successful:', relationships.length, 'relationships');
         return { success: true, data: relationships };
       } else {
-        console.log('[CanisterIntegration] No relationships found (new user)');
         return { success: false, error: result.Err };
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Relationships fetch failed:', error);
       return { success: false, error: error.message };
     }
   }
-
   /**
    * Register a new user
    * @param {string} email - User's email (optional)
@@ -567,42 +481,29 @@ class CanisterIntegrationService {
    */
   async registerUser(email = null) {
     await this.ensureInitialized();
-    
     try {
-      console.log('[CanisterIntegration] Registering user...');
-      
       const result = await this.bondedBackend.register_user(email ? [email] : []);
-      
       // Handle Rust Result type
       if ('Ok' in result) {
-        console.log('[CanisterIntegration] User registration successful');
         return { success: true, message: result.Ok };
       } else {
         throw new Error(result.Err);
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] User registration failed:', error);
       return { success: false, error: error.message };
     }
   }
-
   /**
    * Get user profile
    * @returns {Promise<Object>} User profile
    */
   async getUserProfile() {
     await this.ensureInitialized();
-    
     try {
-      console.log('[CanisterIntegration] Fetching user profile...');
-      
       const result = await this.bondedBackend.get_user_profile();
-      
       // Handle Rust Result type
       if ('Ok' in result) {
         const profile = result.Ok;
-        console.log('[CanisterIntegration] User profile fetch successful');
         return { 
           success: true, 
           data: {
@@ -615,16 +516,12 @@ class CanisterIntegrationService {
           }
         };
       } else {
-        console.log('[CanisterIntegration] User profile not found (new user)');
         return { success: false, error: result.Err };
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] User profile fetch failed:', error);
       return { success: false, error: error.message };
     }
   }
-
   /**
    * Accept a relationship invitation
    * @param {string} relationshipId - Relationship ID to accept
@@ -632,26 +529,18 @@ class CanisterIntegrationService {
    */
   async acceptRelationship(relationshipId) {
     await this.ensureInitialized();
-    
     try {
-      console.log('[CanisterIntegration] Accepting relationship:', relationshipId);
-      
       const result = await this.bondedBackend.accept_relationship(relationshipId);
-      
       // Handle Rust Result type
       if ('Ok' in result) {
-        console.log('[CanisterIntegration] Relationship acceptance successful');
         return { success: true, message: result.Ok };
       } else {
         throw new Error(result.Err);
       }
-      
     } catch (error) {
-      console.error('[CanisterIntegration] Relationship acceptance failed:', error);
       throw new Error(`Relationship acceptance failed: ${error.message}`);
     }
   }
-
   /**
    * Ensure the service is initialized
    */
@@ -660,7 +549,6 @@ class CanisterIntegrationService {
       await this.initialize();
     }
   }
-
   /**
    * Get connection status
    * @returns {Object} Connection status
@@ -673,7 +561,19 @@ class CanisterIntegrationService {
       bondedBackendConnected: !!this.bondedBackend
     };
   }
+  /**
+   * Get connection information for settings
+   * @returns {Object} Connection info
+   */
+  getConnectionInfo() {
+    return {
+      connected: this.isInitialized && !!this.bondedBackend,
+      canisterId: this.backendCanisterId,
+      isLocal: this.isLocal,
+      host: this.isLocal ? 'http://127.0.0.1:4943' : 'https://icp0.io',
+      status: this.isInitialized ? 'connected' : 'disconnected'
+    };
+  }
 }
-
 // Export singleton instance
 export const canisterIntegration = new CanisterIntegrationService(); 

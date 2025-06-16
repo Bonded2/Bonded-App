@@ -1,7 +1,6 @@
 import { useContext } from 'react';
 import { GeoMetadataContext } from '../GeoMetadataProvider';
 import { getGeoMetadata } from '../LocationService';
-
 /**
  * Custom hook for accessing geolocation metadata
  * Provides access to the current metadata, loading state, and refresh functions
@@ -11,15 +10,12 @@ import { getGeoMetadata } from '../LocationService';
 export const useGeoMetadata = () => {
   // Access the context
   const context = useContext(GeoMetadataContext);
-  
   // Make sure we're using this hook inside the GeoMetadataProvider
   if (!context) {
     throw new Error('useGeoMetadata must be used within a GeoMetadataProvider');
   }
-  
   // Extract values from context
   const { metadata, isLoading, error, refreshMetadata } = context;
-  
   /**
    * Helper function to get metadata for a specific file
    * This is the function to use during file upload to attach metadata to files
@@ -31,7 +27,6 @@ export const useGeoMetadata = () => {
     try {
       // Use current cached metadata if available, otherwise fetch fresh metadata
       const geoMetadata = metadata || await getGeoMetadata();
-      
       // Create a new object that includes the file and metadata
       // This doesn't modify the original file object
       return {
@@ -40,7 +35,6 @@ export const useGeoMetadata = () => {
         timestamp: new Date().toISOString()
       };
     } catch (err) {
-      console.error('Error attaching metadata to file:', err);
       // Return the file with minimal metadata in case of failure
       return {
         file,
@@ -51,7 +45,6 @@ export const useGeoMetadata = () => {
       };
     }
   };
-  
   // Return everything from the context plus our helper function
   return {
     metadata,
@@ -61,5 +54,4 @@ export const useGeoMetadata = () => {
     getMetadataForFile
   };
 };
-
 export default useGeoMetadata; 

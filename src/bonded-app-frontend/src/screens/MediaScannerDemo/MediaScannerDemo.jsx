@@ -5,39 +5,30 @@ import { MediaScannerModal } from "../../components/MediaScanner";
 import LocationPanel from '../../features/geolocation/LocationPanel';
 import { useGeoMetadata } from '../../features/geolocation/hooks/useGeoMetadata';
 import "./style.css";
-
 export const MediaImport = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showGeolocationData, setShowGeolocationData] = useState(false);
   const [recentFiles, setRecentFiles] = useState([]);
   const { metadata, refreshMetadata } = useGeoMetadata();
-  
   // Refresh geolocation when component mounts
   useEffect(() => {
     refreshMetadata();
   }, [refreshMetadata]);
-  
   // Handle opening modal
   const handleOpenMediaScanner = () => {
     setIsModalOpen(true);
   };
-  
   // Handle files added to timeline
   const handleFilesAdded = (filesWithMetadata) => {
-    console.log('Files added to timeline with metadata:', filesWithMetadata);
-    
     // In a real app, this would store the files in your backend
     // For this demo, we'll store them in state to display
     setRecentFiles(prev => [...filesWithMetadata, ...prev].slice(0, 10));
-    
     // Show success notification
     alert(`Successfully added ${filesWithMetadata.length} files to your timeline!`);
-    
     // Close the modal
     setIsModalOpen(false);
   };
-  
   // Common styles
   const cardStyle = {
     backgroundColor: "rgba(255, 255, 255, 0.9)",
@@ -46,7 +37,6 @@ export const MediaImport = () => {
     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08)",
     marginBottom: "1.5rem"
   };
-
   const headingStyle = {
     fontSize: "1.25rem",
     fontWeight: "600",
@@ -54,7 +44,6 @@ export const MediaImport = () => {
     fontFamily: "Trocchi, serif",
     color: "#2C4CDF"
   };
-
   const buttonStyle = {
     backgroundColor: "#B9FF46",
     color: "#2C4CDF",
@@ -64,11 +53,9 @@ export const MediaImport = () => {
     cursor: "pointer",
     transition: "background-color 0.2s ease"
   };
-
   return (
     <div className="media-scanner-utility">
       <TopAppBar title="Media Import" showBackButton={true} />
-      
       <div className="content p-4">
         <div className="flex flex-col space-y-6">
           <div style={cardStyle}>
@@ -79,7 +66,6 @@ export const MediaImport = () => {
             <p style={{color: "#666666", marginBottom: "1.5rem", fontSize: "0.875rem"}}>
               All files will be automatically tagged with your current location metadata to help verify your relationship status.
             </p>
-            
             <button 
               onClick={handleOpenMediaScanner}
               style={buttonStyle}
@@ -89,7 +75,6 @@ export const MediaImport = () => {
               Open Media Scanner
             </button>
           </div>
-          
           {recentFiles.length > 0 && (
             <div style={cardStyle}>
               <h2 style={headingStyle}>Recently Added Files</h2>
@@ -123,7 +108,6 @@ export const MediaImport = () => {
               </div>
             </div>
           )}
-          
           <div style={cardStyle}>
             <div className="flex justify-between items-center mb-4">
               <h2 style={headingStyle}>Location Information</h2>
@@ -136,7 +120,6 @@ export const MediaImport = () => {
                 {showGeolocationData ? 'Hide Details' : 'Show Details'}
               </button>
             </div>
-            
             {showGeolocationData ? (
               <LocationPanel />
             ) : (
@@ -144,7 +127,6 @@ export const MediaImport = () => {
                 <p style={{color: "#333333", marginBottom: "0.5rem"}}>
                   Your current location data will be attached to any files you import.
                 </p>
-                
                 {metadata && (
                   <div style={{
                     backgroundColor: "rgba(44, 76, 223, 0.1)", 
@@ -181,7 +163,6 @@ export const MediaImport = () => {
           </div>
         </div>
       </div>
-      
       {isModalOpen && (
         <MediaScannerModal
           onClose={() => setIsModalOpen(false)}
@@ -191,6 +172,5 @@ export const MediaImport = () => {
     </div>
   );
 };
-
 // For backward compatibility
 export const MediaScannerDemo = MediaImport; 

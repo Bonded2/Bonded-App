@@ -4,9 +4,7 @@
  * Handles access to device photo library and Telegram messages
  * Implements privacy-first data collection for evidence processing
  */
-
 import { openDB } from 'idb';
-
 class MediaAccessService {
   constructor() {
     this.db = null;
@@ -16,10 +14,8 @@ class MediaAccessService {
       chatId: null,
       enabled: false
     };
-    
     this.initDB();
   }
-
   /**
    * Initialize IndexedDB for media caching
    */
@@ -33,28 +29,22 @@ class MediaAccessService {
             store.createIndex('date', 'date');
             store.createIndex('timestamp', 'timestamp');
           }
-          
           // Telegram messages cache
           if (!db.objectStoreNames.contains('telegramMessages')) {
             const store = db.createObjectStore('telegramMessages', { autoIncrement: true });
             store.createIndex('date', 'date');
             store.createIndex('timestamp', 'timestamp');
           }
-          
           // Settings
           if (!db.objectStoreNames.contains('mediaSettings')) {
             db.createObjectStore('mediaSettings');
           }
         }
       });
-      
       await this.loadSettings();
-      
     } catch (error) {
-      console.warn('[MediaAccess] IndexedDB initialization failed:', error);
     }
   }
-
   /**
    * Request access to photo library
    * @returns {Promise<boolean>} True if access granted
@@ -68,27 +58,19 @@ class MediaAccessService {
           mode: 'read',
           startIn: 'pictures'
         });
-        
         // Store directory handle for future use
         await this.storeDirectoryHandle(dirHandle);
         this.photoLibraryAccess = true;
-        
-        console.log('[MediaAccess] Photo library access granted via File System API');
         return true;
-        
       } else {
         // Fallback: prompt user to select photos manually
-        console.log('[MediaAccess] File System API not available, using manual selection');
         this.photoLibraryAccess = 'manual';
         return true;
       }
-      
     } catch (error) {
-      console.error('[MediaAccess] Photo library access denied:', error);
       return false;
     }
   }
-
   /**
    * Scan for photos taken on a specific date
    * @param {Date} targetDate - Date to scan for
@@ -97,29 +79,20 @@ class MediaAccessService {
   async scanPhotosForDate(targetDate) {
     try {
       const dateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD
-      
       // Check cache first
       const cachedPhotos = await this.getCachedPhotos(dateStr);
       if (cachedPhotos.length > 0) {
-        console.log(`[MediaAccess] Found ${cachedPhotos.length} cached photos for ${dateStr}`);
         return cachedPhotos;
       }
-
       // Scan for new photos
       const photos = await this.scanPhotoLibrary(targetDate);
-      
       // Cache the results
       await this.cachePhotos(dateStr, photos);
-      
-      console.log(`[MediaAccess] Found ${photos.length} photos for ${dateStr}`);
       return photos;
-      
     } catch (error) {
-      console.error('[MediaAccess] Photo scan failed:', error);
       return [];
     }
   }
-
   /**
    * Scan the photo library for photos
    * @param {Date} targetDate - Date to filter by
@@ -129,31 +102,25 @@ class MediaAccessService {
     if (!this.photoLibraryAccess) {
       throw new Error('Photo library access not granted');
     }
-
     try {
       if (this.photoLibraryAccess === 'manual') {
         // Manual selection fallback
         return await this.requestManualPhotoSelection(targetDate);
       }
-
       // Use stored directory handle
       const dirHandle = await this.getDirectoryHandle();
       if (!dirHandle) {
         throw new Error('No directory handle available');
       }
-
       const photos = [];
       const targetDateStr = targetDate.toISOString().split('T')[0];
-
       // Iterate through files in directory
       for await (const [name, fileHandle] of dirHandle.entries()) {
         if (fileHandle.kind === 'file') {
           const file = await fileHandle.getFile();
-          
           // Check if it's an image
           if (file.type.startsWith('image/')) {
             const photoMetadata = await this.extractPhotoMetadata(file);
-            
             // Check if photo was taken on target date
             if (photoMetadata.date === targetDateStr) {
               photos.push({
@@ -165,17 +132,12 @@ class MediaAccessService {
           }
         }
       }
-
       return photos;
-      
     } catch (error) {
-      console.error('[MediaAccess] Photo library scan failed:', error);
-      
       // Fallback to manual selection
       return await this.requestManualPhotoSelection(targetDate);
     }
   }
-
   /**
    * Request manual photo selection from user
    * @param {Date} targetDate - Target date for context
@@ -187,11 +149,9 @@ class MediaAccessService {
       input.type = 'file';
       input.accept = 'image/*';
       input.multiple = true;
-      
       input.onchange = async (event) => {
         const files = Array.from(event.target.files);
         const photos = [];
-        
         for (const file of files) {
           const metadata = await this.extractPhotoMetadata(file);
           photos.push({
@@ -200,17 +160,13 @@ class MediaAccessService {
             source: 'manual'
           });
         }
-        
         resolve(photos);
       };
-      
       input.oncancel = () => resolve([]);
-      
       // Trigger file picker
       input.click();
     });
   }
-
   /**
    * Extract metadata from photo file
    * @param {File} file - Photo file
@@ -227,20 +183,17 @@ class MediaAccessService {
       location: null,
       exif: null
     };
-
     try {
       // Try to extract EXIF data for more accurate timestamp and location
       const exifData = await this.extractEXIF(file);
       if (exifData) {
         metadata.exif = exifData;
-        
         // Use EXIF date if available
         if (exifData.DateTime) {
           const exifDate = new Date(exifData.DateTime);
           metadata.timestamp = exifDate.getTime();
           metadata.date = exifDate.toISOString().split('T')[0];
         }
-        
         // Extract GPS location if available
         if (exifData.GPSLatitude && exifData.GPSLongitude) {
           metadata.location = {
@@ -249,14 +202,10 @@ class MediaAccessService {
           };
         }
       }
-      
     } catch (error) {
-      console.warn('[MediaAccess] EXIF extraction failed:', error);
     }
-
     return metadata;
   }
-
   /**
    * Extract EXIF data from image file
    * @param {File} file - Image file
@@ -275,13 +224,10 @@ class MediaAccessService {
         };
         reader.readAsArrayBuffer(file);
       });
-      
     } catch (error) {
-      console.warn('[MediaAccess] EXIF extraction error:', error);
       return null;
     }
   }
-
   /**
    * Configure Telegram integration
    * @param {Object} config - Telegram configuration
@@ -289,9 +235,7 @@ class MediaAccessService {
   async configureTelegram(config) {
     this.telegramConfig = { ...this.telegramConfig, ...config };
     await this.saveSettings();
-    console.log('[MediaAccess] Telegram configuration updated');
   }
-
   /**
    * Fetch Telegram messages for a specific date
    * @param {Date} targetDate - Date to fetch messages for
@@ -299,7 +243,6 @@ class MediaAccessService {
    */
   async fetchTelegramMessages(targetDate) {
     if (!this.telegramConfig.enabled || !this.telegramConfig.botToken || !this.telegramConfig.chatId) {
-      console.log('[MediaAccess] Telegram not configured');
       return [];
     }
     try {
@@ -308,13 +251,11 @@ class MediaAccessService {
       startOfDay.setUTCHours(0, 0, 0, 0);
       const endOfDay = new Date(targetDate);
       endOfDay.setUTCHours(23, 59, 59, 999);
-      
       // Fetch updates from Telegram
       const url = `https://api.telegram.org/bot${this.telegramConfig.botToken}/getUpdates`;
       const response = await fetch(url);
       if (!response.ok) throw new Error('Telegram API error');
       const data = await response.json();
-
       // Filter messages for the correct chat and date
       const messages = [];
       for (const update of data.result) {
@@ -337,11 +278,9 @@ class MediaAccessService {
       // Optionally cache messages here
       return messages;
     } catch (error) {
-      console.error('[MediaAccess] Telegram fetch failed:', error);
       return [];
     }
   }
-
   /**
    * Cache photos for a date
    * @param {string} dateStr - Date string (YYYY-MM-DD)
@@ -349,17 +288,13 @@ class MediaAccessService {
    */
   async cachePhotos(dateStr, photos) {
     if (!this.db) return;
-    
     try {
       const tx = this.db.transaction('photoMetadata', 'readwrite');
       await tx.store.put(photos, dateStr);
       await tx.done;
-      
     } catch (error) {
-      console.warn('[MediaAccess] Photo caching failed:', error);
     }
   }
-
   /**
    * Get cached photos for a date
    * @param {string} dateStr - Date string (YYYY-MM-DD)
@@ -367,17 +302,13 @@ class MediaAccessService {
    */
   async getCachedPhotos(dateStr) {
     if (!this.db) return [];
-    
     try {
       const photos = await this.db.get('photoMetadata', dateStr);
       return photos || [];
-      
     } catch (error) {
-      console.warn('[MediaAccess] Photo cache retrieval failed:', error);
       return [];
     }
   }
-
   /**
    * Cache messages for a date
    * @param {string} dateStr - Date string (YYYY-MM-DD)
@@ -385,17 +316,13 @@ class MediaAccessService {
    */
   async cacheMessages(dateStr, messages) {
     if (!this.db) return;
-    
     try {
       const tx = this.db.transaction('telegramMessages', 'readwrite');
       await tx.store.put({ date: dateStr, messages, timestamp: Date.now() });
       await tx.done;
-      
     } catch (error) {
-      console.warn('[MediaAccess] Message caching failed:', error);
     }
   }
-
   /**
    * Get cached messages for a date
    * @param {string} dateStr - Date string (YYYY-MM-DD)
@@ -403,17 +330,13 @@ class MediaAccessService {
    */
   async getCachedMessages(dateStr) {
     if (!this.db) return [];
-    
     try {
       const cached = await this.db.get('telegramMessages', dateStr);
       return cached ? cached.messages : [];
-      
     } catch (error) {
-      console.warn('[MediaAccess] Message cache retrieval failed:', error);
       return [];
     }
   }
-
   /**
    * Store directory handle for photo access
    * @param {FileSystemDirectoryHandle} dirHandle - Directory handle
@@ -426,12 +349,9 @@ class MediaAccessService {
         await tx.store.put(dirHandle, 'photoDirectoryHandle');
         await tx.done;
       }
-      
     } catch (error) {
-      console.warn('[MediaAccess] Failed to store directory handle:', error);
     }
   }
-
   /**
    * Get stored directory handle
    * @returns {Promise<FileSystemDirectoryHandle|null>} Directory handle
@@ -442,13 +362,10 @@ class MediaAccessService {
         return await this.db.get('mediaSettings', 'photoDirectoryHandle');
       }
       return null;
-      
     } catch (error) {
-      console.warn('[MediaAccess] Failed to retrieve directory handle:', error);
       return null;
     }
   }
-
   /**
    * Save settings to storage
    */
@@ -460,12 +377,9 @@ class MediaAccessService {
         await tx.store.put(this.photoLibraryAccess, 'photoLibraryAccess');
         await tx.done;
       }
-      
     } catch (error) {
-      console.warn('[MediaAccess] Settings save failed:', error);
     }
   }
-
   /**
    * Load settings from storage
    */
@@ -474,21 +388,16 @@ class MediaAccessService {
       if (this.db) {
         const telegramConfig = await this.db.get('mediaSettings', 'telegramConfig');
         const photoAccess = await this.db.get('mediaSettings', 'photoLibraryAccess');
-        
         if (telegramConfig) {
           this.telegramConfig = telegramConfig;
         }
-        
         if (photoAccess) {
           this.photoLibraryAccess = photoAccess;
         }
       }
-      
     } catch (error) {
-      console.warn('[MediaAccess] Settings load failed:', error);
     }
   }
-
   /**
    * Get current configuration
    * @returns {Object} Current configuration
@@ -499,26 +408,19 @@ class MediaAccessService {
       telegramConfig: { ...this.telegramConfig }
     };
   }
-
   /**
    * Clear all cached data
    */
   async clearCache() {
     if (!this.db) return;
-    
     try {
       const tx = this.db.transaction(['photoMetadata', 'telegramMessages'], 'readwrite');
       await tx.objectStore('photoMetadata').clear();
       await tx.objectStore('telegramMessages').clear();
       await tx.done;
-      
-      console.log('[MediaAccess] Cache cleared');
-      
     } catch (error) {
-      console.warn('[MediaAccess] Cache clear failed:', error);
     }
   }
 }
-
 // Export singleton instance
 export const mediaAccessService = new MediaAccessService(); 

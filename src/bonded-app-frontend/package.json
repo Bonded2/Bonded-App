@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "setup": "npm i && dfx canister create bonded-app-backend && dfx generate bonded-app-backend && dfx deploy",
+    "dev": "vite --port 3000 --host",
     "start": "node scripts/start.js",
     "prebuild": "",
     "build": "tsc && vite build",

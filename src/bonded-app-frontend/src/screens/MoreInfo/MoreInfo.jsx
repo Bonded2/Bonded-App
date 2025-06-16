@@ -2,19 +2,14 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { TextField } from "../../components/TextField";
 import "./style.css";
-
 export const MoreInfo = () => {
   const [partnerEmail, setPartnerEmail] = useState("");
-  
   const handleEmailChange = (e) => {
     setPartnerEmail(e.target.value);
   };
-  
   const handleInvite = () => {
     // Handle invite logic here
-    console.log("Inviting partner with email:", partnerEmail);
   };
-
   return (
     <div className="more-info" data-model-id="632:1156">
       <div className="more-info-container">
@@ -34,11 +29,9 @@ export const MoreInfo = () => {
             <div className="ellipse-2" />
           </div>
         </div>
-
         <h1 className="invite-title">
           We'd like you to invite your partner to the app
         </h1>
-
         <div className="email-field">
           <TextField
             activeIndicator="https://c.animaapp.com/pbEV2e39/img/active-indicator-5.svg"
@@ -60,7 +53,6 @@ export const MoreInfo = () => {
             inputType="email"
           />
         </div>
-
         <button className="invite-button" onClick={handleInvite}>
           <div className="button-layout">
             <div className="button-content">
@@ -68,14 +60,11 @@ export const MoreInfo = () => {
             </div>
           </div>
         </button>
-
         <div className="divider" />
-
         <h1 className="connect-title">
           Now let's connect your<br />
           accounts
         </h1>
-
         <div className="locked-icon">
           <img
             className="locked"
@@ -83,11 +72,9 @@ export const MoreInfo = () => {
             src="https://c.animaapp.com/pbEV2e39/img/locked-1.svg"
           />
         </div>
-
         <p className="connect-description">
           You both need to agree what data sources to include
         </p>
-
         <Link to="/timeline-created" className="connect-link">
           <button className="connect-button">
             <div className="button-layout">

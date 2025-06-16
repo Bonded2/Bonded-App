@@ -5,15 +5,92 @@
  * Implements AES-256-GCM encryption with HKDF key derivation
  * Used for encrypting evidence packages before uploading to ICP
  */
-
 import { openDB } from 'idb';
-
 class EncryptionService {
   constructor() {
     this.db = null;
+    this.isInitialized = false;
     this.initDB();
   }
-
+  /**
+   * Initialize the encryption service
+   * @returns {Promise<boolean>} Initialization success
+   */
+  async initialize() {
+    if (this.isInitialized) return true;
+    try {
+      // Ensure IndexedDB is ready
+      await this.initDB();
+      // Test WebCrypto availability
+      if (!crypto.subtle) {
+        throw new Error('WebCrypto API not available');
+      }
+      // Test basic encryption functionality
+      const testKey = await crypto.subtle.generateKey(
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+      const testData = new TextEncoder().encode('test');
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        testKey,
+        testData
+      );
+      this.isInitialized = true;
+      return true;
+    } catch (error) {
+      this.isInitialized = false;
+      throw error;
+    }
+  }
+  /**
+   * Get encryption service settings
+   * @returns {Object} Current settings
+   */
+  getSettings() {
+    return {
+      initialized: this.isInitialized,
+      algorithm: 'AES-256-GCM',
+      keyDerivation: 'HKDF-SHA256',
+      ivLength: 12,
+      keyLength: 256
+    };
+  }
+  /**
+   * Test encryption functionality
+   * @returns {Promise<Object>} Test results
+   */
+  async testEncryption() {
+    try {
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
+      // Generate test key
+      const testKey = await this.generateMasterKey();
+      // Test encryption/decryption cycle
+      const testData = 'Bonded encryption test';
+      const encrypted = await this.encryptData(testData, testKey);
+      const decrypted = await this.decryptData(encrypted, testKey);
+      const decryptedText = new TextDecoder().decode(decrypted);
+      const success = decryptedText === testData;
+      return {
+        ready: success,
+        initialized: this.isInitialized,
+        webCryptoAvailable: !!crypto.subtle,
+        testPassed: success
+      };
+    } catch (error) {
+      return {
+        ready: false,
+        initialized: this.isInitialized,
+        webCryptoAvailable: !!crypto.subtle,
+        testPassed: false,
+        error: error.message
+      };
+    }
+  }
   /**
    * Initialize IndexedDB for caching keys and operations
    */
@@ -26,7 +103,6 @@ class EncryptionService {
             const store = db.createObjectStore('keys');
             store.createIndex('keyId', 'keyId');
           }
-          
           // Operation logs
           if (!db.objectStoreNames.contains('cryptoLogs')) {
             const store = db.createObjectStore('cryptoLogs', { autoIncrement: true });
@@ -35,10 +111,8 @@ class EncryptionService {
         }
       });
     } catch (error) {
-      console.warn('[Encryption] IndexedDB initialization failed:', error);
     }
   }
-
   /**
    * Generate a random master key for relationship
    * @returns {Promise<CryptoKey>} Generated master key
@@ -53,16 +127,11 @@ class EncryptionService {
         true, // extractable
         ['encrypt', 'decrypt']
       );
-      
-      console.log('[Encryption] Generated new master key');
       return key;
-      
     } catch (error) {
-      console.error('[Encryption] Master key generation failed:', error);
       throw error;
     }
   }
-
   /**
    * Derive encryption key from master key using HKDF
    * @param {CryptoKey} masterKey - Master key for derivation
@@ -74,13 +143,10 @@ class EncryptionService {
     try {
       // Convert master key to raw bytes for HKDF
       const masterKeyData = await crypto.subtle.exportKey('raw', masterKey);
-      
       // Create salt from relationship ID
       const salt = new TextEncoder().encode(relationshipId);
-      
       // Create info from context
       const info = new TextEncoder().encode(context);
-      
       // Import master key data for HKDF
       const hkdfKey = await crypto.subtle.importKey(
         'raw',
@@ -89,7 +155,6 @@ class EncryptionService {
         false,
         ['deriveKey']
       );
-      
       // Derive the encryption key
       const derivedKey = await crypto.subtle.deriveKey(
         {
@@ -106,16 +171,11 @@ class EncryptionService {
         false, // not extractable for security
         ['encrypt', 'decrypt']
       );
-      
-      console.log('[Encryption] Derived encryption key successfully');
       return derivedKey;
-      
     } catch (error) {
-      console.error('[Encryption] Key derivation failed:', error);
       throw error;
     }
   }
-
   /**
    * Encrypt data using AES-GCM
    * @param {ArrayBuffer|string} data - Data to encrypt
@@ -128,10 +188,8 @@ class EncryptionService {
       const dataBuffer = typeof data === 'string' 
         ? new TextEncoder().encode(data) 
         : data;
-      
       // Generate random IV
       const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
-      
       // Encrypt the data
       const ciphertext = await crypto.subtle.encrypt(
         {
@@ -141,22 +199,16 @@ class EncryptionService {
         key,
         dataBuffer
       );
-      
-      console.log(`[Encryption] Encrypted ${dataBuffer.byteLength} bytes`);
-      
       return {
         iv,
         ciphertext,
         // Note: GCM mode includes authentication tag in ciphertext
         algorithm: 'AES-GCM'
       };
-      
     } catch (error) {
-      console.error('[Encryption] Data encryption failed:', error);
       throw error;
     }
   }
-
   /**
    * Decrypt data using AES-GCM
    * @param {Object} encryptedData - Object containing iv and ciphertext
@@ -166,7 +218,6 @@ class EncryptionService {
   async decryptData(encryptedData, key) {
     try {
       const { iv, ciphertext } = encryptedData;
-      
       // Decrypt the data
       const decryptedData = await crypto.subtle.decrypt(
         {
@@ -176,16 +227,40 @@ class EncryptionService {
         key,
         ciphertext
       );
-      
-      console.log(`[Encryption] Decrypted ${decryptedData.byteLength} bytes`);
       return decryptedData;
-      
     } catch (error) {
-      console.error('[Encryption] Data decryption failed:', error);
       throw error;
     }
   }
-
+  /**
+   * Encrypt evidence (simplified interface for useBondedServices)
+   * @param {Object} evidence - Evidence to encrypt
+   * @returns {Promise<Object>} Encrypted evidence
+   */
+  async encryptEvidence(evidence) {
+    try {
+      // For MVP, use a default key (in production, this would use threshold keys)
+      const defaultKey = await this.generateMasterKey();
+      // Encrypt the evidence package
+      return await this.encryptEvidencePackage(evidence, defaultKey);
+    } catch (error) {
+      throw error;
+    }
+  }
+  /**
+   * Verify data integrity using hash
+   * @param {ArrayBuffer} data - Data to verify
+   * @param {string} expectedHash - Expected hash
+   * @returns {Promise<boolean>} Verification result
+   */
+  async verifyIntegrity(data, expectedHash) {
+    try {
+      const actualHash = await this.computeHash(data);
+      return actualHash === expectedHash;
+    } catch (error) {
+      return false;
+    }
+  }
   /**
    * Encrypt evidence package (photo + messages + metadata)
    * @param {Object} evidencePackage - Package to encrypt
@@ -194,17 +269,12 @@ class EncryptionService {
    */
   async encryptEvidencePackage(evidencePackage, encryptionKey) {
     try {
-      console.log('[Encryption] Encrypting evidence package...');
-      
       // Serialize the evidence package
       const packageData = await this.serializeEvidencePackage(evidencePackage);
-      
       // Encrypt the serialized data
       const encryptedData = await this.encryptData(packageData, encryptionKey);
-      
       // Compute hash for integrity
       const packageHash = await this.computeHash(packageData);
-      
       // Create encrypted package with metadata
       const encryptedPackage = {
         version: '1.0',
@@ -219,7 +289,6 @@ class EncryptionService {
           timestamp: Date.now()
         }
       };
-      
       // Log operation
       await this.logCryptoOperation('encrypt', {
         packageType: 'evidence',
@@ -227,15 +296,11 @@ class EncryptionService {
         encryptedSize: encryptedData.ciphertext.byteLength,
         hash: packageHash
       });
-      
       return encryptedPackage;
-      
     } catch (error) {
-      console.error('[Encryption] Evidence package encryption failed:', error);
       throw error;
     }
   }
-
   /**
    * Decrypt evidence package
    * @param {Object} encryptedPackage - Encrypted package
@@ -244,35 +309,26 @@ class EncryptionService {
    */
   async decryptEvidencePackage(encryptedPackage, decryptionKey) {
     try {
-      console.log('[Encryption] Decrypting evidence package...');
-      
       // Decrypt the data
       const decryptedData = await this.decryptData(encryptedPackage, decryptionKey);
-      
       // Verify hash integrity
       const computedHash = await this.computeHash(decryptedData);
       if (encryptedPackage.hash !== computedHash) {
         throw new Error('Package integrity verification failed - hash mismatch');
       }
-      
       // Deserialize the evidence package
       const evidencePackage = await this.deserializeEvidencePackage(decryptedData);
-      
       // Log operation
       await this.logCryptoOperation('decrypt', {
         packageType: 'evidence',
         decryptedSize: decryptedData.byteLength,
         hash: computedHash
       });
-      
       return evidencePackage;
-      
     } catch (error) {
-      console.error('[Encryption] Evidence package decryption failed:', error);
       throw error;
     }
   }
-
   /**
    * Serialize evidence package into binary format
    * @param {Object} evidencePackage - Package to serialize
@@ -285,7 +341,6 @@ class EncryptionService {
         timestamp: Date.now(),
         ...evidencePackage
       };
-      
       // Convert photos to base64 if present
       if (evidencePackage.photo instanceof File || evidencePackage.photo instanceof Blob) {
         serializable.photo = {
@@ -295,17 +350,13 @@ class EncryptionService {
           size: evidencePackage.photo.size
         };
       }
-      
       // Convert to JSON and then to ArrayBuffer
       const jsonString = JSON.stringify(serializable);
       return new TextEncoder().encode(jsonString);
-      
     } catch (error) {
-      console.error('[Encryption] Package serialization failed:', error);
       throw error;
     }
   }
-
   /**
    * Deserialize evidence package from binary format
    * @param {ArrayBuffer} data - Serialized data
@@ -316,7 +367,6 @@ class EncryptionService {
       // Convert ArrayBuffer to JSON
       const jsonString = new TextDecoder().decode(data);
       const packageData = JSON.parse(jsonString);
-      
       // Convert base64 photos back to Blob if present
       if (packageData.photo && packageData.photo.data) {
         const photoBlob = await this.base64ToBlob(
@@ -328,15 +378,11 @@ class EncryptionService {
           lastModified: Date.now()
         });
       }
-      
       return packageData;
-      
     } catch (error) {
-      console.error('[Encryption] Package deserialization failed:', error);
       throw error;
     }
   }
-
   /**
    * Compute SHA-256 hash of data
    * @param {ArrayBuffer} data - Data to hash
@@ -348,11 +394,9 @@ class EncryptionService {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     } catch (error) {
-      console.error('[Encryption] Hash computation failed:', error);
       throw error;
     }
   }
-
   /**
    * Convert File/Blob to base64 string
    * @param {File|Blob} file - File to convert
@@ -369,7 +413,6 @@ class EncryptionService {
       reader.readAsDataURL(file);
     });
   }
-
   /**
    * Convert base64 string to Blob
    * @param {string} base64 - Base64 string
@@ -380,20 +423,15 @@ class EncryptionService {
     try {
       const byteCharacters = atob(base64);
       const byteNumbers = new Array(byteCharacters.length);
-      
       for (let i = 0; i < byteCharacters.length; i++) {
         byteNumbers[i] = byteCharacters.charCodeAt(i);
       }
-      
       const byteArray = new Uint8Array(byteNumbers);
       return new Blob([byteArray], { type: mimeType });
-      
     } catch (error) {
-      console.error('[Encryption] Base64 to Blob conversion failed:', error);
       throw error;
     }
   }
-
   /**
    * Store key securely in IndexedDB
    * @param {string} keyId - Key identifier
@@ -402,11 +440,9 @@ class EncryptionService {
    */
   async storeKey(keyId, key, metadata = {}) {
     if (!this.db) return;
-    
     try {
       // Export key for storage (only if extractable)
       const keyData = await crypto.subtle.exportKey('jwk', key);
-      
       await this.db.put('keys', {
         keyId,
         keyData,
@@ -416,15 +452,10 @@ class EncryptionService {
           timestamp: Date.now()
         }
       }, keyId);
-      
-      console.log(`[Encryption] Key ${keyId} stored securely`);
-      
     } catch (error) {
-      console.error('[Encryption] Key storage failed:', error);
       throw error;
     }
   }
-
   /**
    * Retrieve key from secure storage
    * @param {string} keyId - Key identifier
@@ -432,11 +463,9 @@ class EncryptionService {
    */
   async retrieveKey(keyId) {
     if (!this.db) return null;
-    
     try {
       const stored = await this.db.get('keys', keyId);
       if (!stored) return null;
-      
       // Import key from stored data
       const key = await crypto.subtle.importKey(
         'jwk',
@@ -445,16 +474,11 @@ class EncryptionService {
         false,
         ['encrypt', 'decrypt']
       );
-      
-      console.log(`[Encryption] Key ${keyId} retrieved successfully`);
       return key;
-      
     } catch (error) {
-      console.error('[Encryption] Key retrieval failed:', error);
       return null;
     }
   }
-
   /**
    * Log cryptographic operations for audit
    * @param {string} operation - Operation type
@@ -462,7 +486,6 @@ class EncryptionService {
    */
   async logCryptoOperation(operation, details) {
     if (!this.db) return;
-    
     try {
       await this.db.add('cryptoLogs', {
         operation,
@@ -470,44 +493,32 @@ class EncryptionService {
         timestamp: Date.now()
       });
     } catch (error) {
-      console.debug('[Encryption] Logging failed:', error);
     }
   }
-
   /**
    * Clear all stored keys (for logout/cleanup)
    */
   async clearKeys() {
     if (!this.db) return;
-    
     try {
       await this.db.clear('keys');
-      console.log('[Encryption] All keys cleared');
     } catch (error) {
-      console.error('[Encryption] Key clearing failed:', error);
     }
   }
-
   /**
    * Clean up resources
    */
   async cleanup() {
     try {
       await this.clearKeys();
-      
       if (this.db) {
         this.db.close();
         this.db = null;
       }
-      
-      console.log('[Encryption] Cleanup completed');
-      
     } catch (error) {
-      console.error('[Encryption] Cleanup failed:', error);
     }
   }
 }
-
 // Export class and singleton instance
 export { EncryptionService };
 export const encryptionService = new EncryptionService(); 

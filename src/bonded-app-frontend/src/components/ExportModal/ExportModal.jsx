@@ -2,38 +2,27 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ExportTimeline } from "../../screens/ExportTimeline";
 import "./style.css";
-
 export const ExportModal = ({ onClose }) => {
   const navigate = useNavigate();
   const [showExportTimeline, setShowExportTimeline] = useState(false);
-
   const handleExportTimeline = () => {
-    console.log("Export timeline clicked");
     setShowExportTimeline(true);
   };
-
   const handleExportCountrySpecific = () => {
-    console.log("Export as country specific requirement clicked");
     // Implement country specific export functionality
     if (onClose) onClose();
   };
-
   const handleExportAllAndLeave = () => {
-    console.log("Leave Bonded and export all data clicked");
     if (onClose) onClose();
     navigate("/export-all-data");
   };
-
   const handleCloseExportTimeline = () => {
-    console.log("Closing Export Timeline view");
     // Option 1: Just close the Export Timeline view and go back to Export modal
     setShowExportTimeline(false);
-    
     // Option 2: Close both Export Timeline and Export Modal to go back to TimelineCreated
     // Uncomment the next line to implement option 2
     // if (onClose) onClose();
   };
-
   // If Export Timeline is active, show that screen instead
   if (showExportTimeline) {
     return (
@@ -42,7 +31,6 @@ export const ExportModal = ({ onClose }) => {
       </div>
     );
   }
-
   return (
     <div className="export-modal-overlay">
       <div className="export-modal-container">
@@ -59,10 +47,8 @@ export const ExportModal = ({ onClose }) => {
               <h2>Export your data</h2>
             </div>
           </div>
-          
           <div className="export-modal-body">
             <p className="export-text">Choose from the following options:</p>
-            
             <div className="export-options">
               <div className="export-row" onClick={handleExportTimeline}>
                 <div className="export-icon">
@@ -76,7 +62,6 @@ export const ExportModal = ({ onClose }) => {
                 </div>
                 <div className="export-option-text">Export timeline</div>
               </div>
-              
               <div className="export-row" onClick={handleExportCountrySpecific}>
                 <div className="export-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -85,7 +70,6 @@ export const ExportModal = ({ onClose }) => {
                 </div>
                 <div className="export-option-text">Export as a country specific requirement</div>
               </div>
-              
               <div className="export-row" onClick={handleExportAllAndLeave}>
                 <div className="export-icon">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

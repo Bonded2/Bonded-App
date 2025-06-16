@@ -2,25 +2,19 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { MenuFrame } from "../../components/MenuFrame/MenuFrame";
 import "./style.css";
-
 export const GettingStarted = () => {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   const handleStatusSelect = (status) => {
     setSelectedStatus(status);
   };
-
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
-    console.log("Menu toggle clicked, isMenuOpen:", !isMenuOpen);
   };
-
   return (
     <div className="getting-started" data-model-id="632:982">
       {isMenuOpen && <MenuFrame onClose={toggleMenu} />}
       <div className="getting-started-container">
-
         <div className="icon">
           <div className="people">
             <img
@@ -37,11 +31,8 @@ export const GettingStarted = () => {
             <div className="ellipse-2" />
           </div>
         </div>
-
         <h1 className="title">What is the status of your relationship</h1>
-        
         <p className="subtitle">Please select one from below</p>
-
         <div className="options-container">
           <div 
             className={`option-item ${selectedStatus === "Married" ? "selected" : ""}`}
@@ -52,7 +43,6 @@ export const GettingStarted = () => {
             </div>
             <div className="option-text">Married</div>
           </div>
-
           <div 
             className={`option-item ${selectedStatus === "CommonLaw" ? "selected" : ""}`}
             onClick={() => handleStatusSelect("CommonLaw")}
@@ -62,7 +52,6 @@ export const GettingStarted = () => {
             </div>
             <div className="option-text">In a Common Law marriage</div>
           </div>
-
           <div 
             className={`option-item ${selectedStatus === "CivilPartnership" ? "selected" : ""}`}
             onClick={() => handleStatusSelect("CivilPartnership")}
@@ -72,7 +61,6 @@ export const GettingStarted = () => {
             </div>
             <div className="option-text">In a civil partnership</div>
           </div>
-
           <div 
             className={`option-item ${selectedStatus === "Engaged" ? "selected" : ""}`}
             onClick={() => handleStatusSelect("Engaged")}
@@ -82,7 +70,6 @@ export const GettingStarted = () => {
             </div>
             <div className="option-text">Engaged to be married</div>
           </div>
-
           <div 
             className={`option-item ${selectedStatus === "Dating" ? "selected" : ""}`}
             onClick={() => handleStatusSelect("Dating")}
@@ -92,7 +79,6 @@ export const GettingStarted = () => {
             </div>
             <div className="option-text">Dating</div>
           </div>
-
           <div 
             className={`option-item ${selectedStatus === "Other" ? "selected" : ""}`}
             onClick={() => handleStatusSelect("Other")}
@@ -103,7 +89,6 @@ export const GettingStarted = () => {
             <div className="option-text">Other</div>
           </div>
         </div>
-
         <Link to="/verify" className="next-link">
           <button className="next-button" disabled={!selectedStatus}>
             <div className="button-layout">

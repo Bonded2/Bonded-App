@@ -5,9 +5,7 @@
  * Implements face detection and face recognition for relationship verification
  * Privacy-first: All processing happens locally, no data sent to servers
  */
-
 // ONNX Runtime will be loaded dynamically to prevent initialization issues
-
 /**
  * Face Detection Service using ONNX models
  * 
@@ -19,68 +17,46 @@ export class FaceDetectionService {
     this.isInitialized = false;
     this.confidenceThreshold = 0.5;
     this.storedEmbeddings = new Map(); // partnerId -> embedding
-    
     // Model sessions
     this.yoloSession = null;
     this.faceEmbeddingSession = null;
-    
     // Model URLs
     this.modelPaths = {
       yolo: '/models/yolov5n.onnx',
       faceEmbedding: '/models/arcfaceresnet100-11-int8.onnx'
     };
-    
-    console.log('🎯 Face Detection Service initialized (ONNX mode)');
   }
-
   /**
    * Initialize the face detection service with ONNX models
    */
   async initialize() {
     if (this.isInitialized) return true;
-
     try {
-      console.log('🔄 Loading ONNX models for face detection...');
-      
       // Load ONNX Runtime from CDN using module loader
       const { loadOnnxRuntime } = await import('../utils/moduleLoader.js');
       const ort = await loadOnnxRuntime();
-      
       // Load YOLOv5n model for face detection
-      console.log('Loading YOLOv5n model...');
       try {
         this.yoloSession = await ort.InferenceSession.create(this.modelPaths.yolo);
-        console.log('✅ YOLOv5n model loaded successfully');
       } catch (error) {
-        console.warn('⚠️ Failed to load YOLOv5n model, using fallback:', error);
         this.yoloSession = null;
       }
-      
       // Load face embedding model (ArcFace)
-      console.log('Loading ArcFace embedding model...');
       try {
         this.faceEmbeddingSession = await ort.InferenceSession.create(this.modelPaths.faceEmbedding);
-        console.log('✅ ArcFace embedding model loaded successfully');
       } catch (error) {
-        console.warn('⚠️ Failed to load ArcFace model, using fallback:', error);
         this.faceEmbeddingSession = null;
       }
-      
       // Load stored embeddings from localStorage
       await this.loadEmbeddingsFromStorage();
-      
       this.isInitialized = true;
-      console.log('✅ Face detection service ready');
-      
       return true;
     } catch (error) {
-      console.error('❌ Failed to initialize face detection:', error);
       // Still mark as initialized so we can use fallback methods
       this.isInitialized = true;
       return false;
     }
   }
-
   /**
    * Detect faces in an image using YOLOv5n ONNX model
    * @param {HTMLImageElement|ImageData|File} imageInput - The image to analyze
@@ -90,11 +66,9 @@ export class FaceDetectionService {
     if (!this.isInitialized) {
       await this.initialize();
     }
-
     try {
       // Convert input to tensor format
       const { tensor, originalWidth, originalHeight } = await this.preprocessImageForYolo(imageInput);
-      
       if (this.yoloSession) {
         return await this.runYoloDetection(tensor, originalWidth, originalHeight);
       } else {
@@ -103,7 +77,6 @@ export class FaceDetectionService {
         return await this.runFallbackDetection(imageData);
       }
     } catch (error) {
-      console.error('Face detection failed:', error);
       return {
         faces_detected: false,
         face_count: 0,
@@ -113,42 +86,34 @@ export class FaceDetectionService {
       };
     }
   }
-
   /**
    * Run YOLOv5n inference for face detection
    */
   async runYoloDetection(tensor, originalWidth, originalHeight) {
     try {
       const startTime = performance.now();
-      
       // Run inference
       const results = await this.yoloSession.run({ images: tensor });
       const output = results.output0.data;
-      
       // Parse YOLO output (format: [batch, predictions, 85])
       // 85 = 4 box coords + 1 objectness + 80 classes
       const boxes = [];
       const predictions = results.output0.dims[1]; // Number of predictions
-      
       for (let i = 0; i < predictions; i++) {
         const baseIndex = i * 85;
         const objectness = output[baseIndex + 4];
-        
         // Check if this is a person detection (class 0 in COCO)
         const personConfidence = output[baseIndex + 5]; // Class 0 (person)
         const totalConfidence = objectness * personConfidence;
-        
         if (totalConfidence > this.confidenceThreshold) {
           // Extract box coordinates (center_x, center_y, width, height)
           const centerX = output[baseIndex] / 640 * originalWidth;
           const centerY = output[baseIndex + 1] / 640 * originalHeight;
           const width = output[baseIndex + 2] / 640 * originalWidth;
           const height = output[baseIndex + 3] / 640 * originalHeight;
-          
           // Convert to top-left coordinates
           const x = centerX - width / 2;
           const y = centerY - height / 2;
-          
           // Simple heuristic: if height > width * 1.2, likely a face/person
           if (height > width * 0.8) {
             boxes.push({
@@ -161,12 +126,9 @@ export class FaceDetectionService {
           }
         }
       }
-      
       // Remove overlapping boxes (simple NMS)
       const filteredBoxes = this.applyNMS(boxes, 0.5);
-      
       const processingTime = performance.now() - startTime;
-      
       return {
         faces_detected: filteredBoxes.length > 0,
         face_count: filteredBoxes.length,
@@ -176,41 +138,31 @@ export class FaceDetectionService {
         model_used: 'YOLOv5n'
       };
     } catch (error) {
-      console.error('YOLO detection failed:', error);
       throw error;
     }
   }
-
   /**
    * Apply Non-Maximum Suppression to remove overlapping boxes
    */
   applyNMS(boxes, iouThreshold) {
     if (boxes.length === 0) return [];
-    
     // Sort by confidence
     boxes.sort((a, b) => b.confidence - a.confidence);
-    
     const selected = [];
     const suppressed = new Set();
-    
     for (let i = 0; i < boxes.length; i++) {
       if (suppressed.has(i)) continue;
-      
       selected.push(boxes[i]);
-      
       for (let j = i + 1; j < boxes.length; j++) {
         if (suppressed.has(j)) continue;
-        
         const iou = this.calculateIoU(boxes[i], boxes[j]);
         if (iou > iouThreshold) {
           suppressed.add(j);
         }
       }
     }
-    
     return selected;
   }
-
   /**
    * Calculate Intersection over Union of two bounding boxes
    */
@@ -219,17 +171,13 @@ export class FaceDetectionService {
     const y1 = Math.max(box1.y, box2.y);
     const x2 = Math.min(box1.x + box1.width, box2.x + box2.width);
     const y2 = Math.min(box1.y + box1.height, box2.y + box2.height);
-    
     if (x2 <= x1 || y2 <= y1) return 0;
-    
     const intersection = (x2 - x1) * (y2 - y1);
     const area1 = box1.width * box1.height;
     const area2 = box2.width * box2.height;
     const union = area1 + area2 - intersection;
-    
     return intersection / union;
   }
-
   /**
    * Preprocess image for YOLOv5 input (640x640, normalized)
    */
@@ -237,45 +185,36 @@ export class FaceDetectionService {
     const image = await this.convertToImage(imageInput);
     const originalWidth = image.width;
     const originalHeight = image.height;
-    
     // Create canvas for preprocessing
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
     // Resize to 640x640 (YOLO input size)
     canvas.width = 640;
     canvas.height = 640;
-    
     // Draw image with letterboxing
     const scale = Math.min(640 / originalWidth, 640 / originalHeight);
     const scaledWidth = originalWidth * scale;
     const scaledHeight = originalHeight * scale;
     const offsetX = (640 - scaledWidth) / 2;
     const offsetY = (640 - scaledHeight) / 2;
-    
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, 640, 640);
     ctx.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
-    
     // Get image data and convert to tensor
     const imageData = ctx.getImageData(0, 0, 640, 640);
     const tensor = this.imageDataToTensor(imageData);
-    
     return { tensor, originalWidth, originalHeight };
   }
-
   /**
    * Convert ImageData to ONNX tensor format [1, 3, 640, 640]
    */
   imageDataToTensor(imageData) {
     const { data, width, height } = imageData;
     const tensorData = new Float32Array(1 * 3 * width * height);
-    
     // Convert RGBA to RGB and normalize [0, 255] -> [0, 1]
     for (let i = 0; i < width * height; i++) {
       const pixelIndex = i * 4;
       const tensorIndex = i;
-      
       // R channel
       tensorData[tensorIndex] = data[pixelIndex] / 255.0;
       // G channel  
@@ -283,10 +222,8 @@ export class FaceDetectionService {
       // B channel
       tensorData[2 * width * height + tensorIndex] = data[pixelIndex + 2] / 255.0;
     }
-    
     return new ort.Tensor('float32', tensorData, [1, 3, height, width]);
   }
-
   /**
    * Store reference face embedding for a partner
    * @param {string} partnerId - Unique partner identifier
@@ -296,35 +233,26 @@ export class FaceDetectionService {
   async storeReferenceEmbedding(partnerId, imageInput) {
     try {
       if (!this.faceEmbeddingSession) {
-        console.warn('Face embedding model not available, using simple storage');
         return await this.storeSimpleReference(partnerId, imageInput);
       }
-      
       // Detect faces first
       const faceResults = await this.detectFaces(imageInput);
       if (!faceResults.faces_detected || faceResults.face_count === 0) {
         throw new Error('No faces detected in reference image');
       }
-      
       // Extract face region from the first detected face
       const face = faceResults.bounding_boxes[0];
       const faceImage = await this.extractFaceRegion(imageInput, face);
-      
       // Generate embedding using ArcFace model
       const embedding = await this.generateFaceEmbedding(faceImage);
-      
       // Store embedding
       this.storedEmbeddings.set(partnerId, embedding);
       await this.saveEmbeddingToStorage(partnerId, embedding);
-      
-      console.log(`✅ Reference embedding stored for partner: ${partnerId}`);
       return true;
     } catch (error) {
-      console.error('Failed to store reference embedding:', error);
       return false;
     }
   }
-
   /**
    * Generate face embedding using ArcFace model
    */
@@ -332,37 +260,29 @@ export class FaceDetectionService {
     if (!this.faceEmbeddingSession) {
       throw new Error('Face embedding model not loaded');
     }
-    
     // Preprocess face image for ArcFace (112x112)
     const tensor = await this.preprocessFaceForEmbedding(faceImage);
-    
     // Run inference
     const results = await this.faceEmbeddingSession.run({ input: tensor });
     const embedding = Array.from(results.output.data);
-    
     // Normalize embedding
     const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
     return embedding.map(val => val / norm);
   }
-
   /**
    * Preprocess face image for embedding model (112x112)
    */
   async preprocessFaceForEmbedding(imageInput) {
     const image = await this.convertToImage(imageInput);
-    
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = 112;
     canvas.height = 112;
-    
     ctx.drawImage(image, 0, 0, 112, 112);
     const imageData = ctx.getImageData(0, 0, 112, 112);
-    
     // Convert to tensor format expected by ArcFace
     const tensorData = new Float32Array(1 * 3 * 112 * 112);
     const { data } = imageData;
-    
     for (let i = 0; i < 112 * 112; i++) {
       const pixelIndex = i * 4;
       // Normalize and convert RGB
@@ -370,10 +290,8 @@ export class FaceDetectionService {
       tensorData[112 * 112 + i] = (data[pixelIndex + 1] - 127.5) / 127.5; // G  
       tensorData[2 * 112 * 112 + i] = (data[pixelIndex + 2] - 127.5) / 127.5; // B
     }
-    
     return new ort.Tensor('float32', tensorData, [1, 3, 112, 112]);
   }
-
   /**
    * Verify if image contains partner faces
    * @param {HTMLImageElement|ImageData|File} imageInput - Image to verify
@@ -392,19 +310,15 @@ export class FaceDetectionService {
           reason: 'No faces detected'
         };
       }
-      
       const recognizedPartners = [];
       let maxConfidence = 0;
-      
       // Check each detected face against stored embeddings
       for (const face of faceResults.bounding_boxes) {
         try {
           const faceImage = await this.extractFaceRegion(imageInput, face);
-          
           if (this.faceEmbeddingSession && this.storedEmbeddings.size > 0) {
             // Use face embedding comparison
             const embedding = await this.generateFaceEmbedding(faceImage);
-            
             for (const [partnerId, storedEmbedding] of this.storedEmbeddings) {
               const similarity = this.computeCosineSimilarity(embedding, storedEmbedding);
               if (similarity > 0.6) { // Threshold for face match
@@ -429,10 +343,8 @@ export class FaceDetectionService {
             }
           }
         } catch (error) {
-          console.error('Face verification failed for face:', error);
         }
       }
-      
       return {
         verified: recognizedPartners.length > 0,
         confidence: maxConfidence,
@@ -443,7 +355,6 @@ export class FaceDetectionService {
           'No partners recognized in detected faces'
       };
     } catch (error) {
-      console.error('Partner face verification failed:', error);
       return {
         verified: false,
         confidence: 0,
@@ -453,35 +364,28 @@ export class FaceDetectionService {
       };
     }
   }
-
   /**
    * Extract face region from image based on bounding box
    */
   async extractFaceRegion(imageInput, boundingBox) {
     const image = await this.convertToImage(imageInput);
-    
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    
     // Add some padding around the face
     const padding = 0.2;
     const paddedWidth = boundingBox.width * (1 + padding);
     const paddedHeight = boundingBox.height * (1 + padding);
     const paddedX = Math.max(0, boundingBox.x - boundingBox.width * padding / 2);
     const paddedY = Math.max(0, boundingBox.y - boundingBox.height * padding / 2);
-    
     canvas.width = paddedWidth;
     canvas.height = paddedHeight;
-    
     ctx.drawImage(
       image,
       paddedX, paddedY, paddedWidth, paddedHeight,
       0, 0, paddedWidth, paddedHeight
     );
-    
     return canvas;
   }
-
   /**
    * Compute cosine similarity between two embeddings
    */
@@ -489,20 +393,16 @@ export class FaceDetectionService {
     if (embedding1.length !== embedding2.length) {
       throw new Error('Embeddings must have same length');
     }
-    
     let dotProduct = 0;
     let norm1 = 0;
     let norm2 = 0;
-    
     for (let i = 0; i < embedding1.length; i++) {
       dotProduct += embedding1[i] * embedding2[i];
       norm1 += embedding1[i] * embedding1[i];
       norm2 += embedding2[i] * embedding2[i];
     }
-    
     return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
   }
-
   /**
    * Fallback face detection using basic computer vision techniques
    * This provides face detection when ONNX models are not available
@@ -511,41 +411,32 @@ export class FaceDetectionService {
     try {
       // Simple heuristic-based face detection
       const { width, height, data } = imageData;
-      
       // Look for skin-colored regions that might indicate faces
       let skinPixelCount = 0;
       let totalPixels = width * height;
-      
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-        
         // Basic skin color detection (this is very simplified)
         if (this.isSkinColor(r, g, b)) {
           skinPixelCount++;
         }
       }
-      
       const skinRatio = skinPixelCount / totalPixels;
       const likelyHasFace = skinRatio > 0.02 && skinRatio < 0.4; // Rough heuristic
-      
       // Look for face-like patterns (this is very basic)
       const hasSymmetricFeatures = this.detectSymmetricFeatures(imageData);
-      
       // Additional checks for human presence
       const hasFleshTones = this.detectFleshTones(imageData);
       const hasComplexity = this.measureImageComplexity(imageData) > 0.3;
-      
       // Combine all factors for confidence score
       let confidence = 0;
       if (likelyHasFace) confidence += 0.3;
       if (hasSymmetricFeatures) confidence += 0.3;
       if (hasFleshTones) confidence += 0.2;
       if (hasComplexity) confidence += 0.2;
-      
       const faceCount = confidence > 0.5 ? 1 : 0;
-      
       return {
         faces_detected: faceCount > 0,
         face_count: faceCount,
@@ -567,7 +458,6 @@ export class FaceDetectionService {
         }
       };
     } catch (error) {
-      console.error('Fallback detection failed:', error);
       return {
         faces_detected: false,
         face_count: 0,
@@ -577,7 +467,6 @@ export class FaceDetectionService {
       };
     }
   }
-
   /**
    * Simple skin color detection heuristic
    */
@@ -587,7 +476,6 @@ export class FaceDetectionService {
             Math.max(r, g, b) - Math.min(r, g, b) > 15 &&
             Math.abs(r - g) > 15 && r > g && r > b);
   }
-
   /**
    * Detect symmetric features that might indicate a face
    */
@@ -595,30 +483,23 @@ export class FaceDetectionService {
     // Very basic symmetry detection
     const { width, height, data } = imageData;
     const centerX = Math.floor(width / 2);
-    
     let symmetryScore = 0;
     const samplePoints = 20;
-    
     for (let i = 0; i < samplePoints; i++) {
       const y = Math.floor((height / samplePoints) * i);
       const leftX = Math.floor(centerX * 0.3);
       const rightX = Math.floor(centerX * 1.7);
-      
       if (leftX >= 0 && rightX < width && y < height) {
         const leftIdx = (y * width + leftX) * 4;
         const rightIdx = (y * width + rightX) * 4;
-        
         const leftBrightness = (data[leftIdx] + data[leftIdx + 1] + data[leftIdx + 2]) / 3;
         const rightBrightness = (data[rightIdx] + data[rightIdx + 1] + data[rightIdx + 2]) / 3;
-        
         const diff = Math.abs(leftBrightness - rightBrightness);
         if (diff < 30) symmetryScore++;
       }
     }
-    
     return (symmetryScore / samplePoints) > 0.6;
   }
-
   /**
    * Detect flesh tones in the image
    */
@@ -626,22 +507,18 @@ export class FaceDetectionService {
     const { data } = imageData;
     let fleshPixels = 0;
     let totalPixels = data.length / 4;
-    
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
-      
       // More sophisticated flesh tone detection
       if (this.isFleshTone(r, g, b)) {
         fleshPixels++;
       }
     }
-    
     const fleshRatio = fleshPixels / totalPixels;
     return fleshRatio > 0.05 && fleshRatio < 0.5;
   }
-
   /**
    * Check if RGB values represent flesh tones
    */
@@ -655,14 +532,12 @@ export class FaceDetectionService {
       // Dark skin
       { rMin: 80, rMax: 150, gMin: 50, gMax: 100, bMin: 30, bMax: 80 }
     ];
-    
     return ranges.some(range => 
       r >= range.rMin && r <= range.rMax &&
       g >= range.gMin && g <= range.gMax &&
       b >= range.bMin && b <= range.bMax
     );
   }
-
   /**
    * Measure image complexity (helps distinguish photos from simple graphics)
    */
@@ -671,12 +546,10 @@ export class FaceDetectionService {
     let edgePixels = 0;
     let totalPixels = width * height;
     const threshold = 30;
-    
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
         const idx = (y * width + x) * 4;
         const currentBrightness = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
-        
         // Check neighbors
         const neighbors = [
           ((y - 1) * width + x) * 4,     // Top
@@ -684,22 +557,18 @@ export class FaceDetectionService {
           (y * width + (x - 1)) * 4,     // Left
           (y * width + (x + 1)) * 4      // Right
         ];
-        
         let maxDiff = 0;
         for (const nIdx of neighbors) {
           const nBrightness = (data[nIdx] + data[nIdx + 1] + data[nIdx + 2]) / 3;
           maxDiff = Math.max(maxDiff, Math.abs(currentBrightness - nBrightness));
         }
-        
         if (maxDiff > threshold) {
           edgePixels++;
         }
       }
     }
-    
     return edgePixels / totalPixels;
   }
-
   /**
    * Convert various input types to HTMLImageElement
    */
@@ -707,18 +576,15 @@ export class FaceDetectionService {
     if (imageInput instanceof HTMLImageElement) {
       return imageInput;
     }
-    
     if (imageInput instanceof File) {
       return await this.fileToImage(imageInput);
     }
-    
     if (imageInput instanceof ImageData) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = imageInput.width;
       canvas.height = imageInput.height;
       ctx.putImageData(imageInput, 0, 0);
-      
       const image = new Image();
       image.src = canvas.toDataURL();
       await new Promise(resolve => {
@@ -726,10 +592,8 @@ export class FaceDetectionService {
       });
       return image;
     }
-    
     throw new Error('Unsupported image input type');
   }
-
   /**
    * Simple face verification fallback when embedding model not available
    */
@@ -738,22 +602,18 @@ export class FaceDetectionService {
     const canvas = faceImage instanceof HTMLCanvasElement ? faceImage : await this.convertToCanvas(faceImage);
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    
     const complexity = this.measureImageComplexity(imageData);
     const hasFleshTones = this.detectFleshTones(imageData);
     const hasSymmetricFeatures = this.detectSymmetricFeatures(imageData);
-    
     let confidence = 0;
     if (complexity > 0.3) confidence += 0.3;
     if (hasFleshTones) confidence += 0.4;
     if (hasSymmetricFeatures) confidence += 0.3;
-    
     return {
       confidence: Math.min(confidence, 0.8), // Cap fallback confidence
       method: 'simple_heuristic'
     };
   }
-
   /**
    * Store simple reference when embedding model not available
    */
@@ -761,25 +621,19 @@ export class FaceDetectionService {
     try {
       const imageData = await this.preprocessImage(imageInput);
       const simpleFeatures = await this.extractSimpleFeatures(imageData);
-      
       this.storedEmbeddings.set(partnerId, simpleFeatures);
       await this.saveEmbeddingToStorage(partnerId, simpleFeatures);
-      
-      console.log(`✅ Simple reference stored for partner: ${partnerId}`);
       return true;
     } catch (error) {
-      console.error('Failed to store simple reference:', error);
       return false;
     }
   }
-
   /**
    * Extract simple features for fallback recognition
    */
   async extractSimpleFeatures(imageData) {
     const { width, height, data } = imageData;
     const features = [];
-    
     // Color histogram
     const colorBins = { r: 0, g: 0, b: 0 };
     for (let i = 0; i < data.length; i += 4) {
@@ -791,7 +645,6 @@ export class FaceDetectionService {
     features.push(colorBins.r / pixelCount / 255);
     features.push(colorBins.g / pixelCount / 255);
     features.push(colorBins.b / pixelCount / 255);
-    
     // Regional complexity
     const regions = [
       { x: 0, y: 0, w: width / 2, h: height / 2 },
@@ -799,14 +652,11 @@ export class FaceDetectionService {
       { x: 0, y: height / 2, w: width / 2, h: height / 2 },
       { x: width / 2, y: height / 2, w: width / 2, h: height / 2 }
     ];
-    
     for (const region of regions) {
       features.push(this.getRegionComplexity(imageData, region));
     }
-    
     return new Float32Array(features);
   }
-
   /**
    * Get complexity measure for a specific region
    */
@@ -814,25 +664,20 @@ export class FaceDetectionService {
     const { data, width } = imageData;
     let edgeCount = 0;
     let pixelCount = 0;
-    
     for (let y = Math.floor(region.y); y < Math.floor(region.y + region.h) - 1; y++) {
       for (let x = Math.floor(region.x); x < Math.floor(region.x + region.w) - 1; x++) {
         const idx = (y * width + x) * 4;
         const nextIdx = (y * width + (x + 1)) * 4;
-        
         const brightness1 = (data[idx] + data[idx + 1] + data[idx + 2]) / 3;
         const brightness2 = (data[nextIdx] + data[nextIdx + 1] + data[nextIdx + 2]) / 3;
-        
         if (Math.abs(brightness1 - brightness2) > 20) {
           edgeCount++;
         }
         pixelCount++;
       }
     }
-    
     return pixelCount > 0 ? edgeCount / pixelCount : 0;
   }
-
   /**
    * Convert input to canvas for processing
    */
@@ -845,7 +690,6 @@ export class FaceDetectionService {
     ctx.drawImage(image, 0, 0);
     return canvas;
   }
-
   /**
    * Convert File to HTMLImageElement
    */
@@ -863,7 +707,6 @@ export class FaceDetectionService {
       img.src = URL.createObjectURL(file);
     });
   }
-
   /**
    * Save embedding to local storage
    */
@@ -876,10 +719,8 @@ export class FaceDetectionService {
       };
       localStorage.setItem(`bonded_face_${partnerId}`, JSON.stringify(data));
     } catch (error) {
-      console.warn('[Face] Failed to save embedding to storage:', error);
     }
   }
-
   /**
    * Load embeddings from local storage
    */
@@ -892,12 +733,9 @@ export class FaceDetectionService {
           this.storedEmbeddings.set(data.partnerId, new Float32Array(data.embedding));
         }
       }
-      console.log(`[Face] Loaded ${this.storedEmbeddings.size} reference embeddings`);
     } catch (error) {
-      console.warn('[Face] Failed to load embeddings from storage:', error);
     }
   }
-
   /**
    * Clear stored embeddings
    */
@@ -910,9 +748,7 @@ export class FaceDetectionService {
         localStorage.removeItem(key);
       }
     }
-    console.log('[Face] Cleared all stored embeddings');
   }
-
   /**
    * Get service status
    */
@@ -925,6 +761,5 @@ export class FaceDetectionService {
     };
   }
 }
-
 // Export singleton instance
 export const faceDetectionService = new FaceDetectionService(); 

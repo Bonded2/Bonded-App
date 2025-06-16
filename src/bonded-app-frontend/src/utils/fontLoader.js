@@ -2,13 +2,11 @@
  * Font Loader Utility for Bonded PWA
  * Handles Google Fonts loading with fallbacks and CSP compliance
  */
-
 class FontLoader {
   constructor() {
     this.fontsLoaded = false;
     this.loadPromise = null;
   }
-
   /**
    * Load Google Fonts with proper error handling
    * @returns {Promise<boolean>} Whether fonts loaded successfully
@@ -17,11 +15,9 @@ class FontLoader {
     if (this.loadPromise) {
       return this.loadPromise;
     }
-
     this.loadPromise = this.doLoadFonts();
     return this.loadPromise;
   }
-
   async doLoadFonts() {
     try {
       // Check if fonts are already available
@@ -29,7 +25,6 @@ class FontLoader {
         this.fontsLoaded = true;
         return true;
       }
-
       // Create font face definitions
       const fonts = [
         {
@@ -51,7 +46,6 @@ class FontLoader {
           style: 'normal'
         }
       ];
-
       // Load fonts using Font Loading API if available
       if ('fonts' in document) {
         const loadPromises = fonts.map(font => {
@@ -60,28 +54,20 @@ class FontLoader {
             style: font.style,
             display: 'swap'
           });
-          
           document.fonts.add(fontFace);
           return fontFace.load();
         });
-
         await Promise.allSettled(loadPromises);
         this.fontsLoaded = true;
-        
-        console.log('[FontLoader] Google Fonts loaded successfully');
         return true;
       }
-
       // Fallback: CSS-based loading
       return this.loadFontsWithCSS();
-
     } catch (error) {
-      console.warn('[FontLoader] Failed to load Google Fonts:', error);
       this.fontsLoaded = false;
       return false;
     }
   }
-
   /**
    * Fallback method using CSS import
    * @returns {Promise<boolean>}
@@ -91,30 +77,22 @@ class FontLoader {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = 'https://fonts.googleapis.com/css2?family=Rethink+Sans:ital,wght@0,400..800;1,400..800&family=Trocchi&display=swap';
-      
       link.onload = () => {
         this.fontsLoaded = true;
-        console.log('[FontLoader] Google Fonts loaded via CSS');
         resolve(true);
       };
-      
       link.onerror = () => {
-        console.warn('[FontLoader] Failed to load Google Fonts via CSS');
         resolve(false);
       };
-      
       // Timeout after 5 seconds
       setTimeout(() => {
         if (!this.fontsLoaded) {
-          console.warn('[FontLoader] Font loading timeout');
           resolve(false);
         }
       }, 5000);
-      
       document.head.appendChild(link);
     });
   }
-
   /**
    * Check if fonts are available
    * @returns {boolean}
@@ -122,7 +100,6 @@ class FontLoader {
   areFontsLoaded() {
     return this.fontsLoaded;
   }
-
   /**
    * Get CSS class for font families with fallbacks
    * @param {'body' | 'heading'} type - Font type
@@ -133,30 +110,23 @@ class FontLoader {
       body: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif',
       heading: 'Georgia, "Times New Roman", Times, serif'
     };
-
     if (this.fontsLoaded) {
       return type === 'body' 
         ? `"Rethink Sans", ${fallbacks.body}`
         : `"Trocchi", ${fallbacks.heading}`;
     }
-
     return fallbacks[type];
   }
 }
-
 // Export singleton instance
 export const fontLoader = new FontLoader();
-
 // Auto-load fonts when module is imported
 fontLoader.loadFonts().then(success => {
   if (success) {
     document.documentElement.classList.add('fonts-loaded');
-    console.log('[FontLoader] ✅ Fonts loaded successfully');
   } else {
     document.documentElement.classList.add('fonts-failed');
-    console.log('[FontLoader] ⚠️ Using fallback fonts');
   }
 }).catch(error => {
   document.documentElement.classList.add('fonts-failed');
-  console.warn('[FontLoader] ❌ Font loading failed:', error);
 }); 

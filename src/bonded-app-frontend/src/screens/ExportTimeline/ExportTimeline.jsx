@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { TimestampFolder } from "../TimestampFolder/TimestampFolder";
 import "./style.css";
-
 // Content types for export selection
 const EXPORTABLE_CONTENT_TYPES = [
   { id: "photos", label: "Photos & Images", icon: "📸" },
@@ -10,11 +9,9 @@ const EXPORTABLE_CONTENT_TYPES = [
   { id: "documents", label: "Documents & Certificates", icon: "📄" },
   { id: "locations", label: "Location Data", icon: "📍" },
 ];
-
 // Timeline data storage keys
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';
 const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
-
 export const ExportTimeline = ({ onClose }) => {
   const navigate = useNavigate();
   const [selectedDates, setSelectedDates] = useState({});
@@ -30,7 +27,6 @@ export const ExportTimeline = ({ onClose }) => {
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [exportDetails, setExportDetails] = useState({ size: "0 MB", itemCount: 0 });
   const [loading, setLoading] = useState(true);
-
   // New state for PDF export
   const [selectedContentTypes, setSelectedContentTypes] = useState(
     EXPORTABLE_CONTENT_TYPES.reduce((acc, type) => ({ ...acc, [type.id]: true }), {})
@@ -41,17 +37,14 @@ export const ExportTimeline = ({ onClose }) => {
   const [exportFormat, setExportFormat] = useState("pdf");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [selectionMode, setSelectionMode] = useState("date"); // 'date' or 'individual'
-
   // Load timeline data from localStorage on mount
   useEffect(() => {
     loadTimelineData();
   }, []);
-
   // Calculate export stats whenever selection changes
   useEffect(() => {
     calculateExportStats();
   }, [selectedDates, evidenceItems, selectedContentTypes]);
-
   // Animation on mount for selected dates
   useEffect(() => {
     if (Object.keys(selectedDates).length > 0) {
@@ -61,18 +54,15 @@ export const ExportTimeline = ({ onClose }) => {
       return () => clearTimeout(timer);
     }
   }, [selectedDates]);
-
   const loadTimelineData = async () => {
     setLoading(true);
     try {
       // Load timeline data from localStorage
       const savedTimelineData = localStorage.getItem(TIMELINE_DATA_KEY);
       const savedContentData = localStorage.getItem(TIMESTAMP_CONTENT_KEY);
-      
       if (savedTimelineData) {
         const parsedTimelineData = JSON.parse(savedTimelineData);
         setTimelineData(parsedTimelineData);
-        
         // Initialize selectedDates with all dates unselected
         const dateSelectionMap = {};
         parsedTimelineData.forEach(item => {
@@ -81,16 +71,13 @@ export const ExportTimeline = ({ onClose }) => {
           }
         });
         setSelectedDates(dateSelectionMap);
-        
         // Process content data into evidence items
         if (savedContentData) {
           const parsedContentData = JSON.parse(savedContentData);
           const processedEvidenceItems = {};
-          
           // Convert the content data format to our evidence items format
           Object.keys(parsedContentData).forEach(date => {
             const items = parsedContentData[date];
-            
             processedEvidenceItems[date] = items.map(item => ({
               id: item.id || `${date}-${Math.random().toString(36).substr(2, 9)}`,
               type: mapContentTypeToExportable(item.type),
@@ -99,22 +86,18 @@ export const ExportTimeline = ({ onClose }) => {
               originalItem: item // Keep the original item for reference
             }));
           });
-          
           setEvidenceItems(processedEvidenceItems);
         }
       }
     } catch (err) {
-      console.error("Error loading timeline data:", err);
       showNotification("Failed to load timeline data. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-  
   // Map content types from timeline to exportable types
   const mapContentTypeToExportable = (originalType) => {
     if (!originalType) return "documents";
-    
     if (originalType.includes("photo") || originalType.includes("image")) {
       return "photos";
     } else if (originalType.includes("message") || originalType.includes("chat")) {
@@ -125,12 +108,10 @@ export const ExportTimeline = ({ onClose }) => {
       return "documents";
     }
   };
-
   const calculateExportStats = () => {
     // Count selected items
     let count = 0;
     let size = 0;
-
     Object.keys(evidenceItems).forEach(date => {
       if (selectedDates[date]) {
         evidenceItems[date]?.forEach(item => {
@@ -147,22 +128,18 @@ export const ExportTimeline = ({ onClose }) => {
         });
       }
     });
-
     setExportDetails({
       size: `${size.toFixed(1)} MB`,
       itemCount: count
     });
   };
-
   const handleRemove = (date, e) => {
     e.stopPropagation();
     // Animate out before removing from selected
     setAnimatedItems(prev => prev.filter(item => item !== date));
-    
     // Update date selection and evidence items selection
     setTimeout(() => {
       setSelectedDates(prev => ({ ...prev, [date]: false }));
-      
       // Deselect all evidence items for this date
       setEvidenceItems(prevItems => {
         const newItems = { ...prevItems };
@@ -173,11 +150,9 @@ export const ExportTimeline = ({ onClose }) => {
       });
     }, 300);
   };
-
   const handleToggleSelectDate = (date) => {
     setSelectedDates(prev => {
       const newSelectedDates = { ...prev, [date]: !prev[date] };
-      
       // When selecting a date, also select all its evidence items
       setEvidenceItems(prevItems => {
         const newItems = { ...prevItems };
@@ -189,59 +164,48 @@ export const ExportTimeline = ({ onClose }) => {
         }
         return newItems;
       });
-      
       return newSelectedDates;
     });
   };
-
   const handleToggleExpandDate = (date, e) => {
     e.stopPropagation();
     setExpandedDates(prev => ({ ...prev, [date]: !prev[date] }));
   };
-
   const handleToggleSelectEvidence = (date, itemId) => {
     setEvidenceItems(prevItems => {
       const newItems = { ...prevItems };
       const dateItems = [...(newItems[date] || [])];
       const itemIndex = dateItems.findIndex(item => item.id === itemId);
-      
       if (itemIndex !== -1) {
         dateItems[itemIndex] = { 
           ...dateItems[itemIndex], 
           selected: !dateItems[itemIndex].selected 
         };
         newItems[date] = dateItems;
-        
         // Check if all items for this date are now selected/deselected
         const allSelected = dateItems.every(item => item.selected);
         const allDeselected = dateItems.every(item => !item.selected);
-        
         if (allDeselected) {
           setSelectedDates(prev => ({ ...prev, [date]: false }));
         } else if (allSelected) {
           setSelectedDates(prev => ({ ...prev, [date]: true }));
         }
       }
-      
       return newItems;
     });
   };
-
   const handleEditClick = (date, e) => {
     e.stopPropagation();
     setSelectedDateForEdit(date);
     setShowTimestampFolder(true);
   };
-
   const handleCloseTimestampFolder = () => {
     setShowTimestampFolder(false);
     // Reload data after potential edits
     loadTimelineData();
   };
-
   const handleContentTypeChange = (contentTypeId) => {
     setSelectedContentTypes(prev => ({ ...prev, [contentTypeId]: !prev[contentTypeId] }));
-    
     // Visual feedback animation
     if (contentRef.current) {
       contentRef.current.classList.add("pulse-animation");
@@ -250,82 +214,65 @@ export const ExportTimeline = ({ onClose }) => {
       }, 500);
     }
   };
-
   const toggleExportFormat = () => {
     setExportFormat(prev => prev === "pdf" ? "zip" : "pdf");
-    
     // Visual transition
     contentRef.current.classList.add("format-change-animation");
     setTimeout(() => {
       contentRef.current.classList.remove("format-change-animation");
     }, 500);
   };
-
   const togglePreviewMode = () => {
     setPreviewMode(prev => !prev);
   };
-
   const toggleSelectionMode = () => {
     setSelectionMode(prev => prev === "date" ? "individual" : "date");
-    
     // Visual transition
     contentRef.current.classList.add("mode-change-animation");
     setTimeout(() => {
       contentRef.current.classList.remove("mode-change-animation");
     }, 500);
   };
-
   const toggleAdvancedFilter = () => {
     setIsAdvancedFilterOpen(prev => !prev);
   };
-
   const handleDateRangeChange = (e) => {
     const { name, value } = e.target;
     setDateRangeFilter(prev => ({ ...prev, [name]: value }));
   };
-
   const applyDateRangeFilter = () => {
     if (!dateRangeFilter.start || !dateRangeFilter.end) {
       showNotification("Please select both start and end dates");
       return;
     }
-    
     const startDate = new Date(dateRangeFilter.start);
     const endDate = new Date(dateRangeFilter.end);
-    
     if (startDate > endDate) {
       showNotification("Start date must be before end date");
       return;
     }
-    
     // Filter timeline data by date range
     const filteredDates = {};
-    
     timelineData.forEach(item => {
       const itemDate = new Date(item.date);
       if (itemDate >= startDate && itemDate <= endDate) {
         filteredDates[item.date] = selectedDates[item.date] || false;
       }
     });
-    
     setSelectedDates(filteredDates);
     showNotification(`Filtered to dates between ${dateRangeFilter.start} and ${dateRangeFilter.end}`);
   };
-
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
-
   const searchEvidenceItems = () => {
     if (!searchQuery.trim()) {
       showNotification("Please enter a search term");
       return;
     }
-    
     const query = searchQuery.toLowerCase();
     const matchedDates = {};
     let foundAny = false;
-    
     // Search through all evidence items
     Object.keys(evidenceItems).forEach(date => {
       const itemsForDate = evidenceItems[date] || [];
@@ -333,11 +280,9 @@ export const ExportTimeline = ({ onClose }) => {
         item.title.toLowerCase().includes(query) || 
         item.type.toLowerCase().includes(query)
       );
-      
       if (matchingItems.length > 0) {
         matchedDates[date] = true;
         foundAny = true;
-        
         // Update evidence items to highlight matches
         setEvidenceItems(prev => ({
           ...prev,
@@ -347,7 +292,6 @@ export const ExportTimeline = ({ onClose }) => {
                           item.type.toLowerCase().includes(query)
           }))
         }));
-        
         // Auto-expand dates with matches
         setExpandedDates(prev => ({
           ...prev,
@@ -355,14 +299,12 @@ export const ExportTimeline = ({ onClose }) => {
         }));
       }
     });
-    
     if (foundAny) {
       showNotification(`Found matches for "${searchQuery}"`);
     } else {
       showNotification(`No matches found for "${searchQuery}"`);
     }
   };
-
   const handleGeneratePdf = () => {
     // Count selected items for export
     let selectedItemCount = 0;
@@ -375,16 +317,12 @@ export const ExportTimeline = ({ onClose }) => {
         });
       }
     });
-
     if (selectedItemCount === 0) {
       showNotification("Please select at least one evidence item to export.");
       return;
     }
-
-    console.log(`Generating ${exportFormat.toUpperCase()} with ${selectedItemCount} evidence items`);
     setIsGeneratingPdf(true);
     setPdfProgress(0);
-
     // Simulate generation and progress
     let currentProgress = 0;
     const interval = setInterval(() => {
@@ -395,7 +333,6 @@ export const ExportTimeline = ({ onClose }) => {
         clearInterval(interval);
         setIsGeneratingPdf(false);
         setShowSuccessMessage(true);
-        
         // Auto-hide success message after 5 seconds
         setTimeout(() => {
           setShowSuccessMessage(false);
@@ -403,15 +340,12 @@ export const ExportTimeline = ({ onClose }) => {
       }
     }, 100);
   };
-
   const handleSelectAll = () => {
     const allDates = Object.keys(evidenceItems);
-    
     // Select all dates
     setSelectedDates(
       allDates.reduce((acc, date) => ({ ...acc, [date]: true }), {})
     );
-    
     // Select all evidence items
     setEvidenceItems(prevItems => {
       const newItems = { ...prevItems };
@@ -422,16 +356,13 @@ export const ExportTimeline = ({ onClose }) => {
       });
       return newItems;
     });
-    
     showNotification("Selected all timeline evidence");
   };
-
   const handleDeselectAll = () => {
     // Deselect all dates
     setSelectedDates(
       Object.keys(evidenceItems).reduce((acc, date) => ({ ...acc, [date]: false }), {})
     );
-    
     // Deselect all evidence items
     setEvidenceItems(prevItems => {
       const newItems = { ...prevItems };
@@ -442,20 +373,16 @@ export const ExportTimeline = ({ onClose }) => {
       });
       return newItems;
     });
-    
     showNotification("Deselected all timeline evidence");
   };
-
   const showNotification = (message) => {
     const notification = document.createElement("div");
     notification.className = "export-notification";
     notification.textContent = message;
     document.body.appendChild(notification);
-    
     setTimeout(() => {
       notification.classList.add("show");
     }, 10);
-    
     setTimeout(() => {
       notification.classList.remove("show");
       setTimeout(() => {
@@ -463,17 +390,13 @@ export const ExportTimeline = ({ onClose }) => {
       }, 300);
     }, 3000);
   };
-
   const handleBack = () => {
     if (onClose) onClose();
   };
-
   if (showTimestampFolder) {
     return <TimestampFolder onClose={handleCloseTimestampFolder} date={selectedDateForEdit} />;
   }
-
   const countSelectedDates = Object.keys(selectedDates).filter(date => selectedDates[date]).length;
-
   return (
     <div className="export-timeline-screen">
       <div className="export-timeline-container">
@@ -498,7 +421,6 @@ export const ExportTimeline = ({ onClose }) => {
               </button>
             </div>
         </div>
-
         <div className="export-timeline-content" ref={contentRef}>
           {loading ? (
             <div className="loading-container">
@@ -540,7 +462,6 @@ export const ExportTimeline = ({ onClose }) => {
                   </button>
                 </div>
               </div>
-
               {/* Search and Filter Section */}
               <div className="search-filter-section">
                 <div className="search-container">
@@ -557,7 +478,6 @@ export const ExportTimeline = ({ onClose }) => {
                     </svg>
                   </button>
                 </div>
-                
                 <button 
                   className={`advanced-filter-toggle ${isAdvancedFilterOpen ? 'active' : ''}`}
                   onClick={toggleAdvancedFilter}
@@ -573,7 +493,6 @@ export const ExportTimeline = ({ onClose }) => {
                     <path d="M7 10l5 5 5-5z" fill="currentColor"/>
                   </svg>
                 </button>
-                
                 {isAdvancedFilterOpen && (
                   <div className="advanced-filters">
                     <div className="date-range-filter">
@@ -610,7 +529,6 @@ export const ExportTimeline = ({ onClose }) => {
                   </div>
                 )}
               </div>
-
               <div className="date-selection-section">
                 <div className="section-header">
                   <h3 className="section-heading">Timeline Evidence</h3>
@@ -624,7 +542,6 @@ export const ExportTimeline = ({ onClose }) => {
                     </button>
                   )}
                 </div>
-                
                 <div className="dates-list">
                   {Object.keys(selectedDates).length === 0 ? (
                     <div className="no-timeline-data">
@@ -686,7 +603,6 @@ export const ExportTimeline = ({ onClose }) => {
                               </button>
                             </div>
                           </div>
-                          
                           {/* Expanded evidence items */}
                           {expandedDates[date] && evidenceItems[date] && (
                             <div className="evidence-items-list">
@@ -731,7 +647,6 @@ export const ExportTimeline = ({ onClose }) => {
                   )}
                 </div>
               </div>
-
               <div className={`content-type-section ${exportFormat === 'pdf' ? 'show' : 'hide'}`}>
                 <h3 className="section-heading">Include in {exportFormat.toUpperCase()}</h3>
                 <div className="content-types-grid">
@@ -749,7 +664,6 @@ export const ExportTimeline = ({ onClose }) => {
                   ))}
                 </div>
               </div>
-
               {isGeneratingPdf && (
                 <div className="progress-container">
                   <div className="progress-bar-container">
@@ -765,7 +679,6 @@ export const ExportTimeline = ({ onClose }) => {
                   </div>
                 </div>
               )}
-
               {showSuccessMessage && (
                 <div className="success-message">
                   <div className="success-icon">✓</div>
@@ -775,7 +688,6 @@ export const ExportTimeline = ({ onClose }) => {
                   </div>
                 </div>
               )}
-
               <div className="export-actions">
                 <button 
                   className={`export-action-btn ${exportFormat}-btn`}
@@ -784,7 +696,6 @@ export const ExportTimeline = ({ onClose }) => {
                 >
                   {isGeneratingPdf ? "Processing..." : `Generate & Download ${exportFormat.toUpperCase()}`}
                 </button>
-                
                 {exportDetails.itemCount > 0 && (
                   <div className="export-stats">
                     <div className="stat-item">
@@ -809,7 +720,6 @@ export const ExportTimeline = ({ onClose }) => {
     </div>
   );
 };
-
 function getColorForDate(date) {
   const colors = ['#FF704D', '#1E8CFC', '#B9FF46', '#FFC107', '#9C27B0'];
   let hash = 0;

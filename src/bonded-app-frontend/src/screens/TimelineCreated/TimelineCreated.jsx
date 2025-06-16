@@ -11,13 +11,11 @@ import { MediaScanner } from "../../components/MediaScanner";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import { useBondedServices } from "../../hooks/useBondedServices";
 import "./style.css";
-
 // LocalStorage keys for storing timeline data
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';
 const TIMELINE_LAST_UPDATE_KEY = 'bonded_timeline_last_update';
 const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
 const AI_TIMELINE_DATA_KEY = 'aiProcessedTimeline';
-
 export const TimelineCreated = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,7 +31,6 @@ export const TimelineCreated = () => {
   const [processingEvidence, setProcessingEvidence] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const timelineRef = useRef(null);
-
   // Use Bonded services hook
   const {
     isInitialized,
@@ -48,7 +45,6 @@ export const TimelineCreated = () => {
     canisterIntegration,
     encryptionService
   } = useBondedServices();
-
   // Timeline state management
   const [timelineData, setTimelineData] = useState([]);
   const [aiTimelineData, setAiTimelineData] = useState([]);
@@ -60,27 +56,20 @@ export const TimelineCreated = () => {
     documentEntries: 0,
     lastUpdate: null
   });
-
   // Enhanced evidence processing with encryption
   const processEvidenceWithEncryption = useCallback(async (evidence) => {
     if (!encryptionService || !canisterIntegration) {
-      throw new Error('Services not initialized');
+      return { success: false, reason: 'Services not initialized' };
     }
-
     try {
       setProcessingEvidence(true);
       setUploadProgress({ stage: 'encrypting', progress: 25 });
-
       // Encrypt evidence data using AES-256-GCM
       const encryptedData = await encryptionService.encryptEvidence(evidence);
-      
       setUploadProgress({ stage: 'hashing', progress: 50 });
-      
       // Compute SHA-256 hash for integrity
       const evidenceHash = await encryptionService.computeHash(evidence);
-      
       setUploadProgress({ stage: 'uploading', progress: 75 });
-      
       // Upload to Evidence Canister
       const relationshipId = 'mock-relationship-id'; // TODO: Get from actual relationship context
       const uploadResult = await canisterIntegration.uploadEvidence(
@@ -93,47 +82,37 @@ export const TimelineCreated = () => {
           category: evidence.category || 'relationship'
         }
       );
-
       setUploadProgress({ stage: 'completed', progress: 100 });
-      
       return uploadResult;
     } catch (error) {
-      console.error('Evidence processing error:', error);
       throw error;
     } finally {
       setProcessingEvidence(false);
       setTimeout(() => setUploadProgress(null), 2000);
     }
   }, [encryptionService, canisterIntegration]);
-
   // Load encrypted timeline data from ICP canister
   const loadEncryptedTimeline = useCallback(async () => {
     if (!canisterIntegration || !encryptionService) {
-      console.log('Services not yet initialized, skipping timeline load');
       return;
     }
-
     try {
       setLoading(true);
       setError(null);
-
       // Fetch encrypted timeline from Evidence Canister
       const encryptedTimeline = await canisterIntegration.fetchTimeline({
         page: 0,
         limit: 50 // Load first 50 entries
       });
-
       if (!encryptedTimeline || !encryptedTimeline.entries) {
         setTimelineData([]);
         return;
       }
-
       // Decrypt each timeline entry
       const decryptedEntries = [];
       for (const entry of encryptedTimeline.entries) {
         try {
           const decryptedData = await encryptionService.decryptEvidence(entry.encryptedData);
-          
           decryptedEntries.push({
             id: entry.id,
             ...decryptedData,
@@ -145,7 +124,6 @@ export const TimelineCreated = () => {
             category: entry.metadata?.category || 'relationship'
           });
         } catch (decryptError) {
-          console.error(`Failed to decrypt entry ${entry.id}:`, decryptError);
           // Add placeholder for failed decryption
           decryptedEntries.push({
             id: entry.id,
@@ -161,12 +139,9 @@ export const TimelineCreated = () => {
           });
         }
       }
-
       // Sort by timestamp (newest first)
       decryptedEntries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      
       setTimelineData(decryptedEntries);
-      
       // Update evidence statistics
       setEvidenceStats({
         totalEntries: decryptedEntries.length,
@@ -175,12 +150,8 @@ export const TimelineCreated = () => {
         documentEntries: decryptedEntries.filter(e => e.category === 'document').length,
         lastUpdate: new Date().toISOString()
       });
-
-      console.log(`Loaded and decrypted ${decryptedEntries.length} timeline entries`);
     } catch (error) {
-      console.error('Error loading encrypted timeline:', error);
       setError(`Failed to load timeline: ${error.message}`);
-      
       // Fallback to local data if available
       try {
         const localData = localStorage.getItem(TIMELINE_DATA_KEY);
@@ -188,17 +159,14 @@ export const TimelineCreated = () => {
           const parsedData = JSON.parse(localData);
           if (Array.isArray(parsedData)) {
             setTimelineData(parsedData);
-            console.log('Loaded fallback data from localStorage');
           }
         }
       } catch (fallbackError) {
-        console.error('Fallback data loading failed:', fallbackError);
       }
     } finally {
       setLoading(false);
     }
   }, [canisterIntegration, encryptionService]);
-
   // Function to load AI timeline data from localStorage
   const loadAITimelineData = useCallback(() => {
     try {
@@ -207,21 +175,17 @@ export const TimelineCreated = () => {
         const parsedAIData = JSON.parse(savedAIData);
         if (Array.isArray(parsedAIData)) {
           setAiTimelineData(parsedAIData);
-          console.log(`Loaded ${parsedAIData.length} AI timeline entries`);
         }
       } else {
         setAiTimelineData([]);
       }
     } catch (error) {
-      console.error('Error loading AI timeline data:', error);
       setAiTimelineData([]);
     }
   }, []);
-
   // Combine timeline data from multiple sources
   const combineTimelineData = useCallback(() => {
     const combined = [];
-    
     // Add regular timeline entries (encrypted vault)
     timelineData.forEach(item => {
       combined.push({
@@ -230,7 +194,6 @@ export const TimelineCreated = () => {
         sortTimestamp: item.timestamp || Date.now()
       });
     });
-    
     // Add AI timeline entries (local processing)
     aiTimelineData.forEach(item => {
       combined.push({
@@ -239,7 +202,6 @@ export const TimelineCreated = () => {
         sortTimestamp: new Date(item.createdAt).getTime()
       });
     });
-
     // Add Bonded services timeline entries (real-time)
     bondedTimeline.forEach(item => {
       combined.push({
@@ -248,13 +210,10 @@ export const TimelineCreated = () => {
         sortTimestamp: item.timestamp || Date.now()
       });
     });
-    
     // Sort by timestamp, newest first
     combined.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
-    
     setCombinedTimelineData(combined);
   }, [timelineData, aiTimelineData, bondedTimeline]);
-
   // Load timeline data when services are initialized
   useEffect(() => {
     if (isInitialized && !servicesLoading) {
@@ -262,12 +221,10 @@ export const TimelineCreated = () => {
     loadAITimelineData();
     }
   }, [isInitialized, servicesLoading, loadEncryptedTimeline, loadAITimelineData]);
-
   // Combine data when any timeline changes
   useEffect(() => {
     combineTimelineData();
   }, [combineTimelineData]);
-
   // Set up auto AI scanner observer
   useEffect(() => {
     const aiScannerObserver = (event, data) => {
@@ -279,19 +236,29 @@ export const TimelineCreated = () => {
         }
       }
     };
-
     autoAIScanner.addObserver(aiScannerObserver);
-
     return () => {
       autoAIScanner.removeObserver(aiScannerObserver);
     };
   }, [loadAITimelineData, loadEncryptedTimeline, isInitialized]);
-
   // Enhanced evidence processing for media selection
   const handleMediaSelected = async (selectedFiles, groupedByDate) => {
     try {
       setProcessingEvidence(true);
-      
+      // Check if services are ready
+      if (!isInitialized) {
+        // Store media locally for processing when services are ready
+        for (const [date, files] of Object.entries(groupedByDate)) {
+          updateContentForDate(date, files);
+        }
+        setImportedMediaInfo({
+          mediaCount: selectedFiles.length,
+          dateRange: formatDateRangeForDisplay(groupedByDate)
+        });
+        setShowImportSuccess(true);
+        setTimeout(() => setShowImportSuccess(false), 5000);
+        return;
+      }
       // Process each date group as evidence
       for (const [date, files] of Object.entries(groupedByDate)) {
         const evidencePackage = {
@@ -303,11 +270,13 @@ export const TimelineCreated = () => {
           category: 'relationship',
           type: 'media_collection'
         };
-
         // Process with encryption and upload to canister
-        await processEvidenceWithEncryption(evidencePackage);
+        const result = await processEvidenceWithEncryption(evidencePackage);
+        if (!result.success) {
+          // Still store locally as fallback
+          updateContentForDate(date, files);
+        }
       }
-
       // Show success message
       const totalFiles = selectedFiles.length;
       setImportedMediaInfo({
@@ -315,121 +284,96 @@ export const TimelineCreated = () => {
         dateRange: formatDateRangeForDisplay(groupedByDate)
       });
       setShowImportSuccess(true);
-      
       // Refresh timeline to show new entries
       await loadEncryptedTimeline();
-      
       // Auto-hide success message
       setTimeout(() => setShowImportSuccess(false), 5000);
-      
     } catch (error) {
-      console.error('Media processing error:', error);
       setError(`Failed to process media: ${error.message}`);
     } finally {
       setProcessingEvidence(false);
       setIsMediaScannerOpen(false);
     }
   };
-
   // Enhanced evidence processing with AI and encryption
   const handleProcessEvidenceClick = async () => {
     try {
       setProcessingEvidence(true);
       setError(null);
-      
       // Use the processEvidence from useBondedServices
       const result = await processEvidence();
-      
       if (result.success) {
         // Encrypt and upload the processed evidence
         if (result.evidence) {
           await processEvidenceWithEncryption(result.evidence);
         }
-        
         setShowImportSuccess(true);
         setImportedMediaInfo({
           count: (result.evidence?.photo ? 1 : 0) + (result.evidence?.messages?.length || 0),
           type: result.evidence?.photo ? 'photo and messages' : 'messages'
         });
-        
         // Refresh timeline
         await loadEncryptedTimeline();
-        
         // Hide success message after 3 seconds
         setTimeout(() => setShowImportSuccess(false), 3000);
       } else {
         setError(`Evidence processing failed: ${result.errors?.join(', ') || 'Unknown error'}`);
       }
     } catch (err) {
-      console.error('Evidence processing error:', err);
       setError(`Failed to process evidence: ${err.message}`);
     } finally {
       setProcessingEvidence(false);
     }
   };
-
   // Enhanced timeline refresh with error handling
   const handleRefreshTimeline = async () => {
     try {
       setLoading(true);
       setError(null);
-      
       // Refresh from multiple sources
       await Promise.all([
         loadEncryptedTimeline(),
         refreshTimeline && refreshTimeline(true),
         loadAITimelineData()
       ]);
-      
-      console.log('Timeline refreshed successfully');
     } catch (err) {
-      console.error('Timeline refresh error:', err);
       setError(`Failed to refresh timeline: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
-
   // Handle services errors
   useEffect(() => {
     if (servicesError) {
       setError(`Service error: ${servicesError}`);
     }
   }, [servicesError]);
-
   // Check if we're coming from MediaScanner or MediaImport with imported media
   useEffect(() => {
     if (location.state?.fromMediaScanner || location.state?.fromMediaImport) {
       const { mediaCount, dateRange } = location.state;
       setImportedMediaInfo({ mediaCount, dateRange });
       setShowImportSuccess(true);
-      
       // Reload timeline data to reflect newly imported media
       if (isInitialized) {
         loadEncryptedTimeline();
       }
-      
       // Scroll to top if we have new media
       if (timelineRef.current) {
         timelineRef.current.scrollTo(0, 0);
       }
-      
       // Auto-hide success message after 5 seconds
       const timer = setTimeout(() => {
         setShowImportSuccess(false);
       }, 5000);
-      
       // Clean up location state to prevent showing success on refresh
       window.history.replaceState({}, document.title);
-      
       return () => clearTimeout(timer);
     }
   }, [location, isInitialized, loadEncryptedTimeline]);
-
   // Enhanced scroll animations
   useEffect(() => {
     if (!combinedTimelineData.length) return;
-    
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
@@ -440,33 +384,26 @@ export const TimelineCreated = () => {
       },
       { threshold: 0.3 }
     );
-
     const elements = document.querySelectorAll('.timeline-item');
     elements.forEach(element => observer.observe(element));
-
     return () => elements.forEach(element => observer.unobserve(element));
   }, [combinedTimelineData]);
-
   // Handle initial animation on mount
   useEffect(() => {
     if (!combinedTimelineData.length) return;
-    
     const timer = setTimeout(() => {
       // Animate first 3 items or all items if less than 3
       const itemsToAnimate = Math.min(combinedTimelineData.length, 3);
       const itemIds = combinedTimelineData.slice(0, itemsToAnimate).map(item => item.id);
       setAnimatedItems(itemIds);
     }, 500);
-    
     return () => clearTimeout(timer);
   }, [combinedTimelineData]);
-
   // Utility functions
   const updateContentForDate = (date, files) => {
     try {
       const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
       const dateContent = allContent[date] || [];
-      
       const newContentItems = files.map(file => ({
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: getFileType(file.file.type),
@@ -479,35 +416,28 @@ export const TimelineCreated = () => {
         size: file.size,
         path: file.path
       }));
-      
       allContent[date] = [...dateContent, ...newContentItems];
       localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
     } catch (err) {
-      console.error("Error updating content for date:", err);
     }
   };
-
   const getFileType = (mimeType) => {
     if (mimeType.startsWith('image/')) return 'photo';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('application/pdf')) return 'document';
     return 'file';
   };
-
   const formatDateForDisplay = (date) => {
     try {
       if (!(date instanceof Date) || isNaN(date.getTime())) {
         date = new Date();
       }
-      
       const options = { day: 'numeric', month: 'short', year: 'numeric' };
       return date.toLocaleDateString('en-GB', options);
     } catch (error) {
-      console.error("Error formatting date:", error);
       return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
     }
   };
-
   const determineEvidenceCategory = (item) => {
     if (item.messages > 0 && item.photos > 0) return "relationship";
     if (item.location?.toLowerCase().includes("bank") || 
@@ -518,7 +448,6 @@ export const TimelineCreated = () => {
     if (item.messages > 0) return "communication";
     return "general";
   };
-
   const determineEvidenceType = (item) => {
     if (item.type === 'ai_processed') return "AI Processed";
     if (item.type === 'encrypted_evidence') return "Encrypted Vault";
@@ -527,7 +456,6 @@ export const TimelineCreated = () => {
     if (item.source === 'telegram') return "Telegram";
     return "Manual Upload";
   };
-
   const formatDateRangeForDisplay = (groupedByDate) => {
     const dates = Object.keys(groupedByDate).sort();
     if (dates.length === 1) {
@@ -538,7 +466,6 @@ export const TimelineCreated = () => {
       return `${formatDateForDisplay(new Date(dates[0]))} to ${formatDateForDisplay(new Date(dates[dates.length - 1]))}`;
     }
   };
-
   const getLocationFromFiles = (files) => {
     for (const file of files) {
       if (file.metadata?.resolvedLocation?.city) {
@@ -547,7 +474,6 @@ export const TimelineCreated = () => {
     }
     return "Location Unknown";
   };
-
   // Event handlers
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const handleUploadClick = () => setIsUploadModalOpen(true);
@@ -557,7 +483,6 @@ export const TimelineCreated = () => {
   const handleTimelineTileClick = (date) => navigate(`/timestamp-folder?date=${encodeURIComponent(date)}`);
   const handleScanMediaClick = () => setIsMediaScannerOpen(true);
   const handleCloseMediaScanner = () => setIsMediaScannerOpen(false);
-
   // Enhanced timeline content rendering
   const renderTimelineContent = () => {
     if (loading || servicesLoading) {
@@ -578,7 +503,6 @@ export const TimelineCreated = () => {
         </div>
       );
     }
-    
     if (error) {
       return (
         <div className="timeline-error">
@@ -596,7 +520,6 @@ export const TimelineCreated = () => {
         </div>
       );
     }
-
     if (processingEvidence) {
       return (
         <div className="timeline-processing">
@@ -623,7 +546,6 @@ export const TimelineCreated = () => {
         </div>
       );
     }
-    
     if (combinedTimelineData.length === 0) {
       return (
         <div className="empty-timeline">
@@ -652,7 +574,6 @@ export const TimelineCreated = () => {
         </div>
       );
     }
-    
     return (
       <>
         {/* Evidence Statistics Bar */}
@@ -684,7 +605,6 @@ export const TimelineCreated = () => {
             </button>
           </div>
         </div>
-
         {/* Timeline Visualization */}
         <div className="timeline-line">
           <div className="timeline-vertical-line">
@@ -697,7 +617,6 @@ export const TimelineCreated = () => {
             ))}
           </div>
         </div>
-
         {/* Timeline Entries */}
         {combinedTimelineData.map((item, index) => {
           if (item.type === 'ai_processed') {
@@ -723,7 +642,6 @@ export const TimelineCreated = () => {
                     <div className="encryption-badge" title="End-to-end encrypted">🔒</div>
                   )}
             </div>
-            
             <TimelineTileWrapper 
               className={`timeline-tile-${Math.min(index + 1, 3)}`}
                   timelineTileText={`${item.messages || 0} Messages`}
@@ -747,7 +665,6 @@ export const TimelineCreated = () => {
             );
           }
         })}
-        
         <div className="timeline-end">
           <div className="timeline-end-dot" />
           <p className="timeline-end-text">Keep building your evidence timeline</p>
@@ -763,7 +680,6 @@ export const TimelineCreated = () => {
       </>
     );
   };
-
   return (
     <div className="timeline-created">
       {isMenuOpen && <MenuFrame onClose={toggleMenu} />}
@@ -780,7 +696,6 @@ export const TimelineCreated = () => {
           </div>
         </div>
       )}
-      
       <div className="timeline-container">
         <TopAppBar
           onMenuToggle={toggleMenu}
@@ -788,7 +703,6 @@ export const TimelineCreated = () => {
           onScanMediaClick={handleScanMediaClick}
           onExportClick={handleExportClick}
         />
-        
         {showImportSuccess && importedMediaInfo && (
           <div className="import-success-banner">
             <div className="success-icon">✅</div>
@@ -803,7 +717,6 @@ export const TimelineCreated = () => {
             </div>
           </div>
         )}
-
         {/* Upload Progress Banner */}
         {isUploadDue && (
           <div className="upload-due-banner">
@@ -816,7 +729,6 @@ export const TimelineCreated = () => {
             </div>
           </div>
         )}
-        
         <div className="timeline-content-container">
           <div className="timeline-header">
             <div className="frame-header">
@@ -826,7 +738,6 @@ export const TimelineCreated = () => {
               </p>
             </div>
           </div>
-          
           <div className="timeline-content" ref={timelineRef}>
             {renderTimelineContent()}
           </div>

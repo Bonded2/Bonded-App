@@ -10,7 +10,6 @@ import { getUserData, logoutUser } from "../../services/icpUserService";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import { aiClassificationService } from "../../utils/aiClassification";
 import "./style.css";
-
 export const MenuFrame = ({ onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -24,7 +23,6 @@ export const MenuFrame = ({ onClose }) => {
     rejectedCount: 0,
     autoScanEnabled: false
   });
-
   // Load user data when component mounts
   useEffect(() => {
     const userInfo = getUserData();
@@ -33,22 +31,17 @@ export const MenuFrame = ({ onClose }) => {
       email: userInfo.email || "user@example.com",
       avatar: userInfo.avatar || "U",
     });
-
     // Initialize AI status
     updateAiStatus();
-
     // Set up AI scanner observer
     const aiObserver = (event, data) => {
       updateAiStatus();
     };
-
     autoAIScanner.addObserver(aiObserver);
-
     return () => {
       autoAIScanner.removeObserver(aiObserver);
     };
   }, []);
-
   const updateAiStatus = () => {
     const scanStatus = autoAIScanner.getScanStatus();
     setAiStatus({
@@ -60,25 +53,19 @@ export const MenuFrame = ({ onClose }) => {
       autoScanEnabled: scanStatus.settings.autoScanEnabled
     });
   };
-
   const handleLogout = () => {
-    console.log("Logging out...");
     logoutUser();
     onClose();
     navigate('/');
   };
-
   const handleBackClick = () => {
-    console.log("Back button clicked");
     if (onClose) {
       onClose();
     }
   };
-
   const handleEditProfile = () => {
     setShowEditModal(true);
   };
-
   const handleCloseEditModal = () => {
     setShowEditModal(false);
     // Refresh user data after edit
@@ -89,21 +76,17 @@ export const MenuFrame = ({ onClose }) => {
       avatar: userInfo.avatar || "U",
     });
   };
-
   const handleStartAIScan = async () => {
     try {
       await autoAIScanner.startAutoScan();
       updateAiStatus();
     } catch (error) {
-      console.error('Failed to start AI scan:', error);
     }
   };
-
   const handleStopAIScan = () => {
     autoAIScanner.stopAutoScan();
     updateAiStatus();
   };
-
   const handleToggleAutoScan = () => {
     const newSettings = {
       autoScanEnabled: !aiStatus.autoScanEnabled
@@ -111,9 +94,7 @@ export const MenuFrame = ({ onClose }) => {
     autoAIScanner.saveSettings(newSettings);
     updateAiStatus();
   };
-
   const isActive = (path) => location.pathname === path;
-
   return (
     <div className="menu-frame" role="dialog" aria-modal="true" aria-label="Main menu">
       <div className="menu-content">
@@ -123,7 +104,6 @@ export const MenuFrame = ({ onClose }) => {
           </button>
           <h1 className="menu-title">Bonded</h1>
         </div>
-
         <div className="user-profile" aria-label="User profile">
           <div className="avatar" aria-hidden="true">
             <span>{userData.avatar}</span>
@@ -145,9 +125,7 @@ export const MenuFrame = ({ onClose }) => {
             </svg>
           </button>
         </div>
-        
         <div className="menu-divider" role="separator"></div>
-        
         <nav className="menu-nav-items" aria-label="Main navigation">
           {/* AI Data Capture Section */}
           <div className="ai-section">
@@ -157,7 +135,6 @@ export const MenuFrame = ({ onClose }) => {
                 {aiStatus.isInitialized ? '🤖 Ready' : '⚠️ Not Ready'}
               </div>
             </div>
-            
             {/* AI Status Summary */}
             <div className="ai-status-summary">
               <div className="ai-stats">
@@ -176,7 +153,6 @@ export const MenuFrame = ({ onClose }) => {
                   </div>
                 )}
               </div>
-              
               {/* AI Controls */}
               <div className="ai-controls">
                 <button 
@@ -186,7 +162,6 @@ export const MenuFrame = ({ onClose }) => {
                 >
                   {aiStatus.autoScanEnabled ? '🟢 Auto Scan ON' : '🔴 Auto Scan OFF'}
                 </button>
-                
                 {aiStatus.isScanning ? (
                   <button className="ai-action stop" onClick={handleStopAIScan}>
                     ⏹️ Stop Scan
@@ -203,7 +178,6 @@ export const MenuFrame = ({ onClose }) => {
               </div>
             </div>
           </div>
-
           {/* Navigation Links */}
           <Link 
             to="/ai-settings" 
@@ -217,7 +191,6 @@ export const MenuFrame = ({ onClose }) => {
               {aiStatus.isScanning ? 'Scanning...' : 'Configure'}
             </div>
           </Link>
-          
           <Link 
             to="/account" 
             className={`menu-item ${isActive("/account") ? "active" : ""}`}
@@ -227,7 +200,6 @@ export const MenuFrame = ({ onClose }) => {
             <StyleOutlined className="menu-icon" aria-hidden="true" />
             <span className="menu-text">Account Management</span>
           </Link>
-          
           <Link 
             to="/privacy" 
             className={`menu-item ${isActive("/privacy") ? "active" : ""}`}
@@ -237,7 +209,6 @@ export const MenuFrame = ({ onClose }) => {
             <LocationOn2 className="menu-icon" aria-hidden="true" />
             <span className="menu-text">Privacy Policy</span>
           </Link>
-          
           <Link 
             to="/faq" 
             className={`menu-item ${isActive("/faq") ? "active" : ""}`}
@@ -248,7 +219,6 @@ export const MenuFrame = ({ onClose }) => {
             <span className="menu-text">FAQs</span>
           </Link>
         </nav>
-        
         <div className="menu-footer">
           <button onClick={handleLogout} className="logout-button" aria-label="Log out of account">
             <svg className="logout-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true">
@@ -256,14 +226,12 @@ export const MenuFrame = ({ onClose }) => {
             </svg>
             <span>Logout</span>
           </button>
-          
           <div className="app-info" aria-label="App information">
             <p className="app-version">Bonded App v2.0.0</p>
             <p className="copyright">© {new Date().getFullYear()} Bonded. All rights reserved.</p>
           </div>
         </div>
       </div>
-      
       {showEditModal && <EditProfileModal onClose={handleCloseEditModal} />}
     </div>
   );

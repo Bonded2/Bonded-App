@@ -4,11 +4,9 @@ import { MediaScanner } from "../../components/MediaScanner";
 import { InfoModal } from "../../components/InfoModal";
 import { DeleteModal } from "../../components/DeleteModal";
 import "./style.css";
-
 // LocalStorage keys - same as in TimelineCreated
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';
 const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
-
 // Evidence categories for immigration verification
 const EVIDENCE_CATEGORIES = {
   RELATIONSHIP: "relationship",
@@ -18,7 +16,6 @@ const EVIDENCE_CATEGORIES = {
   TRAVEL: "travel",
   DOCUMENT: "document"
 };
-
 export const TimestampFolder = ({ onClose, date: propDate }) => {
   const navigate = useNavigate();
   const { date: paramDate } = useParams();
@@ -31,10 +28,8 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
   const [showImportSuccess, setShowImportSuccess] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  
   // Use date from props or URL params, make sure to decode URL encoded date
   const date = propDate || (paramDate ? decodeURIComponent(paramDate) : null);
-
   // Load content items for this date from localStorage
   useEffect(() => {
     const loadContentItems = () => {
@@ -42,7 +37,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
       try {
         // Get all content from localStorage
         const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
-        
         // Get content specifically for this date
         if (allContent[date]) {
           setContentItems(allContent[date]);
@@ -51,43 +45,33 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
           setContentItems([]);
         }
       } catch (err) {
-        console.error("Error loading content:", err);
         setContentItems([]);
       } finally {
         setLoading(false);
       }
     };
-
     if (date) {
       loadContentItems();
     }
   }, [date]);
-
   // Save content items whenever they change
   useEffect(() => {
     const saveContentItems = () => {
       if (!date || contentItems.length === 0) return;
-      
       try {
         // Get all existing content
         const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
-        
         // Update content for this date
         allContent[date] = contentItems;
-        
         // Save back to localStorage
         localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
-        
         // Update timeline counts after saving
         updateTimelineItemCount();
       } catch (err) {
-        console.error("Error saving content:", err);
       }
     };
-
     saveContentItems();
   }, [contentItems, date]);
-
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -95,47 +79,38 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
       navigate(-1); // Go back to the previous screen (likely TimelineCreated)
     }
   };
-
   const handlePreviewClick = (item) => {
     // Navigate to ImagePreview screen with the selected item ID
     navigate(`/image-preview/${item.id}`);
   };
-
   const handleInfoClick = (item) => {
     setSelectedItem(item);
     setShowInfoModal(true);
   };
-
   const handleDeleteClick = (item) => {
     setSelectedItem(item);
     setShowDeleteModal(true);
   };
-  
   const handleConfirmDelete = (item) => {
     // Remove the item from contentItems
     setContentItems(contentItems.filter(i => i.id !== item.id));
     setShowDeleteModal(false);
   };
-
   const updateTimelineItemCount = () => {
     try {
       // Get timeline data
       const timelineData = JSON.parse(localStorage.getItem(TIMELINE_DATA_KEY) || '[]');
-      
       // Find the entry for this date
       const entry = timelineData.find(item => item.date === date);
-      
       if (entry) {
         // Update the counts based on content types
         const photoCount = contentItems.filter(item => item.type === 'photo' || item.type === 'image').length;
         const messageCount = contentItems.filter(item => item.type === 'message').length;
         const videoCount = contentItems.filter(item => item.type === 'video').length;
         const documentCount = contentItems.filter(item => item.type === 'document').length;
-        
         // Update the counts
         entry.photos = photoCount;
         entry.messages = messageCount;
-        
         // Update the evidence category based on majority content type
         if (documentCount > messageCount && documentCount > photoCount) {
           entry.evidenceCategory = EVIDENCE_CATEGORIES.DOCUMENT;
@@ -144,7 +119,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         } else {
           entry.evidenceCategory = EVIDENCE_CATEGORIES.RELATIONSHIP;
         }
-        
         // Update the image if we have at least one photo
         if (photoCount > 0 && !entry.image) {
           const firstPhoto = contentItems.find(item => item.type === 'photo' || item.type === 'image');
@@ -152,19 +126,15 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             entry.image = firstPhoto.imageUrl;
           }
         }
-        
         // Save back to localStorage
         localStorage.setItem(TIMELINE_DATA_KEY, JSON.stringify(timelineData));
       }
     } catch (err) {
-      console.error("Error updating timeline item count:", err);
     }
   };
-
   const handleScanMedia = () => {
     setShowMediaScannerModal(true);
   };
-
   const handleMediaSelected = (selectedFiles, groupedByDate) => {
     // We're only interested in files for this specific date
     const filesForThisDate = selectedFiles.filter(file => {
@@ -175,12 +145,10 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
       });
       return fileDate === date;
     });
-    
     if (filesForThisDate.length === 0) {
       alert(`No files found for date: ${date}. Please select files from this exact date.`);
       return;
     }
-    
     // Create content items from the selected files
     const newContentItems = filesForThisDate.map(file => {
       // Create object URL safely
@@ -189,12 +157,9 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         if (file.file instanceof Blob) {
           fileImageUrl = URL.createObjectURL(file.file);
         } else {
-          console.warn("Invalid file (not a Blob) detected:", file.name || "unnamed file");
         }
       } catch (err) {
-        console.error("Error creating URL for file:", file.name || "unnamed file", err);
       }
-      
       return {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: getFileType(file.file?.type || "unknown"),
@@ -216,31 +181,24 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         }
       };
     }).filter(item => item.imageUrl !== null); // Filter out items with failed URLs
-
     // Add new content items to the existing ones
     setContentItems(prevItems => [...prevItems, ...newContentItems]);
-    
     // Close the scanner modal
     setShowMediaScannerModal(false);
-    
     // Show success message
     setImportedCount(newContentItems.length);
     setShowImportSuccess(true);
-    
     // Hide success message after 3 seconds
     setTimeout(() => {
       setShowImportSuccess(false);
     }, 3000);
-    
     // Also update the timeline item count
     updateTimelineItemCount(newContentItems.length);
   };
-
   // Determine evidence category based on file type and name
   const determineEvidenceCategory = (mimeType, fileName) => {
     // Logic to determine category based on file name and type
     const lowerFileName = fileName.toLowerCase();
-    
     if (lowerFileName.includes('passport') || lowerFileName.includes('visa') || 
         lowerFileName.includes('document') || lowerFileName.includes('certificate')) {
       return EVIDENCE_CATEGORIES.DOCUMENT;
@@ -260,16 +218,13 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
       return EVIDENCE_CATEGORIES.RELATIONSHIP;
     }
   };
-
   // Check if a file name suggests it's an official document
   const isLikelyOfficialDocument = (fileName) => {
     const officialTerms = ['passport', 'visa', 'certificate', 'license', 'official', 'government', 
                            'id', 'document', 'statement', 'record'];
-    
     const lowerFileName = fileName.toLowerCase();
     return officialTerms.some(term => lowerFileName.includes(term));
   };
-
   const getFileType = (mimeType) => {
     if (mimeType.startsWith('image/')) {
       return 'photo';
@@ -281,21 +236,17 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
       return 'file';
     }
   };
-
   const handleViewAllMedia = () => {
     // Show all media items
     setSelectedCategory('all');
   };
-
   const handleAddMedia = () => {
     // Open the media scanner
     setShowMediaScannerModal(true);
   };
-
   const handleFilterByCategory = (category) => {
     setSelectedCategory(category);
   };
-
   // Filter content items based on selected category
   const filteredItems = selectedCategory === 'all' 
     ? contentItems 
@@ -309,7 +260,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         }
         return true;
       });
-
   const renderIcon = (type) => {
     switch (type) {
       case 'photo':
@@ -350,20 +300,17 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
         );
     }
   };
-
   // Get item counts for display
   const photoCount = contentItems.filter(item => item.type === 'photo').length;
   const videoCount = contentItems.filter(item => item.type === 'video').length;
   const documentCount = contentItems.filter(item => item.type === 'document').length;
   const messageCount = contentItems.filter(item => item.type === 'message').length;
   const totalCount = contentItems.length;
-
   // Count by evidence category
   const evidenceCounts = Object.values(EVIDENCE_CATEGORIES).reduce((acc, category) => {
     acc[category] = contentItems.filter(item => item.evidenceCategory === category).length;
     return acc;
   }, {});
-
   return (
     <div className="timestamp-folder-screen">
       <div className="timestamp-folder-container">
@@ -377,7 +324,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             </div>
             <div className="header-title">{date || "Date not specified"}</div>
           </div>
-          
           {/* Immigration verification status badge */}
           {contentItems.some(item => item.officialDocument) && (
             <div className="verification-status">
@@ -386,14 +332,12 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             </div>
           )}
         </div>
-
         {/* Import success notification */}
         {showImportSuccess && (
           <div className="import-success-notification">
             <p>✅ Successfully imported {importedCount} items for {date}</p>
           </div>
         )}
-
         {/* Evidence category filter chips */}
         {contentItems.length > 0 && (
           <div className="filter-chips">
@@ -403,7 +347,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             >
               All ({totalCount})
             </div>
-            
             {photoCount > 0 && (
               <div 
                 className={`filter-chip ${selectedCategory === 'photos' ? 'active' : ''}`}
@@ -412,7 +355,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
                 Photos ({photoCount})
               </div>
             )}
-            
             {documentCount > 0 && (
               <div 
                 className={`filter-chip ${selectedCategory === 'documents' ? 'active' : ''}`}
@@ -421,7 +363,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
                 Documents ({documentCount})
               </div>
             )}
-            
             {messageCount > 0 && (
               <div 
                 className={`filter-chip ${selectedCategory === 'messages' ? 'active' : ''}`}
@@ -430,7 +371,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
                 Messages ({messageCount})
               </div>
             )}
-            
             {videoCount > 0 && (
               <div 
                 className={`filter-chip ${selectedCategory === 'videos' ? 'active' : ''}`}
@@ -439,7 +379,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
                 Videos ({videoCount})
               </div>
             )}
-            
             {/* Evidence category filters */}
             {Object.entries(evidenceCounts).map(([category, count]) => (
               count > 0 && (
@@ -454,7 +393,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             ))}
           </div>
         )}
-
         {/* Content rows */}
         <div className="timestamp-content">
           {/* Media count summary card */}
@@ -489,7 +427,6 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
               </div>
             </div>
           )}
-
           {loading ? (
             <div className="loading-indicator">
               <div className="loading-spinner"></div>
@@ -514,14 +451,12 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
                       <span className="item-source">{item.source}</span>
                       {item.location && <span className="item-location">{item.location}</span>}
                     </div>
-                    
                     {/* Evidence category badge */}
                     {item.evidenceCategory && (
                       <div className={`evidence-badge ${item.evidenceCategory}`}>
                         {item.evidenceCategory}
                       </div>
                     )}
-                    
                     {/* Official document indicator */}
                     {item.officialDocument && (
                       <div className="official-badge">
@@ -550,13 +485,11 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
               </div>
             ))
           )}
-
           {/* Scan Media button */}
           <button className="upload-btn" onClick={handleScanMedia}>
             <div className="btn-text">Add Immigration Evidence</div>
           </button>
         </div>
-
         {/* Media Scanner Modal */}
         {showMediaScannerModal && (
           <div className="media-scanner-modal">
@@ -569,10 +502,8 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
             </div>
           </div>
         )}
-        
         {/* Info Modal */}
         {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} item={selectedItem} />}
-        
         {/* Delete Modal */}
         {showDeleteModal && (
           <DeleteModal 
@@ -585,13 +516,10 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
     </div>
   );
 };
-
 // Helper function to format file size
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes';
-  
   const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  
   return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
 }; 

@@ -7,10 +7,8 @@
  * - Location validation and security checks
  * - VPN/proxy detection
  */
-
 // Google API key - replace with your actual API key
 const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
-
 // API endpoints for location services
 const LOCATION_APIS = {
   GOOGLE_GEOCODING: `https://maps.googleapis.com/maps/api/geocode/json?key=${GOOGLE_API_KEY}`,
@@ -18,10 +16,8 @@ const LOCATION_APIS = {
   IP_INFO: 'https://ipinfo.io/json', // Removed token for graceful fallback
   COUNTRIES: 'https://restcountries.com/v3.1/all',
 };
-
 // Country flags base URL
 const FLAG_BASE_URL = 'https://flagcdn.com/16x12';
-
 /**
  * Get a list of all countries with flag images
  * @returns {Promise<Array>} Array of country objects with value, label, and flag properties
@@ -33,16 +29,12 @@ export const getAllCountries = async () => {
     if (cachedCountries) {
       return JSON.parse(cachedCountries);
     }
-
     // Fetch countries from API
     const response = await fetch(LOCATION_APIS.COUNTRIES);
-    
     if (!response.ok) {
       throw new Error('Failed to fetch countries');
     }
-    
     const data = await response.json();
-    
     // Format country data
     const countries = data
       .map(country => ({
@@ -54,13 +46,10 @@ export const getAllCountries = async () => {
         latlng: country.latlng
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
-    
     // Cache in session storage
     sessionStorage.setItem('bonded_countries', JSON.stringify(countries));
-    
     return countries;
   } catch (error) {
-    console.error('Error fetching countries:', error);
     // Return a minimal fallback list for emergencies
     return [
       { value: 'US', label: 'United States', flag: `${FLAG_BASE_URL}/us.png` },
@@ -71,7 +60,6 @@ export const getAllCountries = async () => {
     ];
   }
 };
-
 /**
  * Get cities for a specific country using Google Places API
  * @param {string} countryCode - ISO country code (2 characters)
@@ -85,13 +73,10 @@ export const getCitiesByCountry = async (countryCode) => {
     if (cachedCities) {
       return JSON.parse(cachedCities);
     }
-    
     // Note: In a real production app, you would use Google Places API with a proxy server
     // to avoid exposing your API key. For now, we'll still use our mock data
     // since the client-side Places API calls require a proxy due to CORS restrictions
-    
     let cities = [];
-    
     switch (countryCode) {
       case 'US':
         cities = [
@@ -156,17 +141,13 @@ export const getCitiesByCountry = async (countryCode) => {
           { value: 'LC', label: 'Largest City', region: 'Main Region' },
         ];
     }
-    
     // Cache the results
     sessionStorage.setItem(cacheKey, JSON.stringify(cities));
-    
     return cities;
   } catch (error) {
-    console.error(`Error fetching cities for ${countryCode}:`, error);
     return [];
   }
 };
-
 /**
  * Get user's current location using browser's geolocation API
  * @returns {Promise<{lat: number, lng: number}>} Coordinates object
@@ -177,7 +158,6 @@ export const getCurrentLocation = () => {
       reject(new Error('Geolocation is not supported by your browser'));
       return;
     }
-    
     navigator.geolocation.getCurrentPosition(
       (position) => {
         resolve({
@@ -196,7 +176,6 @@ export const getCurrentLocation = () => {
     );
   });
 };
-
 /**
  * Convert coordinates to human-readable location using Google Geocoding API
  * @param {Object} coordinates - {lat, lng} coordinates
@@ -205,13 +184,10 @@ export const getCurrentLocation = () => {
 export const reverseGeocode = async (coordinates) => {
   try {
     const { lat, lng } = coordinates;
-    
     // In a production app, this would be a real call to Google's Geocoding API via a backend proxy
     // For now, we'll simulate the response based on rough coordinates
-    
     // Simulate a delay for a realistic API call
     await new Promise(resolve => setTimeout(resolve, 800));
-    
     // Very basic simulation based on lat/lng ranges
     let locationData = {
       country: 'US',
@@ -220,7 +196,6 @@ export const reverseGeocode = async (coordinates) => {
       fullAddress: '123 Main St, New York, NY, USA',
       postcode: '10001'
     };
-    
     // Extremely simple location simulation based on coordinates
     if (lat > 49 && lat < 60 && lng > -130 && lng < -60) {
       locationData = {
@@ -255,14 +230,11 @@ export const reverseGeocode = async (coordinates) => {
         postcode: '94103'
       };
     }
-    
     return locationData;
   } catch (error) {
-    console.error('Error in reverse geocoding:', error);
     throw new Error('Could not determine location from coordinates');
   }
 };
-
 /**
  * Detect if the user is using a VPN or proxy
  * @returns {Promise<{isVPN: boolean, detail: string}>} VPN detection result
@@ -277,31 +249,25 @@ export const detectVPN = async () => {
         ipInfo: { ip: '127.0.0.1', city: 'Local', region: 'Development', country: 'US' }
       };
     }
-    
     // First get basic IP info
     const response = await fetch(LOCATION_APIS.IP_INFO);
     if (!response.ok) {
       // Instead of throwing, just return a default response
-      console.warn('IP info service unavailable, skipping VPN detection');
       return { 
         isVPN: false, 
         detail: 'VPN detection skipped - service unavailable',
         error: `Status: ${response.status}`
       };
     }
-    
     const ipData = await response.json();
-    
     // Simulate VPN detection logic
     // In reality, this would be a call to a service like ipinfo.io or similar
     const isDatacenter = ipData.hostname?.includes('aws') || 
                          ipData.hostname?.includes('azure') || 
                          ipData.hostname?.includes('cloud');
-    
     const suspiciousOrg = ipData.org?.toLowerCase().includes('vpn') ||
                          ipData.org?.toLowerCase().includes('proxy') ||
                          ipData.org?.toLowerCase().includes('hosting');
-    
     return {
       isVPN: isDatacenter || suspiciousOrg,
       detail: isDatacenter ? 'Datacenter IP detected' : 
@@ -309,12 +275,10 @@ export const detectVPN = async () => {
       ipInfo: ipData
     };
   } catch (error) {
-    console.error('Error detecting VPN:', error);
     // Default to not reporting VPN in case of errors
     return { isVPN: false, detail: 'Unable to verify VPN status', error: error.message };
   }
 };
-
 /**
  * Validate location consistency to detect location spoofing
  * @param {Object} coordinates - {lat, lng} from browser geolocation
@@ -329,34 +293,27 @@ export const validateLocationConsistency = async (coordinates) => {
         message: 'Location validation skipped in development mode'
       };
     }
-    
     // Get IP-based location
     const ipResponse = await fetch(LOCATION_APIS.IP_INFO);
     if (!ipResponse.ok) {
-      console.warn('IP info service unavailable, skipping location validation');
       return { 
         isConsistent: true, 
         message: 'Location validation skipped - service unavailable'
       };
     }
-    
     const ipData = await ipResponse.json();
     const ipLocation = ipData.loc ? ipData.loc.split(',').map(Number) : null;
-    
     // If we don't have IP location data, we can't validate
     if (!ipLocation) {
       return { isConsistent: true, message: 'IP location validation skipped' };
     }
-    
     // Get browser-reported location
     const { lat, lng } = coordinates;
-    
     // Calculate distance between IP location and browser location
     const distance = calculateDistance(
       ipLocation[0], ipLocation[1],
       lat, lng
     );
-    
     // If distance is more than 100km, flag as inconsistent
     if (distance > 100) {
       return {
@@ -365,19 +322,16 @@ export const validateLocationConsistency = async (coordinates) => {
         distance
       };
     }
-    
     return {
       isConsistent: true,
       message: 'Location verified',
       distance
     };
   } catch (error) {
-    console.error('Error validating location consistency:', error);
     // Default to accepting the location in case of errors
     return { isConsistent: true, message: 'Location validation skipped due to error' };
   }
 };
-
 /**
  * Calculate distance between two points using the Haversine formula
  * @private
@@ -394,7 +348,6 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const d = R * c; // Distance in km
   return d;
 };
-
 /**
  * Convert degrees to radians
  * @private

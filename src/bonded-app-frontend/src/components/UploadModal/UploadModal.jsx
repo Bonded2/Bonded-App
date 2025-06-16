@@ -7,21 +7,17 @@ import { useGeoMetadata } from "../../features/geolocation/hooks/useGeoMetadata"
 import { aiClassificationService } from "../../utils/aiClassification";
 import { AIClassificationDemo } from "../AIClassificationDemo";
 import "./style.css";
-
 // Helper to get a simple file type category
 const getFileTypeCategory = (fileNameOrType) => {
   const name = typeof fileNameOrType === 'string' ? fileNameOrType : fileNameOrType.name;
   const type = typeof fileNameOrType === 'string' ? '' : fileNameOrType.type; // MIME type from File object
-
   const extension = name.split('.').pop().toLowerCase();
-
   if (type.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'heic'].includes(extension)) return 'image';
   if (type.startsWith('application/pdf') || ['pdf', 'doc', 'docx', 'txt', 'xls', 'xlsx', 'ppt', 'pptx'].includes(extension)) return 'document';
   if (type.startsWith('video/') || ['mov', 'mp4', 'avi', 'mkv'].includes(extension)) return 'video';
   // Add more categories as needed
   return 'other';
 };
-
 const FileIcon = ({ file }) => {
   const category = getFileTypeCategory(file);
   if (category === 'image') return <Photo1 className="file-item-icon image-icon" />;
@@ -29,17 +25,14 @@ const FileIcon = ({ file }) => {
   // if (category === 'video') return <VideoIcon className="file-item-icon video-icon" />;
   return <span className="file-item-icon generic-icon">📄</span>; // Generic file icon
 };
-
 // Function to check if a file would be excluded by AI filters and settings
 const getExclusionReason = (file, captureSettings, fileTypeOverrides, aiClassificationResult = null) => {
   const category = getFileTypeCategory(file);
   const fileExt = file.name.split('.').pop().toLowerCase();
-
   // Check manual file type overrides first
   if (fileTypeOverrides && fileTypeOverrides[fileExt] === false) {
     return `Manually excluded file type: .${fileExt}`;
   }
-
   // Check AI classification results for images
   if (aiClassificationResult && category === 'image') {
     const exclusion = aiClassificationService.shouldExcludeContent(aiClassificationResult, 'image');
@@ -47,7 +40,6 @@ const getExclusionReason = (file, captureSettings, fileTypeOverrides, aiClassifi
       return `AI Filter: ${exclusion.reason}`;
     }
   }
-
   // Check capture settings
   if (captureSettings) {
     if (category === 'image' && captureSettings.photos === 'none') {
@@ -55,7 +47,6 @@ const getExclusionReason = (file, captureSettings, fileTypeOverrides, aiClassifi
     }
     // Add more checks for 'light', 'medium' (e.g., based on file.size)
     // Example: if (category === 'image' && captureSettings.photos === 'light' && file.size > 1024 * 1024) return "Image too large for 'light' setting.";
-    
     if (category === 'document' && captureSettings.documents === 'none') { // Assuming a 'documents' setting exists
       return "Document capture is set to 'none'.";
     }
@@ -66,7 +57,6 @@ const getExclusionReason = (file, captureSettings, fileTypeOverrides, aiClassifi
   }
   return null; // Not excluded by basic type/level checks
 };
-
 export const UploadModal = ({ 
   onClose, 
   onFilesUpload, 
@@ -82,87 +72,67 @@ export const UploadModal = ({
   const [aiClassificationResults, setAiClassificationResults] = useState({}); // Store AI results by filename
   const [isClassifying, setIsClassifying] = useState(false);
   const [showAIDemo, setShowAIDemo] = useState(false);
-  
   // Get geolocation metadata hook
   const { getMetadataForFile, refreshMetadata } = useGeoMetadata();
-
   // Initialize AI service on component mount
   useEffect(() => {
-    aiClassificationService.initialize().catch(console.error);
+    aiClassificationService.initialize().catch(() => {});
   }, []);
-
   const handleSelectFilesClick = () => {
     fileInputRef.current.click();
   };
-
   const handleFileInputChange = async (e) => {
     const newFiles = Array.from(e.target.files);
     // Prevent duplicates by checking names, simple approach
     const uniqueNewFiles = newFiles.filter(nf => !selectedFiles.some(sf => sf.name === nf.name && sf.size === nf.size));
-    
     setSelectedFiles(prev => [...prev, ...uniqueNewFiles]);
     const newChecked = { ...checkedFiles };
     uniqueNewFiles.forEach(file => newChecked[file.name] = true); // Auto-check new files
     setCheckedFiles(newChecked);
     if(fileInputRef.current) fileInputRef.current.value = ""; 
-
     // Run AI classification on new image files
     await classifyNewFiles(uniqueNewFiles);
   };
-
   // Function to classify new files with AI
   const classifyNewFiles = async (files) => {
     const imageFiles = files.filter(file => getFileTypeCategory(file) === 'image');
-    
     if (imageFiles.length === 0) return;
-
     setIsClassifying(true);
-    
     try {
       const classificationPromises = imageFiles.map(async (file) => {
         try {
           const result = await aiClassificationService.classifyImage(file);
           return { fileName: file.name, result };
         } catch (error) {
-          console.error(`AI classification failed for ${file.name}:`, error);
           return { fileName: file.name, error: error.message };
         }
       });
-
       const results = await Promise.all(classificationPromises);
-      
       // Update classification results state
       const newResults = { ...aiClassificationResults };
       results.forEach(({ fileName, result, error }) => {
         newResults[fileName] = error ? { error } : result;
       });
       setAiClassificationResults(newResults);
-
     } catch (error) {
-      console.error('Batch AI classification failed:', error);
     } finally {
       setIsClassifying(false);
     }
   };
-
   const handleCheckboxChange = (fileName) => {
     setCheckedFiles(prev => ({ ...prev, [fileName]: !prev[fileName] }));
   };
-
   const handleUploadChecked = async () => {
     try {
       setIsPreparingUpload(true);
-      
       // Start by refreshing the geolocation metadata to ensure it's up-to-date
       await refreshMetadata();
-      
       // Filter selected files
       const filesToUpload = selectedFiles.filter(file => checkedFiles[file.name]);
       const finalFilesToUpload = filesToUpload.filter(file => {
         const aiResult = aiClassificationResults[file.name];
         return !getExclusionReason(file, captureSettings, fileTypeOverrides, aiResult);
       });
-      
       if (finalFilesToUpload.length !== filesToUpload.length) {
           // Optionally confirm with user if some checked files will be excluded
           const excludedCount = filesToUpload.length - finalFilesToUpload.length;
@@ -171,19 +141,13 @@ export const UploadModal = ({
               return;
           }
       }
-
       if (finalFilesToUpload.length > 0) {
-        console.log("Preparing files with geolocation metadata...");
-        
         // Attach geolocation metadata to each file
         const filesWithMetadata = await Promise.all(
           finalFilesToUpload.map(async (file) => {
             return await getMetadataForFile(file);
           })
         );
-        
-        console.log("Uploading files with metadata:", filesWithMetadata);
-        
         if (onFilesUpload) {
           onFilesUpload(filesWithMetadata);
         }
@@ -192,13 +156,11 @@ export const UploadModal = ({
         alert("No files selected for upload or all selected files are excluded by filters.");
       }
     } catch (error) {
-      console.error("Error during file upload preparation:", error);
       alert("There was an error preparing your files for upload.");
     } finally {
       setIsPreparingUpload(false);
     }
   };
-
   const filteredFiles = selectedFiles.filter(file => {
     if (currentFilter === "all") return true;
     const category = getFileTypeCategory(file);
@@ -207,7 +169,6 @@ export const UploadModal = ({
     // Add 'videos' filter if that category is added
     return true;
   });
-
   const toggleSelectAll = () => {
     const allVisibleCurrentlyChecked = filteredFiles.length > 0 && filteredFiles.every(file => checkedFiles[file.name]);
     const newCheckedState = { ...checkedFiles };
@@ -216,9 +177,7 @@ export const UploadModal = ({
     });
     setCheckedFiles(newCheckedState);
   };
-  
   const countCheckedFiles = () => Object.values(checkedFiles).filter(Boolean).length;
-
   return (
     <div className="upload-modal-overlay">
       <div className="upload-modal-container">
@@ -235,7 +194,6 @@ export const UploadModal = ({
               <h2>Upload Media</h2>
             </div>
           </div>
-          
           <div className="upload-modal-body">
             {selectedFiles.length === 0 ? (
               <>
@@ -273,7 +231,6 @@ export const UploadModal = ({
                         const isExcluded = !!exclusionReason;
                         const isImage = getFileTypeCategory(file) === 'image';
                         const isCurrentlyClassifying = isImage && !aiResult && isClassifying;
-                        
                         return (
                           <li 
                             key={`${file.name}-${file.lastModified}`}
@@ -342,7 +299,6 @@ export const UploadModal = ({
                     )}
                   </button>
             </div>
-                
                 {/* AI Classification Status */}
                 {(isClassifying || Object.keys(aiClassificationResults).length > 0) && (
                   <div className="ai-classification-status">
@@ -364,7 +320,6 @@ export const UploadModal = ({
               </>
             )}
           </div>
-          
           <input 
             type="file" 
             ref={fileInputRef} 
@@ -375,7 +330,6 @@ export const UploadModal = ({
           />
         </div>
       </div>
-      
       {/* AI Classification Demo Modal */}
       {showAIDemo && (
         <AIClassificationDemo onClose={() => setShowAIDemo(false)} />

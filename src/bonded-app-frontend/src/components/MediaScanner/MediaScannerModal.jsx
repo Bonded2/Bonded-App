@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { MediaScanner } from "./MediaScanner";
 import { useGeoMetadata } from "../../features/geolocation/hooks/useGeoMetadata";
 import "./style.css";
-
 /**
  * Modal wrapper for the MediaScanner component that adds timeline and geolocation integration
  */
@@ -11,15 +10,12 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [status, setStatus] = useState("");
   const [locationStatus, setLocationStatus] = useState("");
-  
   // Get geolocation metadata hook
   const { metadata, isLoading, refreshMetadata, getMetadataForFile } = useGeoMetadata();
-  
   // Refresh metadata when component mounts
   useEffect(() => {
     refreshMetadata();
   }, [refreshMetadata]);
-  
   // Update location status when metadata changes
   useEffect(() => {
     if (isLoading) {
@@ -27,51 +23,37 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
     } else if (metadata) {
       const location = metadata.resolvedLocation?.city || metadata.ipLocation?.city || 'Unknown';
       const country = metadata.resolvedLocation?.countryName || metadata.ipLocation?.countryName || '';
-      
       setLocationStatus(`Location: ${location}${country ? `, ${country}` : ''} ${metadata.vpnCheck ? '(VPN detected)' : '✓'}`);
     }
   }, [metadata, isLoading]);
-  
   // Handle media selection from scanner
   const handleMediaSelect = (files) => {
     setSelectedFiles(files);
     setStatus(`${files.length} files selected. Click "Add to Timeline" to complete.`);
   };
-  
   // Reset selection
   const handleReset = () => {
     setSelectedFiles([]);
     setStatus("");
   };
-  
   /**
    * Group files by date for better organization
    */
   const groupFilesByDate = (files) => {
-    console.log(`Grouping ${files.length} files by date`);
     const groups = {};
-    
     files.forEach(file => {
       // Make sure we have a valid timestamp
       const timestamp = file.timestamp || file.file?.lastModified || Date.now();
-      
       // Create a new Date object
       const date = new Date(timestamp);
-      
       // Format date in a consistent way - YYYY-MM-DD format
       const dateKey = date.toLocaleDateString('en-CA');
-      
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
-      
       groups[dateKey].push(file);
     });
-    
     // Log the grouped files for debugging
-    console.log(`Files grouped into ${Object.keys(groups).length} date groups:`, 
-                Object.keys(groups).map(date => `${date}: ${groups[date].length} files`));
-    
     // Sort files within each date group by timestamp
     Object.keys(groups).forEach(date => {
       groups[date].sort((a, b) => {
@@ -80,10 +62,8 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
         return timestampB - timestampA; // Sort newest first
       });
     });
-    
     return groups;
   };
-  
   // Process selected files with geolocation data and add to timeline
   const processFilesWithGeolocation = async () => {
     try {
@@ -91,62 +71,45 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
         setStatus("Please select at least one file first");
         return;
       }
-      
       setIsProcessing(true);
       setStatus(`Processing ${selectedFiles.length} files with location data...`);
-      
       // First validate all files to make sure they're viable
       const validFiles = selectedFiles.filter(file => {
         // Check if it's actually a valid file
         if (!file || !file.file || !(file.file instanceof Blob)) {
-          console.warn('Invalid file found:', file);
           return false;
         }
-        
         // Additional validation - check if the file has a size and type
         if (!file.file.size || file.file.size <= 0) {
-          console.warn('Zero-sized file found:', file);
           return false;
         }
-        
         // Make sure we have a timestamp
         if (!file.timestamp) {
           // If no timestamp, assign from file.lastModified or current time
           file.timestamp = file.file.lastModified || Date.now();
-          console.warn('Missing timestamp, assigned:', new Date(file.timestamp).toISOString());
         }
-        
         return true;
       });
-      
       if (validFiles.length === 0) {
         throw new Error("No valid files selected. Please try again.");
       }
-      
       if (validFiles.length < selectedFiles.length) {
-        console.warn(`Filtered out ${selectedFiles.length - validFiles.length} invalid files`);
         setStatus(`Warning: ${selectedFiles.length - validFiles.length} invalid files were skipped.`);
       }
-      
       // Refresh geolocation metadata to ensure it's up-to-date
       await refreshMetadata();
-      
       // Ensure we have location data
       if (!metadata) {
         // Wait a bit and try to get metadata again
         setStatus("Waiting for location data...");
         await new Promise(resolve => setTimeout(resolve, 1000));
         await refreshMetadata();
-        
         if (!metadata) {
           setStatus("Warning: Unable to get location data. Files will be imported without location verification.");
         }
       }
-      
       // Group files by date for better organization before attaching metadata
       const filesByDate = groupFilesByDate(validFiles);
-      console.log('Files grouped by date:', Object.keys(filesByDate).length, 'unique dates');
-      
       // Attach metadata to each file
       const filesWithMetadata = validFiles.map(file => {
         return {
@@ -158,19 +121,15 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
           }
         };
       });
-      
       // Call the parent component's onMediaSelected handler
       onMediaSelected(filesWithMetadata, filesByDate);
-      
       setStatus(`Successfully processed ${validFiles.length} files`);
       setIsProcessing(false);
     } catch (error) {
-      console.error("Error processing files:", error);
       setStatus(`Error: ${error.message || "Failed to process files"}`);
       setIsProcessing(false);
     }
   };
-  
   return (
     <div className="media-scanner-modal-overlay">
       <div className="media-scanner-modal-container">
@@ -186,7 +145,6 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
             </svg>
           </button>
         </div>
-        
         <div className="media-scanner-modal-content">
           {locationStatus && (
             <div className="media-scanner-location-status">
@@ -226,17 +184,14 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
               </div>
             </div>
           )}
-        
           <div className="media-scanner-scrollable">
             <MediaScanner onMediaSelected={handleMediaSelect} />
           </div>
-          
           {status && (
             <div className="media-scanner-status">
               {status}
             </div>
           )}
-          
           <div className="media-scanner-actions">
             <div style={{display: 'flex', gap: '8px'}}>
               <button 
@@ -246,7 +201,6 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
               >
                 Cancel
               </button>
-              
               {selectedFiles.length > 0 && (
                 <button
                   className="reset-button"
@@ -262,7 +216,6 @@ export const MediaScannerModal = ({ onClose, onMediaSelected }) => {
                 </button>
               )}
             </div>
-            
             <button 
               className="process-button" 
               onClick={processFilesWithGeolocation}

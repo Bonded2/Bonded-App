@@ -387,7 +387,6 @@ export default defineConfig({
         // Exclude potentially problematic libraries (but keep buffer for @dfinity/agent)
         'crypto-js',
         'jszip',
-        'jspdf',
         // Exclude other CBOR libraries that might have BigNumber constructor issues
         'cbor',
         'cbor-js'
@@ -400,9 +399,7 @@ export default defineConfig({
       'react-router',
       'react-router-dom',
       'scheduler',
-      // Only include hook utilities that don't have hoisting issues
-      'use-callback-ref',
-      'use-composed-ref',
+      // Hook utilities removed due to dependency resolution issues
       // Note: Emotion dependencies removed since react-select replaced
       'jspdf',
       'buffer',

@@ -13,7 +13,6 @@
  * All API calls use free, CORS-enabled public endpoints
  * All responses are cached in sessionStorage for performance
  */
-
 // Constants for cache keys
 const CACHE_KEYS = {
   COUNTRIES: 'bonded_countries',
@@ -21,7 +20,6 @@ const CACHE_KEYS = {
   IP_DATA: 'bonded_ip_data',
   REVERSE_GEO: 'bonded_reverse_geo',
 };
-
 // API endpoints - all CORS-friendly and no API key required
 const APIS = {
   COUNTRIES: 'https://restcountries.com/v3.1/all',
@@ -29,10 +27,8 @@ const APIS = {
   IP_INFO: 'https://ipwho.is',
   CITY_AUTOCOMPLETE: 'https://photon.komoot.io/api/',
 };
-
 // Flag icon base URL
 const FLAG_BASE_URL = 'https://flagcdn.com/16x12';
-
 /**
  * Gets the current device location using the browser's geolocation API
  * 
@@ -45,7 +41,6 @@ export const getCurrentLocation = () => {
       reject(new Error('Geolocation is not supported by your browser'));
       return;
     }
-    
     // Get current position with high accuracy
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -57,7 +52,6 @@ export const getCurrentLocation = () => {
         });
       },
       (error) => {
-        console.error('Geolocation error:', error.message);
         reject(error);
       },
       {
@@ -68,7 +62,6 @@ export const getCurrentLocation = () => {
     );
   });
 };
-
 /**
  * Performs reverse geocoding to convert coordinates to address information
  * Uses OSM Nominatim API (CORS-friendly, no API key required)
@@ -79,16 +72,13 @@ export const getCurrentLocation = () => {
 export const reverseGeocode = async (coordinates) => {
   try {
     const { lat, lng } = coordinates;
-    
     // Create cache key from coordinates (rounded to 4 decimal places for consistency)
     const cacheKey = `${CACHE_KEYS.REVERSE_GEO}_${lat.toFixed(4)}_${lng.toFixed(4)}`;
-    
     // Check cache first
     const cachedData = sessionStorage.getItem(cacheKey);
     if (cachedData) {
       return JSON.parse(cachedData);
     }
-    
     // Prepare request with proper headers to respect Nominatim usage policy
     const url = `${APIS.REVERSE_GEO}?lat=${lat}&lon=${lng}&format=json`;
     const response = await fetch(url, {
@@ -97,13 +87,10 @@ export const reverseGeocode = async (coordinates) => {
         'User-Agent': 'BondedApp/1.0 (https://bonded.app)'
       }
     });
-    
     if (!response.ok) {
       throw new Error(`Reverse geocoding failed: ${response.status}`);
     }
-    
     const data = await response.json();
-    
     // Format the response into a consistent structure
     const locationData = {
       country: data.address.country_code?.toUpperCase() || '',
@@ -115,14 +102,10 @@ export const reverseGeocode = async (coordinates) => {
       osm_id: data.osm_id,
       raw: data,
     };
-    
     // Cache the result
     sessionStorage.setItem(cacheKey, JSON.stringify(locationData));
-    
     return locationData;
   } catch (error) {
-    console.error('Error in reverse geocoding:', error);
-    
     // Return minimal fallback object in case of failure
     return {
       country: '',
@@ -134,7 +117,6 @@ export const reverseGeocode = async (coordinates) => {
     };
   }
 };
-
 /**
  * Get IP-based location data and check for VPN/proxy
  * Uses ipwho.is API (CORS-friendly, no API key required)
@@ -148,22 +130,17 @@ export const getIpLocation = async () => {
     if (cachedData) {
       return JSON.parse(cachedData);
     }
-    
     // Fetch from API
     const response = await fetch(APIS.IP_INFO);
-    
     if (!response.ok) {
       throw new Error(`IP location lookup failed: ${response.status}`);
     }
-    
     const data = await response.json();
-    
     // Detect potential VPN/proxy based on connection type
     const isVpn = data.connection?.type === 'hosting' || 
                  data.connection?.type === 'proxy' || 
                  data.connection?.org?.toLowerCase().includes('vpn') ||
                  data.security?.vpn === true;
-    
     // Format the response
     const ipData = {
       ip: data.ip,
@@ -179,14 +156,10 @@ export const getIpLocation = async () => {
       isp: data.connection?.isp || '',
       raw: data
     };
-    
     // Cache the result
     sessionStorage.setItem(CACHE_KEYS.IP_DATA, JSON.stringify(ipData));
-    
     return ipData;
   } catch (error) {
-    console.error('Error getting IP location:', error);
-    
     // Return minimal fallback object in case of failure
     return {
       ip: '',
@@ -200,7 +173,6 @@ export const getIpLocation = async () => {
     };
   }
 };
-
 /**
  * Validates consistency between device location and IP location
  * 
@@ -219,16 +191,13 @@ export const validateLocationConsistency = (deviceCoords, ipLocation) => {
         message: 'Location validation skipped - insufficient data' 
       };
     }
-    
     // Calculate distance between the two locations
     const distance = calculateDistance(
       deviceCoords.lat, deviceCoords.lng,
       ipLocation.latitude, ipLocation.longitude
     );
-    
     // Within 100km is considered consistent
     const isConsistent = distance <= 100;
-    
     return {
       isConsistent,
       distance: Math.round(distance * 10) / 10, // Round to 1 decimal place
@@ -237,8 +206,6 @@ export const validateLocationConsistency = (deviceCoords, ipLocation) => {
         : `Location discrepancy detected (${Math.round(distance)}km apart)`
     };
   } catch (error) {
-    console.error('Error validating location consistency:', error);
-    
     // Default to accepting the location in case of errors
     return { 
       isConsistent: true, 
@@ -248,7 +215,6 @@ export const validateLocationConsistency = (deviceCoords, ipLocation) => {
     };
   }
 };
-
 /**
  * Get a list of all countries with flag images
  * 
@@ -261,16 +227,12 @@ export const getAllCountries = async () => {
     if (cachedCountries) {
       return JSON.parse(cachedCountries);
     }
-    
     // Fetch from API
     const response = await fetch(APIS.COUNTRIES);
-    
     if (!response.ok) {
       throw new Error('Failed to fetch countries');
     }
-    
     const data = await response.json();
-    
     // Format country data
     const countries = data
       .map(country => ({
@@ -282,14 +244,10 @@ export const getAllCountries = async () => {
         latlng: country.latlng
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
-    
     // Cache the results
     sessionStorage.setItem(CACHE_KEYS.COUNTRIES, JSON.stringify(countries));
-    
     return countries;
   } catch (error) {
-    console.error('Error fetching countries:', error);
-    
     // Return a minimal fallback list
     return [
       { value: 'US', label: 'United States', flag: `${FLAG_BASE_URL}/us.png` },
@@ -300,7 +258,6 @@ export const getAllCountries = async () => {
     ];
   }
 };
-
 /**
  * Get cities for a specific country or matching a search term
  * Uses Photon API (OpenStreetMap data, CORS-friendly)
@@ -312,36 +269,28 @@ export const getAllCountries = async () => {
 export const getCities = async (query, countryCode) => {
   try {
     if (!query && !countryCode) return [];
-    
     // Create a cache key
     const cacheKey = `${CACHE_KEYS.CITIES_PREFIX}${countryCode || ''}_${query || ''}`;
-    
     // Check cache first
     const cachedCities = sessionStorage.getItem(cacheKey);
     if (cachedCities) {
       return JSON.parse(cachedCities);
     }
-    
     // Build query parameters
     let params = new URLSearchParams();
     if (query) params.append('q', query);
     params.append('limit', '10');
-    
     // Add country filter if specified
     if (countryCode) {
       params.append('osm_tag', `place:city`);
       params.append('boundary.country', countryCode.toLowerCase());
     }
-    
     // Fetch from Photon API
     const response = await fetch(`${APIS.CITY_AUTOCOMPLETE}?${params.toString()}`);
-    
     if (!response.ok) {
       throw new Error('Failed to fetch cities');
     }
-    
     const data = await response.json();
-    
     // Format city data
     const cities = data.features.map(feature => {
       const props = feature.properties;
@@ -354,17 +303,13 @@ export const getCities = async (query, countryCode) => {
         coordinates: feature.geometry.coordinates.reverse() // [lat, lng] instead of [lng, lat]
       };
     });
-    
     // Cache the results
     sessionStorage.setItem(cacheKey, JSON.stringify(cities));
-    
     return cities;
   } catch (error) {
-    console.error(`Error fetching cities:`, error);
     return [];
   }
 };
-
 /**
  * Get full geolocation metadata for a file
  * Combines device location, IP location, and validation
@@ -376,33 +321,26 @@ export const getGeoMetadata = async () => {
     // Start with getting device location and IP in parallel
     const [deviceLocationPromise, ipLocationPromise] = await Promise.allSettled([
       getCurrentLocation().catch(err => {
-        console.warn('Failed to get device location:', err.message);
         return null;
       }),
       getIpLocation().catch(err => {
-        console.warn('Failed to get IP location:', err.message);
         return null;
       })
     ]);
-    
     // Extract results from promises
     const deviceLocation = deviceLocationPromise.status === 'fulfilled' ? deviceLocationPromise.value : null;
     const ipLocation = ipLocationPromise.status === 'fulfilled' ? ipLocationPromise.value : null;
-    
     // Get reverse geocoded location if device location is available
     let resolvedLocation = null;
     if (deviceLocation?.lat && deviceLocation?.lng) {
       resolvedLocation = await reverseGeocode(deviceLocation).catch(err => {
-        console.warn('Failed to reverse geocode:', err.message);
         return null;
       });
     }
-    
     // Check location consistency if both are available
     const locationConsistency = deviceLocation && ipLocation 
       ? validateLocationConsistency(deviceLocation, ipLocation)
       : { isConsistent: null, distance: null, message: 'Location validation skipped' };
-    
     // Construct the metadata object
     const metadata = {
       timestamp: new Date().toISOString(),
@@ -425,11 +363,8 @@ export const getGeoMetadata = async () => {
       distance: locationConsistency.distance,
       message: locationConsistency.message
     };
-    
     return metadata;
   } catch (error) {
-    console.error('Error generating location metadata:', error);
-    
     // Return a minimal metadata object in case of failure
     return {
       timestamp: new Date().toISOString(),
@@ -443,9 +378,7 @@ export const getGeoMetadata = async () => {
     };
   }
 };
-
 /* UTILITY FUNCTIONS */
-
 /**
  * Calculate distance between two points using the Haversine formula
  * @param {number} lat1 - Latitude of point 1
@@ -466,7 +399,6 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const d = R * c; // Distance in km
   return d;
 };
-
 /**
  * Convert degrees to radians
  * @param {number} deg - Angle in degrees

@@ -5,7 +5,6 @@ import { EditProfileModal } from "../../components/EditProfileModal";
 import { getUserData, logoutUser, updateUserData } from "../../utils/userState";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import "./style.css";
-
 const AccountTopBar = ({ onBackClick }) => {
   return (
     <div className="account-top-bar">
@@ -18,7 +17,6 @@ const AccountTopBar = ({ onBackClick }) => {
     </div>
   );
 };
-
 export const Account = () => {
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -32,7 +30,6 @@ export const Account = () => {
     currentCity: null,
     currentCountry: null
   });
-  
   // Password change state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -42,60 +39,49 @@ export const Account = () => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-
   // Load user data
   useEffect(() => {
     const loadUserData = () => {
       const data = getUserData();
       setUserData(data);
     };
-
     loadUserData();
   }, []);
-
   const handleBackClick = () => {
     navigate('/timeline');
   };
-
   const handleEditProfile = () => {
     setShowEditModal(true);
   };
-
   const handleCloseEditModal = () => {
     setShowEditModal(false);
     // Refresh user data
     const data = getUserData();
     setUserData(data);
   };
-
   const handleDeleteAccount = () => {
     if (showDeleteConfirm) {
       // Delete account and log out the user
       logoutUser();
-      console.log("Account deleted");
       navigate('/');
     } else {
       setShowDeleteConfirm(true);
       setShowUnbondConfirm(false);
     }
   };
-
   const handleUnbondPartner = () => {
     if (showUnbondConfirm) {
       // Actual unbonding logic would go here
-      console.log("Unbonded from partner");
       navigate('/');
     } else {
       setShowUnbondConfirm(true);
       setShowDeleteConfirm(false);
     }
   };
-
   const cancelAction = () => {
     setShowDeleteConfirm(false);
     setShowUnbondConfirm(false);
   };
-
   // Password change handlers
   const handleTogglePasswordForm = () => {
     setShowPasswordForm(!showPasswordForm);
@@ -110,14 +96,12 @@ export const Account = () => {
       setPasswordSuccess(false);
     }
   };
-
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
     setPasswordData(prev => ({
       ...prev,
       [name]: value
     }));
-    
     // Clear error for this field when typing
     if (passwordErrors[name]) {
       setPasswordErrors(prev => ({
@@ -126,43 +110,32 @@ export const Account = () => {
       }));
     }
   };
-
   const validatePasswordForm = () => {
     const newErrors = {};
-    
     // Simulate checking current password against stored password
     // In a real app, this would verify against backend/stored password
     if (!passwordData.currentPassword) {
       newErrors.currentPassword = "Current password is required";
     }
-    
     if (!passwordData.newPassword) {
       newErrors.newPassword = "New password is required";
     } else if (passwordData.newPassword.length < 8) {
       newErrors.newPassword = "Password must be at least 8 characters";
     }
-    
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-    
     setPasswordErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
-    
     if (!validatePasswordForm()) {
       return;
     }
-    
     // In a real app, this would call an API to change the password
-    console.log("Password changed successfully");
-    
     // Show success message
     setPasswordSuccess(true);
-    
     // Reset form after successful submission
     setTimeout(() => {
       setShowPasswordForm(false);
@@ -174,7 +147,6 @@ export const Account = () => {
       setPasswordSuccess(false);
     }, 2000);
   };
-
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "Not set";
@@ -185,11 +157,9 @@ export const Account = () => {
       return dateString;
     }
   };
-
   return (
     <div className="account-screen">
       <AccountTopBar onBackClick={handleBackClick} />
-
       <div className="account-content">
         <div className="account-section">
           <h2 className="section-title">Profile information</h2>
@@ -227,19 +197,15 @@ export const Account = () => {
           )}
           <button className="edit-button" onClick={handleEditProfile}>Edit Profile</button>
         </div>
-
         <div className="account-divider"></div>
-
         <div className="account-section">
           <h2 className="section-title">Security</h2>
-          
           <button 
             className="account-action-button"
             onClick={handleTogglePasswordForm}
           >
             {showPasswordForm ? "Cancel" : "Change Password"}
           </button>
-          
           {showPasswordForm && (
             <form className="password-form" onSubmit={handlePasswordSubmit}>
               {passwordSuccess ? (
@@ -260,7 +226,6 @@ export const Account = () => {
                       className={passwordErrors.currentPassword ? "input-error" : ""}
                     />
                   </div>
-                  
                   <div className="form-field">
                     <CustomTextField
                       label="New Password"
@@ -273,7 +238,6 @@ export const Account = () => {
                       className={passwordErrors.newPassword ? "input-error" : ""}
                     />
                   </div>
-                  
                   <div className="form-field">
                     <CustomTextField
                       label="Confirm New Password"
@@ -286,7 +250,6 @@ export const Account = () => {
                       className={passwordErrors.confirmPassword ? "input-error" : ""}
                     />
                   </div>
-                  
                   <button type="submit" className="submit-button">
                     Update Password
                   </button>
@@ -295,9 +258,7 @@ export const Account = () => {
             </form>
           )}
         </div>
-
         <div className="account-divider"></div>
-
         <div className="account-section">
           <h2 className="section-title">Partner connection</h2>
           <div className="partner-status">
@@ -309,12 +270,9 @@ export const Account = () => {
             <p className="profile-value">Jane Doe</p>
           </div>
         </div>
-
         <div className="account-divider"></div>
-
         <div className="account-section danger-section">
           <h2 className="section-title danger-title">Unbond from partner</h2>
-          
           {!showUnbondConfirm ? (
             <button 
               className="danger-button" 
@@ -344,12 +302,9 @@ export const Account = () => {
             </>
           )}
         </div>
-
         <div className="account-divider"></div>
-
         <div className="account-section danger-section">
           <h2 className="section-title danger-title">Remove data or delete Account</h2>
-          
           {!showDeleteConfirm ? (
             <button 
               className="danger-button" 
@@ -380,7 +335,6 @@ export const Account = () => {
           )}
         </div>
       </div>
-      
       {showEditModal && <EditProfileModal onClose={handleCloseEditModal} />}
     </div>
   );

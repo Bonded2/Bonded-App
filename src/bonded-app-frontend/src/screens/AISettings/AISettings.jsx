@@ -5,7 +5,6 @@ import { AIClassificationDemo } from "../../components/AIClassificationDemo";
 import { aiClassificationService } from "../../utils/aiClassification";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import "./style.css";
-
 export const AISettings = () => {
   const navigate = useNavigate();
   const [showDemo, setShowDemo] = useState(false);
@@ -29,17 +28,14 @@ export const AISettings = () => {
   const [scannerSettings, setScannerSettings] = useState(autoAIScanner.settings);
   const [scanStatus, setScanStatus] = useState(autoAIScanner.getScanStatus());
   const [scanResults, setScanResults] = useState(null);
-
   useEffect(() => {
     // Load saved settings from localStorage
     const savedSettings = localStorage.getItem('bonded_ai_settings');
     if (savedSettings) {
       setAiSettings(JSON.parse(savedSettings));
     }
-
     // Initialize AI service
     initializeAI();
-
     // Set up auto scanner observer
     const scannerObserver = (event, data) => {
       switch (event) {
@@ -60,14 +56,11 @@ export const AISettings = () => {
           break;
       }
     };
-
     autoAIScanner.addObserver(scannerObserver);
-
     return () => {
       autoAIScanner.removeObserver(scannerObserver);
     };
   }, []);
-
   const initializeAI = async () => {
     setInitializationStatus('Initializing AI models...');
     try {
@@ -75,12 +68,10 @@ export const AISettings = () => {
       setIsInitialized(success);
       setInitializationStatus(success ? 'AI models ready' : 'Failed to initialize AI models');
     } catch (error) {
-      console.error('AI initialization error:', error);
       setInitializationStatus('AI initialization failed');
       setIsInitialized(false);
     }
   };
-
   const handleSettingChange = (category, setting, value) => {
     const newSettings = {
       ...aiSettings,
@@ -90,11 +81,9 @@ export const AISettings = () => {
       }
     };
     setAiSettings(newSettings);
-    
     // Save to localStorage
     localStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
   };
-
   const handleScannerSettingChange = (setting, value) => {
     const newSettings = {
       ...scannerSettings,
@@ -102,23 +91,18 @@ export const AISettings = () => {
     };
     autoAIScanner.saveSettings(newSettings);
   };
-
   const handleStartAutoScan = async () => {
     try {
       await autoAIScanner.startAutoScan();
     } catch (error) {
-      console.error('Failed to start auto scan:', error);
     }
   };
-
   const handleStopAutoScan = () => {
     autoAIScanner.stopAutoScan();
   };
-
   const handleBack = () => {
     navigate(-1);
   };
-
   return (
     <div className="ai-settings-screen">
       <TopAppBar 
@@ -126,7 +110,6 @@ export const AISettings = () => {
         showBackButton={true}
         onBackClick={handleBack}
       />
-      
       <div className="ai-settings-content">
         <div className="ai-hero-section">
           <div className="ai-hero-icon">🤖</div>
@@ -151,12 +134,10 @@ export const AISettings = () => {
             </div>
           </div>
         </div>
-
         <div className="settings-header">
           <h1>AI Classification Settings</h1>
           <p>Configure AI models for content filtering and analysis</p>
         </div>
-
         {/* AI Status */}
         <div className="ai-status-section">
           <h2>AI Models Status</h2>
@@ -166,7 +147,6 @@ export const AISettings = () => {
             </span>
             <span className="status-text">{initializationStatus}</span>
           </div>
-          
           <div className="model-info">
             <div className="model-card">
               <h3>Computer Vision</h3>
@@ -174,7 +154,6 @@ export const AISettings = () => {
               <p><strong>Purpose:</strong> Human detection, nudity filtering</p>
               <p><strong>Status:</strong> {isInitialized ? 'Ready' : 'Not initialized'}</p>
             </div>
-            
             <div className="model-card">
               <h3>Textual Analysis</h3>
               <p><strong>Model:</strong> TinyBert</p>
@@ -183,11 +162,9 @@ export const AISettings = () => {
             </div>
           </div>
         </div>
-
         {/* Computer Vision Settings */}
         <div className="settings-section">
           <h2>Computer Vision Settings</h2>
-          
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -203,7 +180,6 @@ export const AISettings = () => {
               Use AI to analyze images for content appropriateness
             </p>
           </div>
-
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -220,7 +196,6 @@ export const AISettings = () => {
               Require at least one human to be detected in photos
             </p>
           </div>
-
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -237,7 +212,6 @@ export const AISettings = () => {
               Automatically exclude images containing nudity or explicit content
             </p>
           </div>
-
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -254,7 +228,6 @@ export const AISettings = () => {
               Identify faces of relationship partners (future feature)
             </p>
           </div>
-
           <div className="setting-item">
             <label className="setting-label">
               Confidence Threshold: {(aiSettings.computerVision.confidenceThreshold * 100).toFixed(0)}%
@@ -274,11 +247,9 @@ export const AISettings = () => {
             </p>
           </div>
         </div>
-
         {/* Textual Analysis Settings */}
         <div className="settings-section">
           <h2>Textual Analysis Settings</h2>
-          
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -294,7 +265,6 @@ export const AISettings = () => {
               Use AI to analyze text messages for content appropriateness
             </p>
           </div>
-
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -311,7 +281,6 @@ export const AISettings = () => {
               Automatically exclude messages containing sexually explicit content
             </p>
           </div>
-
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -328,7 +297,6 @@ export const AISettings = () => {
               Analyze emotional tone of messages (informational only)
             </p>
           </div>
-
           <div className="setting-item">
             <label className="setting-label">
               Confidence Threshold: {(aiSettings.textualAnalysis.confidenceThreshold * 100).toFixed(0)}%
@@ -348,12 +316,10 @@ export const AISettings = () => {
             </p>
           </div>
         </div>
-
         {/* Automatic Gallery Scanning */}
         <div className="settings-section">
           <h2>Automatic Gallery Scanning</h2>
           <p>AI automatically scans your device gallery and updates timelines intelligently</p>
-          
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -369,7 +335,6 @@ export const AISettings = () => {
               Automatically scan device gallery for appropriate content
             </p>
           </div>
-
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -386,7 +351,6 @@ export const AISettings = () => {
               Continue scanning in the background at regular intervals
             </p>
           </div>
-
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -403,7 +367,6 @@ export const AISettings = () => {
               Automatically organize approved content into timeline entries
             </p>
           </div>
-
           <div className="setting-item">
             <label className="setting-label">
               Scan Interval: {Math.round(scannerSettings.scanInterval / 1000)}s
@@ -422,7 +385,6 @@ export const AISettings = () => {
               How often to scan for new content (10s - 5min)
             </p>
           </div>
-
           <div className="setting-item">
             <label className="setting-label">
               Batch Size: {scannerSettings.batchSize} files
@@ -441,7 +403,6 @@ export const AISettings = () => {
               Number of files to process simultaneously
             </p>
           </div>
-
           {/* Scan Status */}
           <div className="scan-status-section">
             <h3>Scan Status</h3>
@@ -452,7 +413,6 @@ export const AISettings = () => {
                   {scanStatus.isScanning ? '🔄 Scanning...' : '⏸️ Idle'}
                 </span>
               </div>
-              
               {scanStatus.isScanning && (
                 <>
                   <div className="status-row">
@@ -469,18 +429,15 @@ export const AISettings = () => {
                   </div>
                 </>
               )}
-              
               <div className="status-row">
                 <span className="status-label">Approved:</span>
                 <span className="status-value approved">{scanStatus.approvedCount} files</span>
               </div>
-              
               <div className="status-row">
                 <span className="status-label">Filtered:</span>
                 <span className="status-value rejected">{scanStatus.rejectedCount} files</span>
               </div>
             </div>
-
             <div className="scan-controls">
               {!scanStatus.isScanning ? (
                 <button 
@@ -499,7 +456,6 @@ export const AISettings = () => {
                 </button>
               )}
             </div>
-
             {scanResults && (
               <div className="scan-results">
                 <h4>Last Scan Results</h4>
@@ -513,12 +469,10 @@ export const AISettings = () => {
             )}
           </div>
         </div>
-
         {/* Test AI Models */}
         <div className="settings-section">
           <h2>Test AI Models</h2>
           <p>Test the AI classification models with your own content</p>
-          
           <button 
             className="test-ai-button"
             onClick={() => setShowDemo(true)}
@@ -527,7 +481,6 @@ export const AISettings = () => {
             Open AI Classification Demo
           </button>
         </div>
-
         {/* MVP Information */}
         <div className="settings-section mvp-info">
           <h2>MVP Information</h2>
@@ -536,12 +489,10 @@ export const AISettings = () => {
               <h3>Pre-trained Models</h3>
               <p>Both AI models are pre-trained and ready to use. No custom training is required for the MVP.</p>
             </div>
-            
             <div className="info-item">
               <h3>Content Filtering</h3>
               <p>Images and messages are automatically filtered based on AI analysis to ensure appropriate content for immigration evidence.</p>
             </div>
-            
             <div className="info-item">
               <h3>Privacy & Security</h3>
               <p>All AI processing happens locally or through secure endpoints. Your content is never stored or shared.</p>
@@ -549,7 +500,6 @@ export const AISettings = () => {
           </div>
         </div>
       </div>
-
       {/* AI Classification Demo Modal */}
       {showDemo && (
         <AIClassificationDemo onClose={() => setShowDemo(false)} />

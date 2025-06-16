@@ -5,7 +5,6 @@ import { Photo1 } from "../../../icons/Photo1";
 import { LocationOn2 } from "../../../icons/LocationOn2";
 import { Chat4 } from "../../../icons/Chat4";
 import "./capture.css";
-
 // Example file types for manual override - this could be more extensive
 const COMMON_FILE_TYPES = [
   { id: "jpg", label: "JPG Images", type: "image" },
@@ -17,21 +16,18 @@ const COMMON_FILE_TYPES = [
   { id: "mov", label: "MOV Videos", type: "video" },
   { id: "mp4", label: "MP4 Videos", type: "video" },
 ];
-
 // Setting type descriptions
 const SETTING_DESCRIPTIONS = {
   photos: "Control what photos are captured from your device for your timeline.",
   geolocation: "Manage location data shared with your partner for joint activities.",
   telegram: "Define how chats and messages are used to build your relationship timeline."
 };
-
 // Setting type icons
 const SETTING_ICONS = {
   photos: Photo1,
   geolocation: LocationOn2,
   telegram: Chat4
 };
-
 // Level descriptions
 const LEVEL_DESCRIPTIONS = {
   none: "Nothing will be captured",
@@ -39,7 +35,6 @@ const LEVEL_DESCRIPTIONS = {
   medium: "Standard level of detail is captured",
   full: "Maximum detail is captured for your timeline"
 };
-
 const CaptureTopBar = ({ onBackClick }) => {
   return (
     <header className="capture-top-bar">
@@ -52,7 +47,6 @@ const CaptureTopBar = ({ onBackClick }) => {
     </header>
   );
 };
-
 export const Capture = () => {
   const navigate = useNavigate();
   const [captureSettings, setCaptureSettings] = useState({
@@ -60,37 +54,31 @@ export const Capture = () => {
     geolocation: "full",
     telegram: "full"
   });
-  
   // State for manual file type overrides
   // Initial state could be all true or based on some defaults
   const [fileTypeOverrides, setFileTypeOverrides] = useState(
     COMMON_FILE_TYPES.reduce((acc, ft) => ({ ...acc, [ft.id]: true }), {})
   );
-
   // State for managing which override section is open
   const [openOverrides, setOpenOverrides] = useState(null); // e.g., 'photos', 'documents'
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewContent, setPreviewContent] = useState({ allowed: [], blocked: [] });
   const [activeSettings, setActiveSettings] = useState(null);
-  
   const sliderRefs = {
     photos: useRef(null),
     geolocation: useRef(null),
     telegram: useRef(null)
   };
-  
   const thumbRefs = {
     photos: useRef(null),
     geolocation: useRef(null),
     telegram: useRef(null)
   };
-  
   const [isDragging, setIsDragging] = useState({
     photos: false,
     geolocation: false,
     telegram: false
   });
-
   const getPositionFromLevel = (level) => {
     switch(level) {
       case "none": return 0;
@@ -100,37 +88,31 @@ export const Capture = () => {
       default: return 100;
     }
   };
-  
   const getLevelFromPosition = (percentage) => {
     if (percentage <= 16.5) return "none";
     if (percentage <= 49.5) return "light";
     if (percentage <= 82.5) return "medium";
     return "full";
   };
-
   const handleToggleSetting = (setting, level) => {
     setCaptureSettings((prev) => ({
       ...prev,
       [setting]: level
     }));
   };
-  
   const handleFileTypeOverrideChange = (fileTypeId) => {
     setFileTypeOverrides((prev) => ({
       ...prev,
       [fileTypeId]: !prev[fileTypeId],
     }));
   };
-
   const toggleOverrideSection = (section) => {
     setOpenOverrides(openOverrides === section ? null : section);
   };
-
   const handleShowPreview = (settingType) => {
     // This is a simplified preview. A real implementation would be more complex.
     let allowed = ["example_photo_allowed.jpg", "travel_doc_allowed.pdf"];
     let blocked = ["work_document_blocked.docx", "screenshot_blocked.png"];
-
     // Customize based on settingType and current levels/overrides
     if (settingType === "photos") {
       allowed = COMMON_FILE_TYPES.filter(ft => ft.type === "image" && fileTypeOverrides[ft.id]).map(ft => `photo_example.${ft.id}`);
@@ -140,16 +122,13 @@ export const Capture = () => {
       }
     }
     // Add more logic for other setting types (documents, videos, telegram etc.)
-
     setActiveSettings(settingType);
     setPreviewContent({ allowed, blocked });
     setShowPreviewModal(true);
   };
-  
   const handleBackClick = () => {
     navigate(-1);
   };
-  
   // Mouse events
   const startDrag = (setting, e) => {
     e.preventDefault();
@@ -158,34 +137,26 @@ export const Capture = () => {
     document.addEventListener("mouseup", () => stopDrag(setting));
     handleDrag(setting, e);
   };
-  
   const handleDrag = (setting, e) => {
     if (!isDragging[setting] || !sliderRefs[setting].current) return;
-    
     const slider = sliderRefs[setting].current;
     const rect = slider.getBoundingClientRect();
     let percentage = ((e.clientX - rect.left) / rect.width) * 100;
-    
     // Constrain percentage between 0 and 100
     percentage = Math.max(0, Math.min(100, percentage));
-    
     // Snap to the nearest position (0%, 33%, 66%, 100%)
     if (percentage <= 16.5) percentage = 0;
     else if (percentage <= 49.5) percentage = 33;
     else if (percentage <= 82.5) percentage = 66;
     else percentage = 100;
-    
     const level = getLevelFromPosition(percentage);
-    
     handleToggleSetting(setting, level);
   };
-  
   const stopDrag = (setting) => {
     setIsDragging({...isDragging, [setting]: false});
     document.removeEventListener("mousemove", (e) => handleDrag(setting, e));
     document.removeEventListener("mouseup", () => stopDrag(setting));
   };
-  
   // Touch events
   const startTouch = (setting, e) => {
     // Only prevent default for the slider interaction
@@ -193,44 +164,33 @@ export const Capture = () => {
       e.preventDefault();
     }
     setIsDragging({...isDragging, [setting]: true});
-    
     // Use unique functions for each setting to avoid closure issues
     const handleTouchMove = (event) => handleTouch(setting, event);
     const handleTouchEnd = () => stopTouch(setting, handleTouchMove, handleTouchEnd);
-    
     document.addEventListener("touchmove", handleTouchMove, { passive: false });
     document.addEventListener("touchend", handleTouchEnd);
     document.addEventListener("touchcancel", handleTouchEnd);
-    
     handleTouch(setting, e);
   };
-  
   const handleTouch = (setting, e) => {
     if (!isDragging[setting] || !sliderRefs[setting].current) return;
     e.preventDefault(); // Prevent scrolling while dragging
-    
     const slider = sliderRefs[setting].current;
     const rect = slider.getBoundingClientRect();
     const touch = e.touches[0];
     let percentage = ((touch.clientX - rect.left) / rect.width) * 100;
-    
     // Constrain percentage between 0 and 100
     percentage = Math.max(0, Math.min(100, percentage));
-    
     // Snap to the nearest position (0%, 33%, 66%, 100%)
     if (percentage <= 16.5) percentage = 0;
     else if (percentage <= 49.5) percentage = 33;
     else if (percentage <= 82.5) percentage = 66;
     else percentage = 100;
-    
     const level = getLevelFromPosition(percentage);
-    
     handleToggleSetting(setting, level);
   };
-  
   const stopTouch = (setting, touchMoveHandler, touchEndHandler) => {
     setIsDragging({...isDragging, [setting]: false});
-    
     if (touchMoveHandler) {
       document.removeEventListener("touchmove", touchMoveHandler);
     }
@@ -239,37 +199,28 @@ export const Capture = () => {
       document.removeEventListener("touchcancel", touchEndHandler);
     }
   };
-  
   const handleSliderClick = (setting, e) => {
     const slider = sliderRefs[setting].current;
     const rect = slider.getBoundingClientRect();
     let percentage = ((e.clientX - rect.left) / rect.width) * 100;
-    
     // Constrain percentage between 0 and 100
     percentage = Math.max(0, Math.min(100, percentage));
-    
     // Snap to the nearest position (0%, 33%, 66%, 100%)
     if (percentage <= 16.5) percentage = 0;
     else if (percentage <= 49.5) percentage = 33;
     else if (percentage <= 82.5) percentage = 66;
     else percentage = 100;
-    
     const level = getLevelFromPosition(percentage);
-    
     handleToggleSetting(setting, level);
   };
-  
   // Handle save button click
   const handleSave = () => {
-    console.log("Saving settings:", captureSettings, "Overrides:", fileTypeOverrides);
     localStorage.setItem("captureSettings", JSON.stringify(captureSettings));
     localStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
-    
     const toast = document.createElement("div");
     toast.className = "toast success";
     toast.textContent = "Settings saved successfully!";
     document.body.appendChild(toast);
-    
     // Remove toast after 3 seconds
     setTimeout(() => {
       toast.classList.add("fadeout");
@@ -278,7 +229,6 @@ export const Capture = () => {
       }, 300);
     }, 3000);
   };
-  
   // Update thumb positions when settings change
   useEffect(() => {
     Object.keys(captureSettings).forEach(setting => {
@@ -288,7 +238,6 @@ export const Capture = () => {
       }
     });
   }, [captureSettings]);
-
   // Placeholder: useEffect for smart-configuration on first run
   useEffect(() => {
     const isFirstRun = !localStorage.getItem("settings_configured");
@@ -296,10 +245,8 @@ export const Capture = () => {
       // TODO: Fetch user nationality/region (e.g., from profile data)
       const userNationality = "US"; // Example
       const userRegion = "North America"; // Example
-
       let initialSettings = { ...captureSettings };
       let initialOverrides = { ...fileTypeOverrides };
-
       // Example Logic (replace with actual smart-configuration)
       if (userNationality === "DE") {
         initialSettings.telegram = "medium";
@@ -308,11 +255,9 @@ export const Capture = () => {
         // Different defaults for Asia
         initialSettings.photos = "medium";
       }
-      
       setCaptureSettings(initialSettings);
       setFileTypeOverrides(initialOverrides);
       localStorage.setItem("settings_configured", "true");
-      console.log("Smart-configured default settings based on (mocked) nationality/region.");
     }
     // Load saved settings if not first run
     const savedCaptureSettings = localStorage.getItem("captureSettings");
@@ -323,9 +268,7 @@ export const Capture = () => {
     if (savedFileTypeOverrides) {
       setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
     }
-
   }, []); // Empty dependency array means this runs once on mount
-
   // Helper function to capitalize setting names
   const formatSettingName = (settingKey) => {
     const formatMap = {
@@ -333,14 +276,11 @@ export const Capture = () => {
       geolocation: "Location & Places",
       telegram: "Chats & Messages"
     };
-    
     return formatMap[settingKey] || settingKey.charAt(0).toUpperCase() + settingKey.slice(1);
   };
-
   return (
     <div className="capture-screen">
       <CaptureTopBar onBackClick={handleBackClick} />
-
       <div className="capture-content" id="capture-content-scrollable">
         <div className="capture-description">
           <p>
@@ -348,7 +288,6 @@ export const Capture = () => {
             You can adjust these settings anytime. Your data is private and only accessible by you and your partner.
           </p>
         </div>
-        
         {/* Media Scanner Demo Link */}
         <div className="media-scanner-link-container">
           <button 
@@ -358,7 +297,6 @@ export const Capture = () => {
             Try Media Import
           </button>
         </div>
-        
         <div className="capture-settings-list">
           {Object.keys(captureSettings).map((settingKey) => {
             const SettingIcon = SETTING_ICONS[settingKey];
@@ -368,22 +306,18 @@ export const Capture = () => {
                   {SettingIcon && <SettingIcon className="setting-icon" />}
                   <h2>{formatSettingName(settingKey)}</h2>
                 </div>
-                
                 <div className="setting-description">
                   <p>{SETTING_DESCRIPTIONS[settingKey]}</p>
                 </div>
-                
                 <div className="current-level-indicator">
                   <span className="level-label">Current level:</span>
                   <span className={`level-value ${captureSettings[settingKey]}`}>
                     {captureSettings[settingKey].charAt(0).toUpperCase() + captureSettings[settingKey].slice(1)}
                   </span>
                 </div>
-                
                 <div className="level-description">
                   <p>{LEVEL_DESCRIPTIONS[captureSettings[settingKey]]}</p>
                 </div>
-                
                 <div className="setting-slider-container">
                   <div 
                     className="slider-track" 
@@ -414,7 +348,6 @@ export const Capture = () => {
                     ))}
                   </div>
                 </div>
-
                 {/* Filter Preview and Manual Override Section */} 
                 {(settingKey === 'photos') && (
                   <div className="filter-controls">
@@ -449,18 +382,15 @@ export const Capture = () => {
             );
           })}
         </div>
-        
         <div className="capture-save-section">
           <button className="save-button" onClick={handleSave}>Save settings</button>
         </div>
       </div>
-
       {showPreviewModal && (
         <div className="preview-modal" onClick={() => setShowPreviewModal(false)}>
           <div className="preview-modal-content" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowPreviewModal(false)} className="close-modal-button">×</button>
             <h3>Filter Preview: {formatSettingName(activeSettings || '')}</h3>
-            
             <div className="filter-preview-level">
               <span className="preview-level-label">Current Level:</span>
               <span className={`preview-level-value ${captureSettings[activeSettings || 'photos']}`}>
@@ -468,13 +398,11 @@ export const Capture = () => {
                 captureSettings[activeSettings || 'photos'].slice(1)}
               </span>
             </div>
-            
             <h4>Allowed Examples:</h4>
             <ul className="file-list allowed">
               {previewContent.allowed.map((item, i) => <li key={`allowed-${i}`}>{item}</li>)}
             </ul>
             {previewContent.allowed.length === 0 && <p>No files would be allowed with current settings.</p>}
-            
             <h4>Blocked Examples:</h4>
             <ul className="file-list blocked">
               {previewContent.blocked.map((item, i) => <li key={`blocked-${i}`}>{item}</li>)}

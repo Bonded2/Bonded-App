@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import './style.css';
-
 export const PWAInstallPrompt = () => {
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -8,20 +7,16 @@ export const PWAInstallPrompt = () => {
   const [isStandalone, setIsStandalone] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [browserInfo, setBrowserInfo] = useState('');
-
   useEffect(() => {
     // Detect iOS devices
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(iOS);
-    
     // Detect Android devices
     const android = /Android/.test(navigator.userAgent);
     setIsAndroid(android);
-    
     // Check if app is already installed
     const standalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
     setIsStandalone(standalone);
-    
     // Detect browser
     const getBrowserInfo = () => {
       const ua = navigator.userAgent;
@@ -37,9 +32,7 @@ export const PWAInstallPrompt = () => {
       if (/Opera/i.test(ua)) return 'Opera';
       return 'Unknown Browser';
     };
-    
     setBrowserInfo(getBrowserInfo());
-
     const handleBeforeInstallPrompt = (e) => {
       // Prevent the mini-infobar from appearing on mobile
       e.preventDefault();
@@ -50,10 +43,8 @@ export const PWAInstallPrompt = () => {
         setShowPrompt(true);
       }, 3000);
     };
-
     // Only add event listener for browsers that support it (mainly Chromium-based)
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
     // Only show custom prompt if:
     // 1. Not already in standalone mode
     // 2. iOS device (since they don't support beforeinstallprompt) OR
@@ -64,30 +55,24 @@ export const PWAInstallPrompt = () => {
         if (iOS && /Safari/i.test(navigator.userAgent) && !(/CriOS/i.test(navigator.userAgent))) {
           setShowPrompt(true);
         }
-        
         // For Samsung Browser (which has inconsistent beforeinstallprompt support)
         if (android && /SamsungBrowser/i.test(navigator.userAgent)) {
           setShowPrompt(true);
         }
       }
     }, 5000);
-
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
-
   const handleInstallClick = () => {
     if (installPromptEvent) {
       // Show the install prompt for browsers that support it
     installPromptEvent.prompt();
-
     // Wait for the user to respond to the prompt
     installPromptEvent.userChoice.then((choiceResult) => {
       if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the install prompt');
       } else {
-        console.log('User dismissed the install prompt');
       }
       // Clear the saved prompt since it can't be used again
       setInstallPromptEvent(null);
@@ -101,17 +86,13 @@ export const PWAInstallPrompt = () => {
       alert('To install this app, tap the menu button and select "Add to Home screen" or "Install App"');
     }
   };
-
   const handleDismissClick = () => {
     setShowPrompt(false);
-    
     // Save user preference to not show for a while
     localStorage.setItem('pwaPromptDismissed', Date.now().toString());
   };
-
   // Don't show if already in standalone mode or if recently dismissed
   if (isStandalone || !showPrompt) return null;
-  
   // Check if user recently dismissed
   const lastDismissed = localStorage.getItem('pwaPromptDismissed');
   if (lastDismissed) {
@@ -121,7 +102,6 @@ export const PWAInstallPrompt = () => {
       return null;
     }
   }
-
   return (
     <div className={`pwa-install-prompt ${isIOS ? 'ios-prompt' : ''} ${isAndroid ? 'android-prompt' : ''}`}>
       <div className="pwa-prompt-content">

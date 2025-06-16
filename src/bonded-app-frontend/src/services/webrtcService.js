@@ -7,17 +7,13 @@
  * MVP Implementation: Simplified version without simple-peer dependency
  * Full WebRTC implementation will be added in future versions
  */
-
 class WebRTCService {
   constructor() {
     this.peer = null;
     this.isConnected = false;
     this.isInitiator = false;
     this.connectionCallbacks = new Map();
-    
-    console.log('[WebRTC] Service initialized (MVP mode)');
   }
-
   /**
    * Initialize WebRTC connection as initiator
    * @param {string} partnerId - Partner identifier
@@ -25,10 +21,7 @@ class WebRTCService {
    */
   async initializeConnection(partnerId) {
     try {
-      console.log('[WebRTC] Initializing connection to partner (MVP mode)');
-      
       this.isInitiator = true;
-      
       // MVP: Simulate connection initialization
       // In production, this would use WebRTC APIs directly or simple-peer
       const mockOffer = {
@@ -40,21 +33,15 @@ class WebRTCService {
         partnerId,
         timestamp: Date.now()
       };
-
       // Simulate async connection setup
       setTimeout(() => {
         this.isConnected = true;
-        console.log('[WebRTC] Mock connection established');
       }, 1000);
-
       return mockOffer;
-
     } catch (error) {
-      console.error('[WebRTC] Connection initialization failed:', error);
       throw error;
     }
   }
-
   /**
    * Accept connection from partner
    * @param {Object} offer - Connection offer from partner
@@ -62,10 +49,7 @@ class WebRTCService {
    */
   async acceptConnection(offer) {
     try {
-      console.log('[WebRTC] Accepting connection from partner (MVP mode)');
-      
       this.isInitiator = false;
-      
       // MVP: Simulate connection acceptance
       const mockAnswer = {
         type: 'answer',
@@ -76,21 +60,15 @@ class WebRTCService {
         partnerId: offer.partnerId,
         timestamp: Date.now()
       };
-
       // Simulate connection establishment
       setTimeout(() => {
         this.isConnected = true;
-        console.log('[WebRTC] Mock connection accepted and established');
       }, 500);
-
       return mockAnswer;
-
     } catch (error) {
-      console.error('[WebRTC] Connection acceptance failed:', error);
       throw error;
     }
   }
-
   /**
    * Complete connection handshake
    * @param {Object} answer - Connection answer from partner
@@ -98,19 +76,13 @@ class WebRTCService {
    */
   async completeConnection(answer) {
     try {
-      console.log('[WebRTC] Completing connection handshake (MVP mode)');
-      
       // MVP: Simulate handshake completion
       this.isConnected = true;
-      
       return true;
-
     } catch (error) {
-      console.error('[WebRTC] Connection completion failed:', error);
       throw error;
     }
   }
-
   /**
    * Send message to partner
    * @param {Object} message - Message to send
@@ -118,26 +90,18 @@ class WebRTCService {
    */
   async sendMessage(message) {
     if (!this.isConnected) {
-      console.warn('[WebRTC] Not connected to partner, queueing message');
-      
       // MVP: For demonstration, we'll simulate message sending
       // In production, this would queue messages or use canister messaging
       return this.sendViaCanister(message);
     }
-    
     try {
-      console.log('[WebRTC] Sending message to partner:', message.type);
-      
       // MVP: Simulate message sending
       // In production, this would use the WebRTC data channel
       return true;
-
     } catch (error) {
-      console.error('[WebRTC] Message sending failed:', error);
       return false;
     }
   }
-
   /**
    * Send message via canister as fallback
    * @param {Object} message - Message to send
@@ -145,18 +109,13 @@ class WebRTCService {
    */
   async sendViaCanister(message) {
     try {
-      console.log('[WebRTC] Sending message via canister fallback');
-      
       // MVP: This would integrate with the canister messaging system
       // For now, just log and return success
       return true;
-
     } catch (error) {
-      console.error('[WebRTC] Canister message sending failed:', error);
       return false;
     }
   }
-
   /**
    * Request key share from partner
    * @param {string} requestId - Unique request identifier
@@ -164,16 +123,12 @@ class WebRTCService {
    */
   async requestKeyShare(requestId) {
     try {
-      console.log('[WebRTC] Requesting key share from partner');
-      
       const request = {
         type: 'key_share_request',
         requestId,
         timestamp: Date.now()
       };
-
       await this.sendMessage(request);
-
       // MVP: Simulate key share response
       // In production, this would wait for actual partner response
       return {
@@ -181,13 +136,10 @@ class WebRTCService {
         keyShare: 'mock-key-share-for-mvp',
         requestId
       };
-
     } catch (error) {
-      console.error('[WebRTC] Key share request failed:', error);
       throw error;
     }
   }
-
   /**
    * Register callback for connection events
    * @param {string} event - Event name
@@ -199,7 +151,6 @@ class WebRTCService {
     }
     this.connectionCallbacks.get(event).push(callback);
   }
-
   /**
    * Emit connection event
    * @param {string} event - Event name
@@ -211,11 +162,9 @@ class WebRTCService {
       try {
         callback(data);
       } catch (error) {
-        console.error(`[WebRTC] Callback error for event ${event}:`, error);
       }
     });
   }
-
   /**
    * Get connection status
    * @returns {Object} Status information
@@ -229,7 +178,6 @@ class WebRTCService {
       supportsWebRTC: typeof RTCPeerConnection !== 'undefined'
     };
   }
-
   /**
    * Check if WebRTC is supported in browser
    * @returns {boolean} Support status
@@ -238,7 +186,6 @@ class WebRTCService {
     return typeof RTCPeerConnection !== 'undefined' &&
            typeof RTCDataChannel !== 'undefined';
   }
-
   /**
    * Close connection
    */
@@ -248,10 +195,7 @@ class WebRTCService {
     }
     this.isConnected = false;
     this.connectionCallbacks.clear();
-    
-    console.log('[WebRTC] Connection closed');
   }
-
   /**
    * Get debug information
    * @returns {Object} Debug info
@@ -265,5 +209,4 @@ class WebRTCService {
     };
   }
 }
-
 export const webrtcService = new WebRTCService(); 
