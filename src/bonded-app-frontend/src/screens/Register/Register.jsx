@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import icpUserService from "../../services/icpUserService";
 import { AuthClient } from "@dfinity/auth-client";
@@ -7,12 +7,14 @@ import "./style.css";
 
 export const Register = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [authClient, setAuthClient] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const fromInvite = searchParams.get('from') === 'invite';
 
   // Initialize auth client
   useEffect(() => {
@@ -113,9 +115,15 @@ export const Register = () => {
               sessionStorage.removeItem('pendingRegistration');
             }
             
-            // For first-time users after registration, always go to partner invite first
-            // This is the correct flow: Register → Invite → Profile Setup → KYC → Timeline
-            navigate("/partner-invite");
+            // Handle different flows based on how user arrived
+            if (fromInvite) {
+              // If coming from invite, skip partner invite and go to profile setup
+              // then directly to timeline (bypassing KYC)
+              navigate("/profile-setup");
+            } else {
+              // For normal registration, go to partner invite first
+              navigate("/partner-invite");
+            }
           } catch (error) {
             setErrors({ submit: "Registration successful, but setup failed. Please try again." });
           } finally {
@@ -145,7 +153,19 @@ export const Register = () => {
           src="/images/bonded-logo-blue.svg"
         />
 
-        <h1 className="create-account-title">Create an account</h1>
+        <h1 className="create-account-title">
+          {fromInvite ? "Join your partner on Bonded" : "Create an account"}
+        </h1>
+        
+        {fromInvite && (
+          <div className="invite-banner">
+            <div className="invite-icon">💌</div>
+            <div className="invite-text">
+              <div className="invite-title">You've been invited!</div>
+              <div className="invite-subtitle">Complete your registration to start building your timeline together</div>
+            </div>
+          </div>
+        )}
 
         {errors.submit && (
           <div className="error-banner" role="alert" aria-live="polite">

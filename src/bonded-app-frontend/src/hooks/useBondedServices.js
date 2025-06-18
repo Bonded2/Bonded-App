@@ -200,7 +200,8 @@ export const useBondedServices = () => {
           // Encrypt the evidence
           const encryptedData = await services.encryptionService.encryptEvidence(result.evidence);
           // Upload to canister
-          const relationshipId = 'mock-relationship-id'; // TODO: Get from actual relationship context
+          // Get relationship ID from current user's relationships
+    const relationshipId = currentUser?.relationships?.[0] || null;
           const uploadResult = await services.canisterIntegration.uploadEvidence(
             relationshipId,
             encryptedData,

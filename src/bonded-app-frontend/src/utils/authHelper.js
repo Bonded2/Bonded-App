@@ -124,8 +124,11 @@ export const safeAuthCall = async (authenticatedFn, authService, options = {}) =
  * Clear all authentication-related storage
  * Useful for complete logout or account deletion
  */
-export const clearAuthStorage = () => {
+export const clearAuthStorage = async () => {
   try {
+    // Import canister storage adapters dynamically to avoid circular dependencies
+    const { canisterLocalStorage, canisterSessionStorage } = await import('./storageAdapter.js');
+    
     // Clear localStorage items related to auth
     const authKeys = [
       'ic-identity',
@@ -134,9 +137,7 @@ export const clearAuthStorage = () => {
       'bonded-session'
     ];
     
-    authKeys.forEach(key => {
-      localStorage.removeItem(key);
-    });
+    await Promise.all(authKeys.map(key => canisterLocalStorage.removeItem(key)));
     
     // Clear sessionStorage items related to auth
     const sessionKeys = [
@@ -144,9 +145,7 @@ export const clearAuthStorage = () => {
       'login-state'
     ];
     
-    sessionKeys.forEach(key => {
-      sessionStorage.removeItem(key);
-    });
+    await Promise.all(sessionKeys.map(key => canisterSessionStorage.removeItem(key)));
     
     console.log('Authentication storage cleared successfully');
   } catch (error) {
@@ -162,8 +161,8 @@ export const clearAuthStorage = () => {
  */
 export const gracefulLogout = async (authService, navigate, redirectPath = '/') => {
   try {
-    // Clear authentication storage first
-    clearAuthStorage();
+    // Clear authentication storage first (now async)
+    await clearAuthStorage();
     
     // Attempt to logout from the service
     if (authService?.logout) {

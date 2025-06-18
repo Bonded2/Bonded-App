@@ -11,8 +11,8 @@
   <link rel="icon" href="/favicon.ico" />
   <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
   
-  <!-- Content Security Policy - Permissive for development and external services -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; font-src 'self' data: blob: https://fonts.gstatic.com; connect-src 'self' http: https: ws: wss: blob: data:; img-src 'self' data: blob: https:; media-src 'self' data: blob:; worker-src 'self' blob: data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;" />
+  <!-- Content Security Policy - Permissive for development, external services, and Yoti -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net https://sdk.yoti.com; style-src 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; font-src 'self' data: blob: https://fonts.gstatic.com; connect-src 'self' http: https: ws: wss: blob: data: https://*.yoti.com https://api.yoti.com wss://*.yoti.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; worker-src 'self' blob: data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;" />
   
   <!-- CDN AI libraries loading (with CSP compatibility) -->
   <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>

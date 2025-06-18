@@ -29,11 +29,24 @@ export const AISettings = () => {
   const [scanStatus, setScanStatus] = useState(autoAIScanner.getScanStatus());
   const [scanResults, setScanResults] = useState(null);
   useEffect(() => {
-    // Load saved settings from localStorage
-    const savedSettings = localStorage.getItem('bonded_ai_settings');
-    if (savedSettings) {
-      setAiSettings(JSON.parse(savedSettings));
-    }
+    // Load saved settings from canister storage
+    const loadSettings = async () => {
+      try {
+        const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+        const savedSettings = await canisterLocalStorage.getItem('bonded_ai_settings');
+        if (savedSettings) {
+          setAiSettings(JSON.parse(savedSettings));
+        }
+      } catch (error) {
+        console.warn('Failed to load AI settings from canister storage:', error);
+        // Fallback to localStorage if canister storage fails
+        const savedSettings = localStorage.getItem('bonded_ai_settings');
+        if (savedSettings) {
+          setAiSettings(JSON.parse(savedSettings));
+        }
+      }
+    };
+    loadSettings();
     // Initialize AI service
     initializeAI();
     // Set up auto scanner observer
@@ -72,7 +85,7 @@ export const AISettings = () => {
       setIsInitialized(false);
     }
   };
-  const handleSettingChange = (category, setting, value) => {
+  const handleSettingChange = async (category, setting, value) => {
     const newSettings = {
       ...aiSettings,
       [category]: {
@@ -81,8 +94,15 @@ export const AISettings = () => {
       }
     };
     setAiSettings(newSettings);
-    // Save to localStorage
-    localStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
+    
+    // Save to canister storage
+    try {
+      const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+      await canisterLocalStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
+    } catch (error) {
+      console.warn('Failed to save AI settings to canister storage, using localStorage fallback:', error);
+      localStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
+    }
   };
   const handleScannerSettingChange = (setting, value) => {
     const newSettings = {

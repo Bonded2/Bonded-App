@@ -214,20 +214,39 @@ export const Capture = () => {
     handleToggleSetting(setting, level);
   };
   // Handle save button click
-  const handleSave = () => {
-    localStorage.setItem("captureSettings", JSON.stringify(captureSettings));
-    localStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
-    const toast = document.createElement("div");
-    toast.className = "toast success";
-    toast.textContent = "Settings saved successfully!";
-    document.body.appendChild(toast);
-    // Remove toast after 3 seconds
-    setTimeout(() => {
-      toast.classList.add("fadeout");
+  const handleSave = async () => {
+    try {
+      const { canisterLocalStorage } = await import('../../../utils/storageAdapter.js');
+      await canisterLocalStorage.setItem("captureSettings", JSON.stringify(captureSettings));
+      await canisterLocalStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
+      
+      const toast = document.createElement("div");
+      toast.className = "toast success";
+      toast.textContent = "Settings saved successfully!";
+      document.body.appendChild(toast);
+      // Remove toast after 3 seconds
       setTimeout(() => {
-        document.body.removeChild(toast);
-      }, 300);
-    }, 3000);
+        toast.classList.add("fadeout");
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 300);
+      }, 3000);
+    } catch (error) {
+      console.warn('Failed to save capture settings to canister, using localStorage fallback:', error);
+      localStorage.setItem("captureSettings", JSON.stringify(captureSettings));
+      localStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
+      
+      const toast = document.createElement("div");
+      toast.className = "toast warning";
+      toast.textContent = "Settings saved locally (canister unavailable)";
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add("fadeout");
+        setTimeout(() => {
+          document.body.removeChild(toast);
+        }, 300);
+      }, 3000);
+    }
   };
   // Update thumb positions when settings change
   useEffect(() => {
@@ -238,36 +257,73 @@ export const Capture = () => {
       }
     });
   }, [captureSettings]);
-  // Placeholder: useEffect for smart-configuration on first run
+  // Smart-configuration and settings loading on first run
   useEffect(() => {
-    const isFirstRun = !localStorage.getItem("settings_configured");
-    if (isFirstRun) {
-      // TODO: Fetch user nationality/region (e.g., from profile data)
-      const userNationality = "US"; // Example
-      const userRegion = "North America"; // Example
-      let initialSettings = { ...captureSettings };
-      let initialOverrides = { ...fileTypeOverrides };
-      // Example Logic (replace with actual smart-configuration)
-      if (userNationality === "DE") {
-        initialSettings.telegram = "medium";
-        initialOverrides.pdf = true; // Germans love PDFs :)
-      } else if (userRegion === "Asia") {
-        // Different defaults for Asia
-        initialSettings.photos = "medium";
+    const initializeSettings = async () => {
+      try {
+        const { canisterLocalStorage } = await import('../../../utils/storageAdapter.js');
+        
+        const isFirstRun = !(await canisterLocalStorage.getItem("settings_configured"));
+        if (isFirstRun) {
+          // TODO: Fetch user nationality/region (e.g., from profile data)
+          const userNationality = "US"; // Example
+          const userRegion = "North America"; // Example
+          let initialSettings = { ...captureSettings };
+          let initialOverrides = { ...fileTypeOverrides };
+          // Example Logic (replace with actual smart-configuration)
+          if (userNationality === "DE") {
+            initialSettings.telegram = "medium";
+            initialOverrides.pdf = true; // Germans love PDFs :)
+          } else if (userRegion === "Asia") {
+            // Different defaults for Asia
+            initialSettings.photos = "medium";
+          }
+          setCaptureSettings(initialSettings);
+          setFileTypeOverrides(initialOverrides);
+          await canisterLocalStorage.setItem("settings_configured", "true");
+        }
+        
+        // Load saved settings if not first run
+        const savedCaptureSettings = await canisterLocalStorage.getItem("captureSettings");
+        if (savedCaptureSettings) {
+          setCaptureSettings(JSON.parse(savedCaptureSettings));
+        }
+        const savedFileTypeOverrides = await canisterLocalStorage.getItem("fileTypeOverrides");
+        if (savedFileTypeOverrides) {
+          setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
+        }
+      } catch (error) {
+        console.warn('Failed to load capture settings from canister, using localStorage fallback:', error);
+        // Fallback to localStorage
+        const isFirstRun = !localStorage.getItem("settings_configured");
+        if (isFirstRun) {
+          const userNationality = "US";
+          const userRegion = "North America";
+          let initialSettings = { ...captureSettings };
+          let initialOverrides = { ...fileTypeOverrides };
+          if (userNationality === "DE") {
+            initialSettings.telegram = "medium";
+            initialOverrides.pdf = true;
+          } else if (userRegion === "Asia") {
+            initialSettings.photos = "medium";
+          }
+          setCaptureSettings(initialSettings);
+          setFileTypeOverrides(initialOverrides);
+          localStorage.setItem("settings_configured", "true");
+        }
+        
+        const savedCaptureSettings = localStorage.getItem("captureSettings");
+        if (savedCaptureSettings) {
+          setCaptureSettings(JSON.parse(savedCaptureSettings));
+        }
+        const savedFileTypeOverrides = localStorage.getItem("fileTypeOverrides");
+        if (savedFileTypeOverrides) {
+          setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
+        }
       }
-      setCaptureSettings(initialSettings);
-      setFileTypeOverrides(initialOverrides);
-      localStorage.setItem("settings_configured", "true");
-    }
-    // Load saved settings if not first run
-    const savedCaptureSettings = localStorage.getItem("captureSettings");
-    if (savedCaptureSettings) {
-      setCaptureSettings(JSON.parse(savedCaptureSettings));
-    }
-    const savedFileTypeOverrides = localStorage.getItem("fileTypeOverrides");
-    if (savedFileTypeOverrides) {
-      setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
-    }
+    };
+    
+    initializeSettings();
   }, []); // Empty dependency array means this runs once on mount
   // Helper function to capitalize setting names
   const formatSettingName = (settingKey) => {

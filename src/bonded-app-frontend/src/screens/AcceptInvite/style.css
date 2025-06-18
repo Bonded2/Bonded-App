@@ -1,0 +1,461 @@
+.accept-invite-screen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.accept-invite-container {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  border-radius: 16px;
+  text-align: center;
+  margin: auto;
+}
+
+.bonded-logo {
+  height: 60px;
+  margin-bottom: 24px;
+}
+
+.status-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.status-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.status-title {
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: #2C4CDF;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.content-area {
+  width: 100%;
+  margin-bottom: 24px;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(44, 76, 223, 0.2);
+  border-left: 4px solid #2C4CDF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-state p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  color: #666666;
+  margin: 0;
+}
+
+/* Valid Invite State */
+.valid-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.invite-details {
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(44, 76, 223, 0.1);
+}
+
+.inviter-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.inviter-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF704D 0%, #ff8566 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.inviter-name {
+  font-family: "Trocchi", serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #2C4CDF;
+}
+
+.invite-message {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  color: #333333;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.bonded-features {
+  background-color: #f8f9ff;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: left;
+}
+
+.bonded-features h3 {
+  font-family: "Trocchi", serif;
+  font-size: 18px;
+  color: #2C4CDF;
+  margin: 0 0 16px 0;
+  text-align: center;
+}
+
+.bonded-features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.bonded-features li {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: #333333;
+  line-height: 1.4;
+}
+
+.bonded-features li:last-child {
+  margin-bottom: 0;
+}
+
+.user-choice h3 {
+  font-family: "Trocchi", serif;
+  font-size: 18px;
+  color: #2C4CDF;
+  margin: 0 0 20px 0;
+}
+
+.choice-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.choice-btn {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  gap: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.choice-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.choice-btn.new-user:hover {
+  border-color: #FF704D;
+  background: linear-gradient(135deg, #fff5f2 0%, #ffffff 100%);
+}
+
+.choice-btn.existing-user:hover {
+  border-color: #2C4CDF;
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+}
+
+.choice-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.choice-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.choice-title {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: #333333;
+}
+
+.choice-subtitle {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: #666666;
+}
+
+/* Processing State */
+.processing-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.bond-animation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.heart-icon {
+  font-size: 64px;
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.bond-text {
+  font-family: "Trocchi", serif;
+  font-size: 18px;
+  color: #2C4CDF;
+}
+
+.progress-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.progress-dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #2C4CDF;
+  animation: dot-pulse 1.4s infinite ease-in-out;
+}
+
+.progress-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.progress-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+/* Success State */
+.success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.success-icon {
+  font-size: 64px;
+  animation: bounce 0.6s ease-out;
+}
+
+.success-state h2 {
+  font-family: "Trocchi", serif;
+  font-size: 24px;
+  color: #4CAF50;
+  margin: 0;
+}
+
+.success-state p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  color: #333333;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.redirect-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #666666;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+}
+
+.redirect-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(102, 102, 102, 0.2);
+  border-left: 2px solid #666666;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Error State */
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.error-icon {
+  font-size: 64px;
+  opacity: 0.7;
+}
+
+.error-state h2 {
+  font-family: "Trocchi", serif;
+  font-size: 22px;
+  color: #333333;
+  margin: 0;
+}
+
+.error-state p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  color: #666666;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.retry-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #2C4CDF 0%, #3a5bef 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: linear-gradient(135deg, #3a5bef 0%, #2C4CDF 100%);
+  transform: translateY(-1px);
+}
+
+/* Security Note */
+.security-note {
+  background-color: rgba(44, 76, 223, 0.05);
+  border: 1px solid rgba(44, 76, 223, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.security-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.security-note p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  color: #2C4CDF;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes dot-pulse {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    transform: translate3d(0, -20px, 0);
+  }
+  70% {
+    transform: translate3d(0, -10px, 0);
+  }
+  90% {
+    transform: translate3d(0, -4px, 0);
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+  .accept-invite-container {
+    padding: 24px 16px;
+  }
+  
+  .status-title {
+    font-size: 20px;
+  }
+  
+  .choice-btn {
+    padding: 16px;
+  }
+  
+  .choice-icon {
+    font-size: 28px;
+  }
+  
+  .choice-title {
+    font-size: 15px;
+  }
+  
+  .choice-subtitle {
+    font-size: 13px;
+  }
+  
+  .bonded-features {
+    padding: 20px;
+  }
+  
+  .invite-details {
+    padding: 20px;
+  }
+} 

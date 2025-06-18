@@ -152,9 +152,11 @@ export const TimelineCreated = () => {
       });
     } catch (error) {
       setError(`Failed to load timeline: ${error.message}`);
-      // Fallback to local data if available
-      try {
-        const localData = localStorage.getItem(TIMELINE_DATA_KEY);
+              // Fallback to local data if available
+        try {
+          // Replace localStorage with canister storage
+          const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+          const localData = await canisterLocalStorage.getItem(TIMELINE_DATA_KEY);
         if (localData) {
           const parsedData = JSON.parse(localData);
           if (Array.isArray(parsedData)) {
@@ -168,9 +170,11 @@ export const TimelineCreated = () => {
     }
   }, [canisterIntegration, encryptionService]);
   // Function to load AI timeline data from localStorage
-  const loadAITimelineData = useCallback(() => {
+    const loadAITimelineData = useCallback(async () => {
     try {
-      const savedAIData = localStorage.getItem(AI_TIMELINE_DATA_KEY);
+      // Replace localStorage with canister storage for AI data
+      const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+      const savedAIData = await canisterLocalStorage.getItem(AI_TIMELINE_DATA_KEY);
       if (savedAIData) {
         const parsedAIData = JSON.parse(savedAIData);
         if (Array.isArray(parsedAIData)) {

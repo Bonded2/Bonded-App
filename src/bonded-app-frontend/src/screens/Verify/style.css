@@ -151,13 +151,13 @@
     margin-right: 5px;
   }
   
-  .verify .iproov-logo {
+  .verify .yoti-logo {
     display: flex;
     align-items: center;
     height: 23px;
   }
   
-  .verify .iproov-image {
+  .verify .yoti-image {
     height: 15px;
     width: 65px;
     object-fit: contain;
@@ -200,5 +200,386 @@
   .verify .verify-button:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+  }
+
+  /* Status Display */
+  .verify .verification-status {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    width: 100%;
+    max-width: 312px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  .verify .verification-status.ready {
+    border-color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.1);
+  }
+
+  .verify .verification-status.initializing,
+  .verify .verification-status.connecting {
+    border-color: #FF9800;
+    background-color: rgba(255, 152, 0, 0.1);
+  }
+
+  .verify .verification-status.started {
+    border-color: #2196F3;
+    background-color: rgba(33, 150, 243, 0.1);
+  }
+
+  .verify .verification-status.processing {
+    border-color: #9C27B0;
+    background-color: rgba(156, 39, 176, 0.1);
+  }
+
+  .verify .verification-status.completed {
+    border-color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.15);
+  }
+
+  .verify .verification-status.failed {
+    border-color: #F44336;
+    background-color: rgba(244, 67, 54, 0.1);
+  }
+
+  .verify .status-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+
+  .verify .status-message {
+    color: #ffffff;
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    margin-bottom: 12px;
+  }
+
+  .verify .progress-bar {
+    width: 100%;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .verify .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff704d, #ff8a65);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+
+  /* Error Details */
+  .verify .error-details {
+    margin-top: 12px;
+    text-align: left;
+  }
+
+  .verify .error-details p {
+    margin: 8px 0;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  /* Network Warning */
+  .verify .network-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+    border: 1px solid #FFC107;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 312px;
+    box-sizing: border-box;
+    color: #FFC107;
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .verify .warning-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  /* Button States */
+  .verify .verify-button.ready {
+    background-color: #ff704d;
+    cursor: pointer;
+  }
+
+  .verify .verify-button.ready:hover {
+    background-color: #ff5722;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+  }
+
+  .verify .verify-button.processing {
+    background-color: #666666;
+    cursor: not-allowed;
+    opacity: 0.8;
+  }
+
+  .verify .verify-button:disabled {
+    background-color: #666666;
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  /* Help Information */
+  .verify .verification-help {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 312px;
+    box-sizing: border-box;
+    text-align: left;
+  }
+
+  .verify .verification-help h3 {
+    color: #ffffff;
+    font-family: "Trocchi", serif;
+    font-size: 16px;
+    font-weight: 400;
+    margin: 0 0 12px 0;
+  }
+
+  .verify .verification-help ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+  }
+
+  .verify .verification-help li {
+    color: #ffffff;
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.5;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .verify .privacy-notice {
+    color: rgba(255, 255, 255, 0.8);
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    margin: 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .verify .privacy-notice strong {
+    color: #ffffff;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 360px) {
+    .verify .verification-status,
+    .verify .network-warning,
+    .verify .verification-help {
+      max-width: 280px;
+    }
+    
+    .verify .verify-button {
+      width: 280px;
+    }
+    
+    .verify .verification-help {
+      padding: 16px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .verify .verification-status,
+    .verify .network-warning,
+    .verify .verification-help {
+      max-width: 400px;
+    }
+    
+    .verify .verify-button {
+      width: 400px;
+    }
+  }
+
+  /* Animation for status changes */
+  .verify .verification-status {
+    transition: all 0.3s ease;
+  }
+
+  .verify .status-icon {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  .verify .verification-status.processing .status-icon {
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Skip Verification Section */
+  .verify .skip-verification-section {
+    margin-top: 40px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .verify .skip-divider {
+    position: relative;
+    width: 100%;
+    text-align: center;
+    margin: 20px 0;
+  }
+
+  .verify .skip-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.2);
+    z-index: 1;
+  }
+
+  .verify .skip-divider span {
+    background: #FF704D;
+    padding: 0 16px;
+    color: rgba(255, 255, 255, 0.7);
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 14px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .verify .skip-verification-button {
+    width: 100%;
+    max-width: 360px;
+    padding: 16px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(10px);
+  }
+
+  .verify .skip-verification-button:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .verify .skip-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+  }
+
+  .verify .skip-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+
+  .verify .skip-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .verify .skip-title {
+    font-family: "Trocchi", serif;
+    font-size: 16px;
+    font-weight: 400;
+    color: #ffffff;
+  }
+
+  .verify .skip-subtitle {
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.3;
+  }
+
+  .verify .skip-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 360px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .verify .note-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .verify .skip-note span:last-child {
+    font-family: "Rethink Sans", sans-serif;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.4;
+  }
+
+  /* Mobile responsiveness for skip section */
+  @media (max-width: 480px) {
+    .verify .skip-verification-section {
+      margin-top: 32px;
+    }
+    
+    .verify .skip-verification-button {
+      max-width: none;
+    }
+    
+    .verify .skip-content {
+      gap: 10px;
+    }
+    
+    .verify .skip-title {
+      font-size: 15px;
+    }
+    
+    .verify .skip-subtitle {
+      font-size: 12px;
+    }
+    
+    .verify .skip-note {
+      max-width: none;
+      padding: 10px;
+    }
   }
   

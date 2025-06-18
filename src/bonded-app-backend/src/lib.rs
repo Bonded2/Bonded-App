@@ -11,12 +11,14 @@ mod utils;
 mod evidence;
 mod relationships;
 mod users;
+mod client_storage;
 
 // Re-export all public functions from modules
 pub use evidence::*;
 pub use relationships::*;
 pub use users::*;
 pub use types::*;
+pub use client_storage::*;
 
 // Imports
 use candid::Principal;

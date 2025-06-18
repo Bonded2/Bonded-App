@@ -255,18 +255,18 @@ export const ProfileSetup = () => {
         message: 'Starting identity verification...',
         verificationId: null
       });
-      // For production, integrate with Yoti, iProov, or similar KYC provider
+      // For production, integrate with Yoti or similar KYC provider
       // This is a simplified implementation for demonstration
-      // Simulate KYC API call
-      const kycResponse = await simulateKYCVerification(formData);
+      // Prepare data for Yoti KYC verification
+      const kycResponse = await prepareKYCVerification(formData);
       if (kycResponse.success) {
         setKycStatus({
           status: 'completed',
-          message: 'Identity verification completed successfully',
+          message: 'Profile prepared for biometric verification',
           verificationId: kycResponse.verificationId
         });
-        // Complete profile setup
-        await completeProfileSetup();
+        // Navigate directly to verification screen
+        navigate("/verify");
       } else {
         setKycStatus({
           status: 'failed',
@@ -282,21 +282,27 @@ export const ProfileSetup = () => {
       });
     }
   };
-  // Simulate KYC verification (replace with real KYC provider integration)
-  const simulateKYCVerification = async (userData) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    // For demo purposes, always succeed
-    // In production, this would call Yoti, iProov, or similar service
+  // Prepare for KYC verification (Yoti integration happens in /verify screen)
+  const prepareKYCVerification = async (userData) => {
+    // Store user data temporarily for the verification screen
+    const profileData = {
+      ...userData,
+      profileComplete: false, // Will be set to true after successful verification
+      kycRequired: true,
+      kycProvider: 'Yoti',
+      kycPreparedAt: Date.now()
+    };
+    
+    // Save profile data to be used by Yoti verification
+    const profileMetadata = JSON.stringify(profileData);
+    await icpUserService.updateUserSettings({
+      profile_metadata: [profileMetadata]
+    });
+    
     return {
       success: true,
-      verificationId: `kyc_${Date.now()}`,
-      confidence: 0.95,
-      checks: {
-        documentVerification: true,
-        faceMatch: true,
-        livenessCheck: true
-      }
+      verificationId: `kyc_prep_${Date.now()}`,
+      message: 'Profile prepared for biometric verification'
     };
   };
   // Complete profile setup

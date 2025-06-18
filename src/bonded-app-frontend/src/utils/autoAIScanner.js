@@ -17,7 +17,7 @@ export class AutoAIScanner {
     this.observers = [];
   }
   /**
-   * Load scanner settings from localStorage
+   * Load scanner settings from canister storage
    */
   loadSettings() {
     const defaultSettings = {
@@ -30,22 +30,54 @@ export class AutoAIScanner {
       confidenceThreshold: 0.7,
       notifyOnCompletion: true
     };
+    
+    // Return defaults for now, async loading handled in separate method
+    this.asyncLoadSettings(defaultSettings);
+    return defaultSettings;
+  }
+
+  /**
+   * Async method to load settings from canister storage
+   */
+  async asyncLoadSettings(defaultSettings) {
     try {
-      const saved = localStorage.getItem('autoAIScannerSettings');
-      return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+      const { canisterLocalStorage } = await import('./storageAdapter.js');
+      const saved = await canisterLocalStorage.getItem('autoAIScannerSettings');
+      if (saved) {
+        this.settings = { ...defaultSettings, ...JSON.parse(saved) };
+        this.notifyObservers('settingsLoaded', this.settings);
+      }
     } catch (error) {
-      return defaultSettings;
+      console.warn('Failed to load scanner settings from canister storage:', error);
+      // Fallback to localStorage
+      try {
+        const saved = localStorage.getItem('autoAIScannerSettings');
+        if (saved) {
+          this.settings = { ...defaultSettings, ...JSON.parse(saved) };
+          this.notifyObservers('settingsLoaded', this.settings);
+        }
+      } catch (fallbackError) {
+        console.warn('Fallback localStorage loading also failed:', fallbackError);
+      }
     }
   }
   /**
-   * Save scanner settings to localStorage
+   * Save scanner settings to canister storage
    */
-  saveSettings(newSettings) {
+  async saveSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
     try {
-      localStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
+      const { canisterLocalStorage } = await import('./storageAdapter.js');
+      await canisterLocalStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
       this.notifyObservers('settingsUpdated', this.settings);
     } catch (error) {
+      console.warn('Failed to save scanner settings to canister storage, using localStorage fallback:', error);
+      try {
+        localStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
+        this.notifyObservers('settingsUpdated', this.settings);
+      } catch (fallbackError) {
+        console.warn('Fallback localStorage saving also failed:', fallbackError);
+      }
     }
   }
   /**
@@ -119,7 +151,7 @@ export class AutoAIScanner {
         await this.processBatch(batch);
         this.updateProgress();
       }
-      this.completeScan();
+      await this.completeScan();
     } catch (error) {
       this.isScanning = false;
       throw error;
@@ -250,7 +282,7 @@ export class AutoAIScanner {
   /**
    * Complete the scanning process
    */
-  completeScan() {
+  async completeScan() {
     this.isScanning = false;
     this.scanProgress = 100;
     this.scanResults = {
@@ -262,7 +294,7 @@ export class AutoAIScanner {
     };
     // Update timelines intelligently
     if (this.settings.smartTimelineUpdate) {
-      this.updateTimelinesIntelligently();
+      await this.updateTimelinesIntelligently();
     }
     this.notifyObservers('scanCompleted', this.scanResults);
     if (this.settings.notifyOnCompletion) {
@@ -272,14 +304,14 @@ export class AutoAIScanner {
   /**
    * Update timelines intelligently based on scan results
    */
-  updateTimelinesIntelligently() {
+  async updateTimelinesIntelligently() {
     if (this.approvedFiles.length === 0) return;
     // Group approved files by date for timeline organization
     const filesByDate = this.groupFilesByDate(this.approvedFiles);
     // Create timeline entries for each date group
-    Object.entries(filesByDate).forEach(([date, files]) => {
-      this.createTimelineEntry(date, files);
-    });
+    await Promise.all(Object.entries(filesByDate).map(([date, files]) => 
+      this.createTimelineEntry(date, files)
+    ));
   }
   /**
    * Group files by date for timeline organization
@@ -298,7 +330,7 @@ export class AutoAIScanner {
   /**
    * Create timeline entry for a date group
    */
-  createTimelineEntry(date, files) {
+  async createTimelineEntry(date, files) {
     // This would integrate with the existing timeline system
     const timelineEntry = {
       id: `ai_scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -314,18 +346,29 @@ export class AutoAIScanner {
       }
     };
     // Save to timeline storage (would integrate with existing timeline system)
-    this.saveTimelineEntry(timelineEntry);
+    await this.saveTimelineEntry(timelineEntry);
   }
   /**
-   * Save timeline entry (mock implementation)
+   * Save timeline entry using canister storage
    */
-  saveTimelineEntry(entry) {
+  async saveTimelineEntry(entry) {
     try {
-      const existingTimeline = JSON.parse(localStorage.getItem('aiProcessedTimeline') || '[]');
+      const { canisterLocalStorage } = await import('./storageAdapter.js');
+      const existingTimelineStr = await canisterLocalStorage.getItem('aiProcessedTimeline') || '[]';
+      const existingTimeline = JSON.parse(existingTimelineStr);
       existingTimeline.push(entry);
-      localStorage.setItem('aiProcessedTimeline', JSON.stringify(existingTimeline));
+      await canisterLocalStorage.setItem('aiProcessedTimeline', JSON.stringify(existingTimeline));
       this.notifyObservers('timelineUpdated', entry);
     } catch (error) {
+      console.warn('Failed to save timeline entry to canister storage, using localStorage fallback:', error);
+      try {
+        const existingTimeline = JSON.parse(localStorage.getItem('aiProcessedTimeline') || '[]');
+        existingTimeline.push(entry);
+        localStorage.setItem('aiProcessedTimeline', JSON.stringify(existingTimeline));
+        this.notifyObservers('timelineUpdated', entry);
+      } catch (fallbackError) {
+        console.warn('Fallback localStorage saving also failed:', fallbackError);
+      }
     }
   }
   /**

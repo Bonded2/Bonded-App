@@ -7,6 +7,7 @@ export const PWAInstallPrompt = () => {
   const [isStandalone, setIsStandalone] = useState(false);
   const [isAndroid, setIsAndroid] = useState(false);
   const [browserInfo, setBrowserInfo] = useState('');
+  const [isDismissedRecently, setIsDismissedRecently] = useState(null); // null = checking, true/false = result
   useEffect(() => {
     // Detect iOS devices
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -49,6 +50,25 @@ export const PWAInstallPrompt = () => {
     // 1. Not already in standalone mode
     // 2. iOS device (since they don't support beforeinstallprompt) OR
     // 3. For Android/desktop specific browsers that need special handling
+    // Check if recently dismissed
+    const checkDismissalStatus = async () => {
+      try {
+        const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+        const lastDismissed = await canisterLocalStorage.getItem('pwaPromptDismissed');
+        const dismissedTime = lastDismissed ? parseInt(lastDismissed, 10) : 0;
+        const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+        setIsDismissedRecently(dismissedTime > oneDayAgo);
+      } catch (error) {
+        console.warn('Failed to check PWA prompt dismissal from canister, using localStorage fallback:', error);
+        const lastDismissed = localStorage.getItem('pwaPromptDismissed');
+        const dismissedTime = lastDismissed ? parseInt(lastDismissed, 10) : 0;
+        const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+        setIsDismissedRecently(dismissedTime > oneDayAgo);
+      }
+    };
+
+    checkDismissalStatus();
+
     setTimeout(() => {
       if (!standalone) {
         // For iOS Safari (which doesn't support beforeinstallprompt)
@@ -86,21 +106,20 @@ export const PWAInstallPrompt = () => {
       alert('To install this app, tap the menu button and select "Add to Home screen" or "Install App"');
     }
   };
-  const handleDismissClick = () => {
+  const handleDismissClick = async () => {
     setShowPrompt(false);
     // Save user preference to not show for a while
-    localStorage.setItem('pwaPromptDismissed', Date.now().toString());
-  };
-  // Don't show if already in standalone mode or if recently dismissed
-  if (isStandalone || !showPrompt) return null;
-  // Check if user recently dismissed
-  const lastDismissed = localStorage.getItem('pwaPromptDismissed');
-  if (lastDismissed) {
-    const dismissedTime = parseInt(lastDismissed, 10);
-    const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-    if (dismissedTime > oneDayAgo) {
-      return null;
+    try {
+      const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+      await canisterLocalStorage.setItem('pwaPromptDismissed', Date.now().toString());
+    } catch (error) {
+      console.warn('Failed to save PWA prompt dismissal to canister storage, using localStorage fallback:', error);
+      localStorage.setItem('pwaPromptDismissed', Date.now().toString());
     }
+  };
+  // Don't show if already in standalone mode, if recently dismissed, or if we're still checking dismissal status
+  if (isStandalone || !showPrompt || isDismissedRecently === null || isDismissedRecently === true) {
+    return null;
   }
   return (
     <div className={`pwa-install-prompt ${isIOS ? 'ios-prompt' : ''} ${isAndroid ? 'android-prompt' : ''}`}>

@@ -19,6 +19,7 @@ import { MediaImport } from "./screens/MediaImport";
 import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
 import { AISettings } from "./screens/AISettings/AISettings";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
+import { AcceptInvite } from "./screens/AcceptInvite/AcceptInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
 import { NetworkStatusIndicator } from "./components/NetworkStatusIndicator";
 import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
@@ -42,22 +43,39 @@ export class ErrorBoundary extends React.Component {
 }
 // Loader function to ensure first-time user flow only happens on initial entry
 const enforceFirstTimeUserLoader = async () => {
-  // Check if this is an initial load or a navigation within the current session
-  const isInitialLoad = !sessionStorage.getItem('sessionStarted');
-  // If this is the initial load, reset everything and redirect to register
-  if (isInitialLoad) {
-    // Set session flag
-    sessionStorage.setItem('sessionStarted', 'true');
-    // Check if we're already on the root or register path
-    const pathname = window.location.pathname;
-    if (pathname !== '/' && pathname !== '/register') {
-      // Reset user data and redirect to splash if entry is not through root or register
-      await resetToFirstTimeUser();
-      return redirect('/');
+  try {
+    // Check if this is an initial load or a navigation within the current session
+    const { canisterSessionStorage } = await import('./utils/storageAdapter.js');
+    const isInitialLoad = !(await canisterSessionStorage.getItem('sessionStarted'));
+    
+    // If this is the initial load, reset everything and redirect to register
+    if (isInitialLoad) {
+      // Set session flag
+      await canisterSessionStorage.setItem('sessionStarted', 'true');
+      // Check if we're already on the root or register path
+      const pathname = window.location.pathname;
+      if (pathname !== '/' && pathname !== '/register') {
+        // Reset user data and redirect to splash if entry is not through root or register
+        await resetToFirstTimeUser();
+        return redirect('/');
+      }
     }
+    // Allow navigation once session has started
+    return null;
+  } catch (error) {
+    console.warn('Failed to use canister session storage, falling back to sessionStorage:', error);
+    // Fallback to regular sessionStorage
+    const isInitialLoad = !sessionStorage.getItem('sessionStarted');
+    if (isInitialLoad) {
+      sessionStorage.setItem('sessionStarted', 'true');
+      const pathname = window.location.pathname;
+      if (pathname !== '/' && pathname !== '/register') {
+        await resetToFirstTimeUser();
+        return redirect('/');
+      }
+    }
+    return null;
   }
-  // Allow navigation once session has started
-  return null;
 };
 const router = createBrowserRouter([
   {
@@ -81,6 +99,11 @@ const router = createBrowserRouter([
     element: <PartnerInvite />,
     errorElement: <ErrorBoundary />,
     loader: enforceFirstTimeUserLoader,
+  },
+  {
+    path: "/accept-invite",
+    element: <AcceptInvite />,
+    errorElement: <ErrorBoundary />,
   },
   {
     path: "/profile-setup",
@@ -233,12 +256,24 @@ export const App = () => {
   // Only reset user data on initial app load of a new session
   useEffect(() => {
     const resetDataIfNeeded = async () => {
-      // Only reset if this is a direct entry to a deep link (not through splash or register)
-      const isInitialLoad = !sessionStorage.getItem('sessionStarted');
-      const pathname = window.location.pathname;
-      if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
-        await resetToFirstTimeUser();
-        sessionStorage.setItem('sessionStarted', 'true');
+      try {
+        // Only reset if this is a direct entry to a deep link (not through splash or register)
+        const { canisterSessionStorage } = await import('./utils/storageAdapter.js');
+        const isInitialLoad = !(await canisterSessionStorage.getItem('sessionStarted'));
+        const pathname = window.location.pathname;
+        if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
+          await resetToFirstTimeUser();
+          await canisterSessionStorage.setItem('sessionStarted', 'true');
+        }
+      } catch (error) {
+        console.warn('Failed to use canister session storage, falling back to sessionStorage:', error);
+        // Fallback to regular sessionStorage
+        const isInitialLoad = !sessionStorage.getItem('sessionStarted');
+        const pathname = window.location.pathname;
+        if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
+          await resetToFirstTimeUser();
+          sessionStorage.setItem('sessionStarted', 'true');
+        }
       }
     };
     resetDataIfNeeded();

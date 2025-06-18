@@ -8,9 +8,9 @@
 /**
  * Clear all session storage data
  */
-export const clearAllSessionData = () => {
+export const clearAllSessionData = async () => {
   try {
-    // Clear all session storage
+    // Clear browser storage
     sessionStorage.clear();
     
     // Clear specific localStorage items that might interfere
@@ -32,6 +32,15 @@ export const clearAllSessionData = () => {
     
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
+    // Also clear canister storage data
+    try {
+      const { canisterStorage } = await import('../services/canisterStorage.js');
+      await canisterStorage.clear();
+      console.log('✅ Cleared canister storage data');
+    } catch (canisterError) {
+      console.warn('⚠️ Could not clear canister storage (may be offline):', canisterError.message);
+    }
+    
     console.log('✅ Cleared all session data');
     return true;
   } catch (error) {
@@ -43,7 +52,7 @@ export const clearAllSessionData = () => {
 /**
  * Clear only user profile related data
  */
-export const clearUserProfileData = () => {
+export const clearUserProfileData = async () => {
   try {
     // Clear user-specific session storage
     const sessionKeys = Object.keys(sessionStorage);
@@ -60,6 +69,27 @@ export const clearUserProfileData = () => {
         localStorage.removeItem(key);
       }
     });
+    
+    // Clear user-specific canister storage data
+    try {
+      const { canisterLocalStorage, canisterSessionStorage } = await import('./storageAdapter.js');
+      
+      // List of user-specific keys that should be cleared
+      const userKeys = [
+        'bonded_user_profile',
+        'bonded_ai_settings', 
+        'captureSettings',
+        'relationshipBond',
+        'currentRelationship'
+      ];
+      
+      await Promise.all(userKeys.map(key => canisterLocalStorage.removeItem(key)));
+      await Promise.all(userKeys.map(key => canisterSessionStorage.removeItem(key)));
+      
+      console.log('✅ Cleared user profile data from canister storage');
+    } catch (canisterError) {
+      console.warn('⚠️ Could not clear user profile data from canister storage:', canisterError.message);
+    }
     
     console.log('✅ Cleared user profile data');
     return true;

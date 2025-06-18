@@ -138,4 +138,18 @@ pub fn validate_encrypted_data(data: &[u8]) -> Result<(), String> {
     }
     
     Ok(())
+}
+
+/**
+ * Validate email address format
+ */
+pub fn is_valid_email(email: &str) -> bool {
+    // Basic email validation - contains @ and has proper structure
+    email.contains('@') 
+        && email.len() > 5 
+        && email.len() < 255 
+        && !email.starts_with('@') 
+        && !email.ends_with('@')
+        && email.split('@').count() == 2
+        && email.split('@').nth(1).unwrap().contains('.')
 } 

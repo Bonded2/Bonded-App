@@ -69,6 +69,77 @@ pub struct UserSettings {
     pub updated_at: u64,
 }
 
+// =======================
+// CLIENT DATA STORAGE
+// =======================
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct TimelineData {
+    pub id: String,
+    pub user: Principal,
+    pub timeline_items: Vec<String>, // JSON encoded timeline data
+    pub updated_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct UserFaceEmbedding {
+    pub user: Principal,
+    pub embedding_data: Vec<f32>,
+    pub partner_id: Option<Principal>,
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct AutoScannerSettings {
+    pub user: Principal,
+    pub settings_data: String, // JSON encoded settings
+    pub updated_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct CaptureSettings {
+    pub user: Principal,
+    pub settings_data: String, // JSON encoded capture settings
+    pub file_type_overrides: String, // JSON encoded file type overrides
+    pub updated_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct EmailLog {
+    pub id: String,
+    pub user: Principal,
+    pub log_data: String, // JSON encoded email log
+    pub created_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct GeolocationCache {
+    pub cache_key: String,
+    pub user: Option<Principal>, // None for global cache
+    pub cache_data: String, // JSON encoded location data
+    pub expires_at: u64,
+    pub created_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct SchedulerSettings {
+    pub user: Principal,
+    pub settings_data: String, // JSON encoded scheduler settings
+    pub updated_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct ProcessedContent {
+    pub id: String,
+    pub user: Principal,
+    pub relationship_id: Option<String>,
+    pub content_data: String, // JSON encoded content
+    pub content_type: String, // "timeline", "timestamp_folder", "media_import", etc.
+    pub created_at: u64,
+    pub updated_at: u64,
+}
+
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct AuditLogEntry {
     pub id: String,
@@ -79,8 +150,70 @@ pub struct AuditLogEntry {
 }
 
 // =======================
+// PARTNER INVITE SYSTEM
+// =======================
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum InviteStatus {
+    Pending,
+    Accepted,
+    Expired,
+    Cancelled,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct PartnerInvite {
+    pub id: String,
+    pub inviter_principal: Principal,
+    pub partner_email: String,
+    pub inviter_name: String,
+    pub status: InviteStatus,
+    pub created_at: u64,
+    pub expires_at: u64,
+    pub metadata: Option<String>,
+}
+
+// =======================
 // API REQUEST/RESPONSE TYPES
 // =======================
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct CreatePartnerInviteRequest {
+    pub partner_email: String,
+    pub inviter_name: String,
+    pub expires_at: u64,
+    pub metadata: Option<String>,
+    pub frontend_url: Option<String>,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct CreatePartnerInviteResponse {
+    pub invite_id: String,
+    pub invite_link: String,
+    pub expires_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct SendInviteEmailRequest {
+    pub recipient_email: String,
+    pub email_content: String,
+    pub subject: String,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct SendEmailResponse {
+    pub success: bool,
+    pub message_id: String,
+    pub provider: String,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
+pub struct AcceptInviteResponse {
+    pub relationship_id: String,
+    pub relationship: Relationship,
+    pub user_key_share: Vec<u8>,
+    pub public_key: Vec<u8>,
+}
 
 #[derive(CandidType, Serialize, Deserialize)]
 pub struct CreateRelationshipRequest {
@@ -191,6 +324,126 @@ impl Storable for UserProfile {
 }
 
 impl Storable for UserSettings {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for PartnerInvite {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for AuditLogEntry {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for TimelineData {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for UserFaceEmbedding {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for AutoScannerSettings {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for CaptureSettings {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for EmailLog {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for GeolocationCache {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for SchedulerSettings {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}
+
+impl Storable for ProcessedContent {
     const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
 
     fn to_bytes(&self) -> Cow<[u8]> {

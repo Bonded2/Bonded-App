@@ -58,7 +58,7 @@ self.addEventListener('fetch', event => {
   }
   // Handle cross-origin requests differently
   const isSameOrigin = event.request.url.startsWith(self.location.origin);
-  // Skip analytics, tracking, and external service requests that should bypass service worker
+  // Skip analytics, tracking, external services and Yoti requests that should bypass service worker
   if (event.request.url.includes('/analytics') || 
       event.request.url.includes('/tracking') ||
       event.request.url.includes('/gtm.js') ||
@@ -68,7 +68,10 @@ self.addEventListener('fetch', event => {
       event.request.url.includes('127.0.0.1:4943') ||
       event.request.url.includes('localhost:4943') ||
       event.request.url.includes('.icp0.io') ||
-      event.request.url.includes('ic0.app')) {
+      event.request.url.includes('ic0.app') ||
+      event.request.url.includes('yoti.com') ||
+      event.request.url.includes('api.yoti.com') ||
+      event.request.url.includes('sdk.yoti.com')) {
     return;
   }
   // Handle navigation requests (HTML pages)
