@@ -183,7 +183,7 @@ export const getIpLocation = async () => {
     
           // This section is now handled in the try block above
   } catch (error) {
-    console.warn('IP location lookup failed (CORS or network issue):', error.message);
+    // Silently handle CORS issues - this is expected in browser environment
     
     // Return minimal fallback object in case of failure
     return {
@@ -273,7 +273,7 @@ export const getAllCountries = async () => {
     sessionStorage.setItem(CACHE_KEYS.COUNTRIES, JSON.stringify(countries));
     return countries;
   } catch (error) {
-    console.warn('Countries API failed (CORS or network issue):', error.message);
+    // Silently handle CORS issues - this is expected in browser environment
     
     // Return a comprehensive fallback list
     return [

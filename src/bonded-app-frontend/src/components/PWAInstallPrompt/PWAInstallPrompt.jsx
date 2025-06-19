@@ -50,20 +50,31 @@ export const PWAInstallPrompt = () => {
     // 1. Not already in standalone mode
     // 2. iOS device (since they don't support beforeinstallprompt) OR
     // 3. For Android/desktop specific browsers that need special handling
-    // Check if recently dismissed
+    // Check if recently dismissed - use localStorage first to avoid early canister calls
     const checkDismissalStatus = async () => {
       try {
-        const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
-        const lastDismissed = await canisterLocalStorage.getItem('pwaPromptDismissed');
-        const dismissedTime = lastDismissed ? parseInt(lastDismissed, 10) : 0;
-        const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
-        setIsDismissedRecently(dismissedTime > oneDayAgo);
-      } catch (error) {
-        console.warn('Failed to check PWA prompt dismissal from canister, using localStorage fallback:', error);
+        // Try localStorage first to avoid triggering canister calls before authentication
         const lastDismissed = localStorage.getItem('pwaPromptDismissed');
         const dismissedTime = lastDismissed ? parseInt(lastDismissed, 10) : 0;
         const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
         setIsDismissedRecently(dismissedTime > oneDayAgo);
+        
+        // If not dismissed recently, optionally try to get from canister storage later
+        if (!lastDismissed) {
+          try {
+            const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+            const canisterDismissed = await canisterLocalStorage.getItem('pwaPromptDismissed');
+            if (canisterDismissed) {
+              const canisterDismissedTime = parseInt(canisterDismissed, 10);
+              setIsDismissedRecently(canisterDismissedTime > oneDayAgo);
+            }
+          } catch (canisterError) {
+            // Ignore canister errors for PWA prompt - not critical
+          }
+        }
+      } catch (error) {
+        // If everything fails, assume not dismissed
+        setIsDismissedRecently(false);
       }
     };
 
@@ -108,13 +119,22 @@ export const PWAInstallPrompt = () => {
   };
   const handleDismissClick = async () => {
     setShowPrompt(false);
-    // Save user preference to not show for a while
+    // Save user preference to not show for a while - use localStorage primarily
+    const timestamp = Date.now().toString();
+    
     try {
-      const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
-      await canisterLocalStorage.setItem('pwaPromptDismissed', Date.now().toString());
+      // Save to localStorage first
+      localStorage.setItem('pwaPromptDismissed', timestamp);
+      
+      // Optionally save to canister storage if available and user is authenticated
+      try {
+        const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
+        await canisterLocalStorage.setItem('pwaPromptDismissed', timestamp);
+      } catch (canisterError) {
+        // Ignore canister errors for PWA prompt - localStorage is sufficient
+      }
     } catch (error) {
-      console.warn('Failed to save PWA prompt dismissal to canister storage, using localStorage fallback:', error);
-      localStorage.setItem('pwaPromptDismissed', Date.now().toString());
+      // Even if localStorage fails, continue - not critical
     }
   };
   // Don't show if already in standalone mode, if recently dismissed, or if we're still checking dismissal status

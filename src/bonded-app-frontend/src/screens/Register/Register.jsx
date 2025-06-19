@@ -88,7 +88,27 @@ export const Register = () => {
             const identity = authClient.getIdentity();
             const principal = identity.getPrincipal().toString();
             
-            // Initialize ICP user service
+            // IMPORTANT: Update the canister integration service with the new authentication state
+            // Import the canister integration service
+            const { default: canisterIntegration } = await import('../../services/canisterIntegration.js');
+            
+            // Set the authentication state in the central service
+            canisterIntegration.isAuthenticated = true;
+            canisterIntegration.identity = identity;
+            canisterIntegration.authClient = authClient;
+            
+            // Create the backend actor with the new identity
+            await canisterIntegration.createBackendActor();
+            
+            // Verify authentication is working
+            const isLoggedIn = await canisterIntegration.isLoggedIn();
+            console.log('Post-authentication check:', { isLoggedIn, principal: principal });
+            
+            if (!isLoggedIn) {
+              throw new Error('Authentication verification failed after login');
+            }
+            
+            // Initialize ICP user service (it will now use the authenticated canister integration)
             await icpUserService.initialize();
             
             // Get the stored registration data

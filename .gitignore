@@ -41,3 +41,6 @@ src/bonded-app-frontend/public/models/
 
 # service worker
 src/bonded-app-frontend/service-worker.js
+
+# emailjs
+emailjs-bonded-template.html

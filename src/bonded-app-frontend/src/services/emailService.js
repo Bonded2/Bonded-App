@@ -116,15 +116,44 @@ class EmailService {
         service: 'Bonded Email Service'
       });
 
+      // Check if EmailJS is properly configured before attempting to send
+      // Get EmailJS configuration from environment variables (support both REACT_APP and VITE prefixes)
+      const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 
+                       import.meta.env?.VITE_EMAILJS_SERVICE_ID || 
+                       'service_n2rlbye'; // Your actual service ID as fallback
+      const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 
+                        import.meta.env?.VITE_EMAILJS_TEMPLATE_ID || 
+                        'template_9qqunmm'; // Your actual template ID as fallback
+      const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 
+                       import.meta.env?.VITE_EMAILJS_PUBLIC_KEY || 
+                       '2C_y5Y8A7moWYpk96'; // Your actual public key as fallback
+      
+      // Log EmailJS configuration status
+      console.log('📧 EmailJS environment variables:', {
+        serviceId: serviceId ? serviceId : 'MISSING',
+        templateId: templateId ? templateId : 'MISSING', 
+        publicKey: publicKey ? publicKey.substring(0, 8) + '...' : 'MISSING'
+      });
+
+      // Validate configuration - all should be available now with fallbacks
+      if (!serviceId || !templateId || !publicKey) {
+        throw new Error('EmailJS not configured - missing environment variables');
+      }
+
+      console.log('📧 Using EmailJS configuration:', {
+        serviceId: serviceId,
+        templateId: templateId,
+        publicKey: publicKey.substring(0, 8) + '...' // Partial key for security
+      });
+      
       // Send email using EmailJS
       // This will use our production email service configured in EmailJS dashboard
-      // NOTE: Will fail until real EmailJS account is set up as per EMAILJS_PRODUCTION_SETUP.md
       const response = await emailjs.send(
-        'service_bonded_app', // Service ID configured in EmailJS
-        'template_invite_partner', // Template ID for partner invitations
+        serviceId,
+        templateId,
         templateParams,
         {
-          publicKey: 'vlDYn0B9JZX7ByYKG' // Public key (needs real EmailJS setup)
+          publicKey: publicKey
         }
       );
 

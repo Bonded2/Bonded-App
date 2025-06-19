@@ -21,7 +21,7 @@ import { AISettings } from "./screens/AISettings/AISettings";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
 import { AcceptInvite } from "./screens/AcceptInvite/AcceptInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
-import { NetworkStatusIndicator } from "./components/NetworkStatusIndicator";
+import NetworkStatusIndicator from "./components/NetworkStatusIndicator";
 import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
 import GeoMetadataProvider from "./features/geolocation/GeoMetadataProvider";
 export class ErrorBoundary extends React.Component {
@@ -257,23 +257,23 @@ export const App = () => {
   useEffect(() => {
     const resetDataIfNeeded = async () => {
       try {
-        // Only reset if this is a direct entry to a deep link (not through splash or register)
-        const { canisterSessionStorage } = await import('./utils/storageAdapter.js');
-        const isInitialLoad = !(await canisterSessionStorage.getItem('sessionStarted'));
-        const pathname = window.location.pathname;
-        if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
-          await resetToFirstTimeUser();
-          await canisterSessionStorage.setItem('sessionStarted', 'true');
-        }
-      } catch (error) {
-        console.warn('Failed to use canister session storage, falling back to sessionStorage:', error);
-        // Fallback to regular sessionStorage
+        // Use sessionStorage first to avoid early canister calls
         const isInitialLoad = !sessionStorage.getItem('sessionStarted');
         const pathname = window.location.pathname;
         if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
           await resetToFirstTimeUser();
           sessionStorage.setItem('sessionStarted', 'true');
+          
+          // Optionally try to sync with canister storage later (non-blocking)
+          try {
+            const { canisterSessionStorage } = await import('./utils/storageAdapter.js');
+            await canisterSessionStorage.setItem('sessionStarted', 'true');
+          } catch (canisterError) {
+            // Ignore canister errors for session tracking - sessionStorage is sufficient
+          }
         }
+      } catch (error) {
+        // If everything fails, continue - not critical for app functionality
       }
     };
     resetDataIfNeeded();

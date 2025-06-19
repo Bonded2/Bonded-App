@@ -1,92 +1,101 @@
 import React, { useState, useEffect } from 'react';
 import { networkMonitor } from '../services/icpNetworkHelper.js';
 
+/**
+ * Network Status Indicator Component
+ * Shows users when the app is running in offline/fallback mode
+ */
 const NetworkStatusIndicator = () => {
-  const [networkStatus, setNetworkStatus] = useState({
-    isOnline: true,
-    errorCount: 0,
-    shouldUseFallback: false
-  });
+  const [networkStatus, setNetworkStatus] = useState(networkMonitor.getStatus());
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setNetworkStatus(networkMonitor.getStatus());
-    }, 30000);
+    const handleStatusUpdate = (status) => {
+      setNetworkStatus(status);
+    };
 
-    setNetworkStatus(networkMonitor.getStatus());
-    return () => clearInterval(interval);
+    networkMonitor.addListener(handleStatusUpdate);
+
+    return () => {
+      networkMonitor.removeListener(handleStatusUpdate);
+    };
   }, []);
 
-  if (networkStatus.isOnline && networkStatus.errorCount === 0) {
+  // Don't show indicator if everything is working normally
+  if (networkStatus.isFullyOnline) {
     return null;
   }
 
+  const getStatusMessage = () => {
+    if (!networkStatus.isOnline) {
+      return 'No Internet Connection';
+    }
+    if (networkStatus.icpNetworkStatus === 'disconnected') {
+      return 'ICP Network Issues';
+    }
+    return 'Network Limited';
+  };
+
+  const getStatusDescription = () => {
+    if (!networkStatus.isOnline) {
+      return 'Please check your internet connection. The app is running in offline mode.';
+    }
+    if (networkStatus.icpNetworkStatus === 'disconnected') {
+      return 'Having trouble connecting to ICP network. The app is using local storage and will sync when connection is restored.';
+    }
+    return 'Limited connectivity detected. Some features may be delayed.';
+  };
+
+  const getStatusColor = () => {
+    if (!networkStatus.isOnline) {
+      return 'bg-red-500';
+    }
+    if (networkStatus.icpNetworkStatus === 'disconnected') {
+      return 'bg-yellow-500';
+    }
+    return 'bg-orange-500';
+  };
+
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1000,
-      background: networkStatus.shouldUseFallback ? '#f39c12' : '#e74c3c',
-      color: 'white',
-      padding: '8px 16px',
-      cursor: 'pointer',
-      fontSize: '14px'
-    }} onClick={() => setShowDetails(!showDetails)}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span>{networkStatus.shouldUseFallback ? '🔄' : '⚠️'}</span>
-        <span style={{ flex: 1 }}>
-          {networkStatus.shouldUseFallback 
-            ? 'Running in offline mode - using cached data'
-            : 'ICP network connectivity issues detected'
-          }
-        </span>
-        <span>{showDetails ? '▼' : '▶'}</span>
+    <div className={`fixed top-0 left-0 right-0 z-50 ${getStatusColor()} text-white px-4 py-2 text-sm`}>
+      <div className="flex items-center justify-between max-w-7xl mx-auto">
+        <div className="flex items-center space-x-2">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span className="font-medium">{getStatusMessage()}</span>
+          <button
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-white/80 hover:text-white underline"
+          >
+            {showDetails ? 'Less' : 'More'}
+          </button>
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <span className="text-xs opacity-75">
+            {networkStatus.isOnline ? 'Online' : 'Offline'}
+          </span>
+        </div>
       </div>
       
       {showDetails && (
-        <div style={{
-          background: 'white',
-          color: '#333',
-          padding: '16px',
-          marginTop: '8px',
-          borderRadius: '4px',
-          fontSize: '13px'
-        }}>
-          <p><strong>Network Status:</strong> {networkStatus.isOnline ? 'Connected' : 'Offline'}</p>
-          <p><strong>Error Count:</strong> {networkStatus.errorCount}</p>
-          {networkStatus.shouldUseFallback && (
-            <div style={{ background: '#f8f9fa', padding: '12px', margin: '12px 0', borderRadius: '4px' }}>
-              <p><strong>🔄 Offline Mode Active</strong></p>
-              <p>The app is using cached data. Your information is safe and will sync when connectivity improves.</p>
+        <div className="mt-2 p-3 bg-black/20 rounded text-xs">
+          <p>{getStatusDescription()}</p>
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div>
+              <strong>Internet:</strong> {networkStatus.isOnline ? '✅ Connected' : '❌ Disconnected'}
             </div>
-          )}
-          <button 
-            style={{
-              background: '#007bff',
-              color: 'white',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              fontSize: '12px',
-              cursor: 'pointer'
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              networkMonitor.reset();
-              setNetworkStatus(networkMonitor.getStatus());
-              setShowDetails(false);
-            }}
-          >
-            Reset Status
-          </button>
+            <div>
+              <strong>ICP Network:</strong> {
+                networkStatus.icpNetworkStatus === 'connected' ? '✅ Connected' :
+                networkStatus.icpNetworkStatus === 'disconnected' ? '❌ Issues' :
+                '⏳ Checking...'
+              }
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-export { NetworkStatusIndicator };
 export default NetworkStatusIndicator; 

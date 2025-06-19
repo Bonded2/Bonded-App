@@ -18,15 +18,15 @@ import {
 // Import network resilience helpers
 import { 
   resilientCanisterCall, 
-  createFallbackProfile, 
-  createFallbackSettings, 
+  generateFallbackProfile, 
+  generateFallbackSettings, 
   networkMonitor 
 } from './icpNetworkHelper.js';
 // Import email service statically to avoid dynamic import issues
 import emailService from './emailService.js';
 
 // Use the correct canister ID for playground deployment
-const backendCanisterId = process.env.CANISTER_ID_BONDED_APP_BACKEND || 'mexqz-aqaaa-aaaab-qabtq-cai';
+const backendCanisterId = process.env.CANISTER_ID_BONDED_APP_BACKEND || declaredCanisterId || 'mexqz-aqaaa-aaaab-qabtq-cai';
 
 /**
  * Canister Integration Service
@@ -111,6 +111,7 @@ class CanisterIntegrationService {
         this.isLocal || 
         window.location.hostname.includes('playground') || 
         window.location.hostname.includes('localhost') ||
+        window.location.hostname.includes('icp0.io') ||
         this.host !== 'https://ic0.app'
       );
       
@@ -118,6 +119,9 @@ class CanisterIntegrationService {
         try {
           await agent.fetchRootKey();
           console.log('✅ Root key fetched successfully for development environment');
+          
+          // Force a small delay to ensure the root key is properly set
+          await new Promise(resolve => setTimeout(resolve, 50));
         } catch (rootKeyError) {
           console.warn('⚠️ Root key fetch failed, but continuing:', rootKeyError.message);
           // This is expected in some environments - continue with degraded functionality
@@ -126,10 +130,8 @@ class CanisterIntegrationService {
 
       // Create actor using generated declarations
       this.backendActor = createBackendActor(backendCanisterId, {
-        agent,
-        agentOptions: {
-          host: this.host
-        }
+        agent
+        // Note: agentOptions removed to avoid warning about redundant options
       });
 
       console.log('Backend actor created successfully');
@@ -193,10 +195,18 @@ class CanisterIntegrationService {
    * Get current authentication status
    */
   async isLoggedIn() {
-    if (!this.authClient) {
-      await this.initialize();
+    try {
+      if (!this.authClient) {
+        await this.initialize();
+      }
+      // Check both our flag and the auth client's status
+      const clientAuthenticated = await this.authClient.isAuthenticated();
+      this.isAuthenticated = clientAuthenticated; // Keep our flag in sync
+      return clientAuthenticated;
+    } catch (error) {
+      this.isAuthenticated = false;
+      return false;
     }
-    return this.isAuthenticated && await this.authClient.isAuthenticated();
   }
 
   /**
@@ -217,12 +227,12 @@ class CanisterIntegrationService {
     // Get the current frontend URL for this deployment
     const frontendUrl = this.getCurrentFrontendUrl();
     
-    // Since the canister methods are working but not in the generated interface,
-    // we'll use the raw canister call approach for production
+    // Try canister method first with resilient error handling
     try {
-      const canisterResponse = await this.backendActor._service._call(
-        'create_partner_invite',
-        [{
+      // Check if backend actor exists and has the method
+      if (this.backendActor && typeof this.backendActor.create_partner_invite === 'function') {
+        console.log('🔄 Attempting canister invite creation...');
+        const canisterResponse = await this.backendActor.create_partner_invite({
           partner_email: inviteData.partnerEmail,
           inviter_name: inviteData.inviterName,
           expires_at: BigInt(inviteData.createdAt + (7 * 24 * 60 * 60 * 1000)), // 7 days
@@ -231,20 +241,24 @@ class CanisterIntegrationService {
             deployment_environment: window.location.hostname
           })],
           frontend_url: [frontendUrl] // Pass dynamic frontend URL to backend
-        }]
-      );
-      
-      if (canisterResponse && canisterResponse.Ok) {
-        return {
-          success: true,
-          invite_id: canisterResponse.Ok.invite_id,
-          invite_link: canisterResponse.Ok.invite_link,
-          method: 'canister',
-          environment: window.location.hostname
-        };
+        });
+        
+        if (canisterResponse && canisterResponse.Ok) {
+          console.log('✅ Canister invite created successfully');
+          return {
+            success: true,
+            invite_id: canisterResponse.Ok.invite_id,
+            invite_link: canisterResponse.Ok.invite_link,
+            method: 'canister',
+            environment: window.location.hostname
+          };
+        }
+      } else {
+        console.log('⚠️ Backend actor not available or method missing, using fallback');
+        throw new Error('Canister method not available');
       }
     } catch (error) {
-      console.warn('Direct canister call failed:', error.message);
+      console.warn('⚠️ Canister invite creation failed, using reliable fallback:', error.message);
     }
     
     // Reliable fallback: store securely in canister storage
@@ -483,7 +497,25 @@ class CanisterIntegrationService {
    * Register a new user
    */
   async registerUser(profileMetadata = null) {
-    await this.ensureAuthenticated();
+    // Don't use ensureAuthenticated for registration - it creates a circular dependency
+    // We need to be logged in to register, but we can't register if we require authentication
+    const isLoggedIn = await this.isLoggedIn();
+    console.log('registerUser auth check:', { 
+      isLoggedIn, 
+      hasIdentity: !!this.identity, 
+      hasBackendActor: !!this.backendActor,
+      principal: this.identity?.getPrincipal()?.toString()
+    });
+    
+    if (!isLoggedIn) {
+      throw new Error('User not authenticated. Please login first.');
+    }
+    
+    // Ensure backend actor exists
+    if (!this.backendActor) {
+      console.log('Creating backend actor for registration...');
+      await this.createBackendActor();
+    }
     
     try {
       const result = await this.backendActor.register_user(
@@ -526,20 +558,12 @@ class CanisterIntegrationService {
         const result = await this.backendActor.get_user_profile();
         
         if ('Err' in result) {
-          // Track this error for network monitoring
-          networkMonitor.addError(new Error(result.Err));
           throw new Error(result.Err);
         }
         
         return result.Ok;
       },
-      {
-        maxRetries: 2,
-        retryDelay: 1000,
-        fallbackResult: createFallbackProfile(principal),
-        enableFallback: true,
-        logErrors: true
-      }
+      () => generateFallbackProfile(principal)
     );
   }
 
@@ -554,20 +578,12 @@ class CanisterIntegrationService {
         const result = await this.backendActor.get_user_settings();
         
         if ('Err' in result) {
-          // Track this error for network monitoring
-          networkMonitor.addError(new Error(result.Err));
           throw new Error(result.Err);
         }
         
         return result.Ok;
       },
-      {
-        maxRetries: 2,
-        retryDelay: 1000,
-        fallbackResult: createFallbackSettings(),
-        enableFallback: true,
-        logErrors: true
-      }
+      () => generateFallbackSettings()
     );
   }
 

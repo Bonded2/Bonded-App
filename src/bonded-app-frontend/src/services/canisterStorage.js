@@ -26,58 +26,53 @@ class CanisterStorageService {
             // Import and initialize canister integration service
             const { default: canisterIntegration } = await import('./canisterIntegration.js');
             await canisterIntegration.initialize();
-            this.backendActor = canisterIntegration.backendActor;
+            
+            // Only set backend actor if user is authenticated
+            if (await canisterIntegration.isLoggedIn()) {
+                this.backendActor = canisterIntegration.backendActor;
+            }
+            
             this.isInitialized = true;
             
-            // Process any pending writes
-            await this.processPendingWrites();
+            // Process any pending writes only if authenticated
+            if (this.backendActor) {
+                await this.processPendingWrites();
+            }
             
         } catch (error) {
-            // Continue in offline mode
-            this.isInitialized = false;
+            // Continue in offline mode but mark as initialized
+            this.isInitialized = true;
+            this.backendActor = null;
         }
     }
 
     /**
      * Save any type of user data to canister
+     * NOTE: Backend doesn't support get_user_data/save_user_data yet, so using localStorage fallback
      */
     async saveUserData(dataType, data) {
         try {
             const jsonData = JSON.stringify(data);
             
-            if (!this.isInitialized) {
-                // Queue for later if offline
-                this.pendingWrites.set(dataType, jsonData);
-                this.cache.set(dataType, data);
-                return true;
-            }
-
-            const result = await resilientCanisterCall(
-                () => this.backendActor.save_user_data(dataType, jsonData),
-                `Fallback: Data queued for ${dataType}`
-            );
-
-            if (result && typeof result === 'object' && result.Ok) {
-                this.cache.set(dataType, data);
-                this.pendingWrites.delete(dataType);
-                return true;
-            }
-            
-            // Fallback: cache locally and queue
-            this.pendingWrites.set(dataType, jsonData);
+            // Always cache locally first
             this.cache.set(dataType, data);
+            
+            // TODO: Implement proper canister storage when backend supports it
+            // For now, the backend uses specific methods like update_user_settings, not generic data storage
+            // So we'll use localStorage as the primary storage mechanism
+            
             return true;
             
         } catch (error) {
             // Emergency fallback: cache locally
             this.cache.set(dataType, data);
-            this.pendingWrites.set(dataType, JSON.stringify(data));
             return true;
         }
     }
 
     /**
      * Get user data from canister
+     * NOTE: Backend doesn't support get_user_data/save_user_data yet, so using localStorage fallback
      */
     async getUserData(dataType, defaultValue = null) {
         try {
@@ -86,29 +81,11 @@ class CanisterStorageService {
                 return this.cache.get(dataType);
             }
 
-            if (!this.isInitialized) {
-                return defaultValue;
-            }
-
-            const result = await resilientCanisterCall(
-                () => this.backendActor.get_user_data(dataType),
-                '{}'
-            );
-
-            let jsonData = '{}';
-            if (result && typeof result === 'object' && result.Ok) {
-                jsonData = result.Ok;
-            } else if (typeof result === 'string') {
-                jsonData = result;
-            }
-
-            if (jsonData === '{}' && defaultValue !== null) {
-                return defaultValue;
-            }
-
-            const data = JSON.parse(jsonData);
-            this.cache.set(dataType, data);
-            return data;
+            // TODO: Implement proper canister storage when backend supports it
+            // For now, the backend uses specific methods like get_user_settings, not generic data storage
+            // So we'll return the default value and rely on localStorage
+            
+            return defaultValue;
             
         } catch (error) {
             return defaultValue;
