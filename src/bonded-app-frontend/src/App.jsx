@@ -41,39 +41,19 @@ export class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-// Loader function to ensure first-time user flow only happens on initial entry
+// Loader function for protected routes - checks ICP authentication instead of sessionStorage
 const enforceFirstTimeUserLoader = async () => {
   try {
-    // Check if this is an initial load or a navigation within the current session
-    const { canisterSessionStorage } = await import('./utils/storageAdapter.js');
-    const isInitialLoad = !(await canisterSessionStorage.getItem('sessionStarted'));
+    // Check ICP authentication status instead of using sessionStorage
+    const icpCanisterService = (await import('./services/icpCanisterService.js')).default;
+    await icpCanisterService.initialize();
     
-    // If this is the initial load, reset everything and redirect to register
-    if (isInitialLoad) {
-      // Set session flag
-      await canisterSessionStorage.setItem('sessionStarted', 'true');
-      // Check if we're already on the root or register path
-      const pathname = window.location.pathname;
-      if (pathname !== '/' && pathname !== '/register') {
-        // Reset user data and redirect to splash if entry is not through root or register
-        await resetToFirstTimeUser();
-        return redirect('/');
-      }
-    }
-    // Allow navigation once session has started
+    // Let the app flow naturally through ICP authentication
+    // No need to force redirects based on session storage
     return null;
   } catch (error) {
-    console.warn('Failed to use canister session storage, falling back to sessionStorage:', error);
-    // Fallback to regular sessionStorage
-    const isInitialLoad = !sessionStorage.getItem('sessionStarted');
-    if (isInitialLoad) {
-      sessionStorage.setItem('sessionStarted', 'true');
-      const pathname = window.location.pathname;
-      if (pathname !== '/' && pathname !== '/register') {
-        await resetToFirstTimeUser();
-        return redirect('/');
-      }
-    }
+    console.warn('ICP authentication check failed:', error);
+    // Allow navigation to continue - authentication will be handled by individual components
     return null;
   }
 };
@@ -253,30 +233,21 @@ const OfflineIndicator = () => {
   );
 };
 export const App = () => {
-  // Only reset user data on initial app load of a new session
+  // Initialize ICP service on app load instead of using sessionStorage
   useEffect(() => {
-    const resetDataIfNeeded = async () => {
+    const initializeApp = async () => {
       try {
-        // Use sessionStorage first to avoid early canister calls
-        const isInitialLoad = !sessionStorage.getItem('sessionStarted');
-        const pathname = window.location.pathname;
-        if (isInitialLoad && pathname !== '/' && pathname !== '/register') {
-          await resetToFirstTimeUser();
-          sessionStorage.setItem('sessionStarted', 'true');
-          
-          // Optionally try to sync with canister storage later (non-blocking)
-          try {
-            const { canisterSessionStorage } = await import('./utils/storageAdapter.js');
-            await canisterSessionStorage.setItem('sessionStarted', 'true');
-          } catch (canisterError) {
-            // Ignore canister errors for session tracking - sessionStorage is sufficient
-          }
-        }
+        // Initialize ICP canister service instead of relying on sessionStorage
+        const icpCanisterService = (await import('./services/icpCanisterService.js')).default;
+        await icpCanisterService.initialize();
+        
+        // Let the app flow naturally - no forced redirects based on session storage
       } catch (error) {
-        // If everything fails, continue - not critical for app functionality
+        console.warn('Failed to initialize ICP service on app load:', error);
+        // Continue - individual components will handle authentication
       }
     };
-    resetDataIfNeeded();
+    initializeApp();
     // Listen for service worker messages
     const handleServiceWorkerMessage = async (event) => {
       if (event.data && event.data.type === 'TRIGGER_DAILY_PROCESSING') {

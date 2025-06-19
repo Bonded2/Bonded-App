@@ -265,9 +265,42 @@ export const Capture = () => {
         
         const isFirstRun = !(await canisterLocalStorage.getItem("settings_configured"));
         if (isFirstRun) {
-          // TODO: Fetch user nationality/region (e.g., from profile data)
-          const userNationality = "US"; // Example
-          const userRegion = "North America"; // Example
+          // Fetch user nationality/region from profile data
+          let userNationality = "US"; // Default fallback
+          let userRegion = "North America"; // Default fallback
+          
+          try {
+            const { default: icpCanisterService } = await import('../../../services/icpCanisterService.js');
+            if (icpCanisterService.isAuthenticated) {
+              const userProfile = await icpCanisterService.getUserProfile();
+              if (userProfile) {
+                // Try to extract nationality from profile metadata
+                const metadata = userProfile.profileMetadata || '{}';
+                const profileData = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
+                
+                if (profileData.nationality) {
+                  userNationality = profileData.nationality;
+                }
+                if (profileData.region) {
+                  userRegion = profileData.region;
+                }
+                
+                // Derive region from nationality if not set
+                if (!profileData.region && profileData.nationality) {
+                  const regionMap = {
+                    'US': 'North America', 'CA': 'North America', 'MX': 'North America',
+                    'GB': 'Europe', 'DE': 'Europe', 'FR': 'Europe', 'IT': 'Europe', 'ES': 'Europe',
+                    'CN': 'Asia', 'JP': 'Asia', 'KR': 'Asia', 'IN': 'Asia', 'TH': 'Asia',
+                    'AU': 'Oceania', 'NZ': 'Oceania',
+                    'BR': 'South America', 'AR': 'South America', 'CL': 'South America'
+                  };
+                  userRegion = regionMap[profileData.nationality] || 'Other';
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Could not fetch user profile for smart settings, using defaults:', error);
+          }
           let initialSettings = { ...captureSettings };
           let initialOverrides = { ...fileTypeOverrides };
           // Example Logic (replace with actual smart-configuration)

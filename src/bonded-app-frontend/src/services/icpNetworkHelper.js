@@ -59,7 +59,7 @@ export const resilientCanisterCall = async (canisterCall, fallbackResult = null,
   for (let attempt = 1; attempt <= config.MAX_RETRIES; attempt++) {
     try {
       const result = await canisterCall();
-      return result;
+      return { success: true, data: result, source: 'canister' };
     } catch (error) {
       lastError = error;
       
@@ -96,15 +96,16 @@ export const resilientCanisterCall = async (canisterCall, fallbackResult = null,
   }
   
   // All retries failed - use fallback if enabled
-  if (config.FALLBACK_ENABLED) {
+  if (config.FALLBACK_ENABLED && fallbackResult !== null) {
     if (!config.SUPPRESS_EXPECTED_ERRORS) {
       console.debug('Canister call failed after all retries, using fallback result');
     }
-    return typeof fallbackResult === 'function' ? fallbackResult() : fallbackResult;
+    const result = typeof fallbackResult === 'function' ? fallbackResult() : fallbackResult;
+    return { success: true, data: result, source: 'fallback' };
   }
   
-  // No fallback - throw the last error
-  throw lastError;
+  // No fallback - return error result
+  return { success: false, error: lastError.message, source: 'canister_failed' };
 };
 
 /**

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
-import icpUserService from "../../services/icpUserService";
-import canisterIntegration from "../../services/canisterIntegration";
+import icpCanisterService from "../../services/icpCanisterService";
+import emailService from "../../services/emailService";
 import "./style.css";
 
 export const PartnerInvite = () => {
@@ -24,10 +24,21 @@ export const PartnerInvite = () => {
 
   const initializeUserData = async () => {
     try {
-      const user = await icpUserService.getCurrentUser();
-      setCurrentUser(user);
+      await icpCanisterService.initialize();
+      const profile = await icpCanisterService.getUserProfile();
+      setCurrentUser({
+        name: 'Bonded User', // Default name for now
+        email: profile.principal.toString(),
+        principal: profile.principal
+      });
     } catch (error) {
-      console.warn('Failed to load user data:', error);
+      // Suppress certificate validation errors in console (expected in playground)
+      const isCertError = error.message?.includes('Invalid certificate') || 
+                         error.message?.includes('Invalid signature from replica');
+      
+      if (!isCertError) {
+        console.warn('Failed to load user data:', error);
+      }
     }
   };
 
@@ -44,8 +55,9 @@ export const PartnerInvite = () => {
   };
 
   const generateInviteLink = (inviteId) => {
-    // Use canisterIntegration service to generate dynamic URLs that work across all environments
-    return canisterIntegration.generateDynamicInviteLink(inviteId);
+    // Generate dynamic invite link for current deployment
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/accept-invite?invite=${inviteId}`;
   };
 
   const createStyledEmail = (inviteId, inviterName, inviteLink) => {
@@ -301,105 +313,113 @@ export const PartnerInvite = () => {
         inviteId: null
       });
 
-      // Generate unique invite ID using crypto.randomUUID for production
-      const inviteId = `invite_${Date.now()}_${crypto.randomUUID().substring(0, 8)}`;
-      
       // Get current user name from profile
       let inviterName = 'Your partner';
-      if (currentUser?.settings?.profile_metadata) {
-        try {
-          const profileData = JSON.parse(currentUser.settings.profile_metadata);
-          inviterName = profileData.fullName || inviterName;
-        } catch (error) {
-          // Handle error gracefully
-        }
+      if (currentUser?.name) {
+        inviterName = currentUser.name;
       }
-
-      // Generate invite link
-      const inviteLink = generateInviteLink(inviteId);
-
-      // Create styled email content
-      const emailContent = createStyledEmail(inviteId, inviterName, inviteLink);
 
       setInviteStatus({
         status: 'sending',
-        message: 'Sending invitation email...',
-        inviteId: inviteId
+        message: 'Storing invitation in ICP canister...',
+        inviteId: null
       });
 
-      // Store invite in ICP canister (production)
+      // Create invite data for ICP canister
       const inviteData = {
-        id: inviteId,
-        inviterPrincipal: currentUser?.principal,
-        inviterName: inviterName,
         partnerEmail: email,
+        inviterName: inviterName,
         createdAt: Date.now(),
-        status: 'pending',
-        inviteLink: inviteLink
+        metadata: JSON.stringify({
+          created_from: 'partner_invite_screen',
+          deployment_environment: window.location.hostname
+        })
       };
 
-      // Store invite data in canister and send email
-      await canisterIntegration.createPartnerInvite(inviteData);
-      const emailResult = await canisterIntegration.sendInviteEmail(email, emailContent);
+      // Create invite in ICP canister (proper canister storage)
+      console.log('📝 Creating invite via proper ICP canister service...');
+      const inviteResult = await icpCanisterService.createPartnerInvite(inviteData);
 
-      if (emailResult.success) {
+      if (inviteResult.success) {
+        console.log('✅ Invite created in canister:', inviteResult);
+        
         setInviteStatus({
-          status: 'sent',
-          message: `Email sent successfully from your registered email to ${email}!`,
-          inviteId: inviteId,
-          emailMethod: emailResult.method
+          status: 'sending',
+          message: 'Sending invitation email via canister...',
+          inviteId: inviteResult.invite_id
         });
-        setIsEmailAccepted(true);
+
+        // Send email using REAL EmailJS service
+        setInviteStatus({
+          status: 'sending',
+          message: 'Sending invitation email via EmailJS...',
+          inviteId: inviteResult.invite_id
+        });
+
+        try {
+          // Initialize EmailJS service
+          await emailService.initialize(currentUser?.email || 'user@bonded.app', inviterName);
+
+          // Send real email via EmailJS
+          const emailResult = await emailService.sendInviteEmail(
+            email,
+            inviteResult.invite_link,
+            inviterName
+          );
+
+          console.log('✅ Real email sent via EmailJS:', emailResult);
+          
+          setInviteStatus({
+            status: 'sent',
+            message: `✅ Invitation created and real email sent to ${email}! Check your inbox.`,
+            inviteId: inviteResult.invite_id,
+            inviteLink: inviteResult.invite_link
+          });
+          setIsEmailAccepted(true);
+
+        } catch (emailError) {
+          console.log('⚠️ EmailJS sending failed, providing manual sharing option:', emailError);
+          
+          // If EmailJS fails, provide manual sharing option
+          setInviteStatus({
+            status: 'manual_required',
+            message: 'Invitation created! Email service unavailable - please share the link manually.',
+            inviteId: inviteResult.invite_id,
+            inviteLink: inviteResult.invite_link,
+            manualInstructions: {
+              recipient: email,
+              subject: `You're invited to join Bonded by ${inviterName}`,
+              link: inviteResult.invite_link,
+              message: `Hi! ${inviterName} has invited you to join Bonded - a secure platform for building your relationship timeline together.\n\nClick this link to accept the invitation:\n${inviteResult.invite_link}\n\nThis invitation will expire in 7 days.\n\nBest regards,\nThe Bonded Team`
+            }
+          });
+          setIsEmailAccepted(true);
+        }
       } else {
-        // Handle manual sharing case
-        setInviteStatus({
-          status: 'manual_required',
-          message: emailResult.note || 'Please send the invitation manually',
-          inviteId: inviteId,
-          manualInstructions: {
-            recipient: emailResult.manual_instructions?.recipient || emailResult.manual_share_data?.recipient || email,
-            subject: emailResult.manual_instructions?.suggested_subject || emailResult.manual_share_data?.suggested_subject || `You're invited to join Bonded by ${inviterName}`,
-            message: emailResult.manual_instructions?.suggested_message || emailResult.manual_share_data?.suggested_message || emailContent
-          }
-        });
-        setIsEmailAccepted(true); // Allow user to continue
+        throw new Error(inviteResult.error || 'Failed to create invite in canister');
       }
 
     } catch (error) {
-      console.error('Failed to send invite:', error);
+      console.error('❌ Failed to create invite via ICP canister:', error);
       
-      // Provide helpful error message based on the error type
-      let errorMessage = 'Failed to send invitation. ';
-      let isEmailServiceError = false;
+      // Provide clear error message for canister failures
+      let errorMessage = 'Failed to create invitation in ICP canister. ';
       
-      if (error.message?.includes('Failed to fetch dynamically imported module') || 
-          error.message?.includes('EmailJS') || 
-          error.message?.includes('Invalid')) {
-        isEmailServiceError = true;
-        errorMessage = '📧 Email service needs setup. See EMAILJS_QUICK_SETUP.md for 5-minute configuration. Using manual sharing for now.';
+      if (error.message?.includes('Not authenticated')) {
+        errorMessage = '🔐 Please log in first to create invitations.';
       } else if (error.message?.includes('Invalid certificate') || 
                  error.message?.includes('Invalid signature')) {
-        errorMessage = '🔗 Network connectivity issue with ICP. Using local storage for now. You can still send invitations!';
+        errorMessage = '🔗 Network connectivity issue with ICP. Please try again in a moment.';
       } else {
-        errorMessage += 'Please try again or use manual sharing below.';
+        errorMessage += 'Please ensure you\'re logged in and try again.';
       }
       
       setInviteStatus({
-        status: isEmailServiceError ? 'manual_required' : 'error',
+        status: 'error',
         message: errorMessage,
-        inviteId: inviteId,
-        error: error.message,
-        manualInstructions: isEmailServiceError ? {
-          recipient: email,
-          subject: `You're invited to join Bonded by ${inviterName}`,
-          message: `Hi there!\n\nYou've been invited to join Bonded - a secure platform for building and sharing your relationship timeline together.\n\nClick this link to accept the invitation:\n${inviteLink}\n\nBest regards,\n${inviterName} (via Bonded)`
-        } : null
+        inviteId: null,
+        error: error.message
       });
-      
-      // If it's an email service error, still treat it as successful for UX
-      if (isEmailServiceError) {
-        setIsEmailAccepted(true);
-      }
     } finally {
       setIsLoading(false);
     }

@@ -7,11 +7,54 @@ type BondedResult_5 = variant { Ok : TimelineResponse; Err : text };
 type BondedResult_6 = variant { Ok : UserProfile; Err : text };
 type BondedResult_7 = variant { Ok : vec Relationship; Err : text };
 type BondedResult_8 = variant { Ok : UserSettings; Err : text };
+type BondedResult_9 = variant { Ok : CreatePartnerInviteResponse; Err : text };
+type BondedResult_10 = variant { Ok : SendEmailResponse; Err : text };
+type BondedResult_11 = variant { Ok : PartnerInvite; Err : text };
+type BondedResult_12 = variant { Ok : AcceptInviteResponse; Err : text };
+type AcceptInviteResponse = record {
+  public_key : blob;
+  relationship : Relationship;
+  relationship_id : text;
+  user_key_share : blob;
+};
+type CreatePartnerInviteRequest = record {
+  expires_at : nat64;
+  frontend_url : opt text;
+  inviter_name : text;
+  metadata : opt text;
+  partner_email : text;
+};
+type CreatePartnerInviteResponse = record {
+  expires_at : nat64;
+  invite_id : text;
+  invite_link : text;
+};
 type CreateRelationshipRequest = record { partner_principal : principal };
 type CreateRelationshipResponse = record {
   public_key : blob;
   relationship_id : text;
   user_key_share : blob;
+};
+type InviteStatus = variant { Pending; Cancelled; Accepted; Expired };
+type PartnerInvite = record {
+  id : text;
+  created_at : nat64;
+  expires_at : nat64;
+  inviter_name : text;
+  inviter_principal : principal;
+  metadata : opt text;
+  partner_email : text;
+  status : InviteStatus;
+};
+type SendEmailResponse = record {
+  message_id : text;
+  provider : text;
+  success : bool;
+};
+type SendInviteEmailRequest = record {
+  email_content : text;
+  recipient_email : text;
+  subject : text;
 };
 type Evidence = record {
   id : text;
@@ -81,13 +124,16 @@ type UserSettings = record {
   profile_metadata : opt text;
 };
 service : () -> {
+  accept_partner_invite : (text) -> (BondedResult_12);
   accept_relationship : (text) -> (BondedResult);
+  create_partner_invite : (CreatePartnerInviteRequest) -> (BondedResult_9);
   create_relationship : (CreateRelationshipRequest) -> (BondedResult_1);
   delete_evidence : (text, text) -> (BondedResult_2);
   delete_user_account : () -> (BondedResult_2);
   get_canister_stats : () -> (vec record { text; nat64 }) query;
   get_evidence_by_id : (text) -> (BondedResult_3) query;
   get_key_share : (text) -> (BondedResult) query;
+  get_partner_invite : (text) -> (BondedResult_11) query;
   get_relationship : (text) -> (BondedResult_4) query;
   get_timeline : (text, nat32, nat32) -> (BondedResult_5) query;
   get_timeline_with_filters : (TimelineQuery) -> (BondedResult_5) query;
@@ -97,6 +143,7 @@ service : () -> {
   greet : (text) -> (text) query;
   health_check : () -> (text) query;
   register_user : (opt text) -> (BondedResult_2);
+  send_invite_email : (SendInviteEmailRequest) -> (BondedResult_10);
   terminate_relationship : (text) -> (BondedResult_2);
   update_face_embedding : (vec float32) -> (BondedResult_2);
   update_user_settings : (UpdateSettingsRequest) -> (BondedResult_2);

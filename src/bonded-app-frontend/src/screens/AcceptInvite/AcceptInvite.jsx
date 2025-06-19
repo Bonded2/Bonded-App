@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import icpUserService from "../../services/icpUserService";
-import canisterIntegration from "../../services/canisterIntegration";
+import icpCanisterService from "../../services/icpCanisterService";
 import "./style.css";
 
 export const AcceptInvite = () => {
@@ -34,49 +33,71 @@ export const AcceptInvite = () => {
         return;
       }
 
-      // Get invite from ICP canister (production)
-      const inviteData = await canisterIntegration.getPartnerInvite(inviteId);
+      // Get invite from ICP canister using proper service with resilient error handling
+      console.log('🔍 Getting invite from ICP canister:', inviteId);
       
-      if (!inviteData) {
-        setInviteState({
-          status: 'invalid',
-          message: 'Invitation not found or has expired',
-          inviteData: null,
-          error: 'Invite not found'
-        });
-        return;
-      }
-      
-      // Check if invite is still valid
-      const isExpired = Date.now() - inviteData.createdAt > 7 * 24 * 60 * 60 * 1000; // 7 days
-      if (isExpired) {
-        setInviteState({
-          status: 'invalid',
-          message: 'This invitation has expired',
-          inviteData: null,
-          error: 'Invite expired'
-        });
-        return;
-      }
+      try {
+        const inviteData = await icpCanisterService.getPartnerInvite(inviteId);
+        
+        if (!inviteData || (typeof inviteData === 'object' && !inviteData.success)) {
+          setInviteState({
+            status: 'invalid',
+            message: 'Invitation not found or has expired',
+            inviteData: null,
+            error: 'Invite not found'
+          });
+          return;
+        }
 
-      // Check if already accepted
-      if (inviteData.status === 'accepted') {
+        // Handle both direct data and wrapped response formats
+        const actualInviteData = inviteData.success ? inviteData.data : inviteData;
+      
+        // Check if invite is still valid (using proper timestamp fields)
+        const isExpired = Date.now() > actualInviteData.expiresAt;
+        if (isExpired) {
+          setInviteState({
+            status: 'invalid',
+            message: 'This invitation has expired',
+            inviteData: null,
+            error: 'Invite expired'
+          });
+          return;
+        }
+
+        // Check if already accepted
+        if (actualInviteData.status === 'Accepted') {
+          setInviteState({
+            status: 'accepted',
+            message: 'This invitation has already been accepted',
+            inviteData: actualInviteData,
+            error: null
+          });
+          return;
+        }
+
         setInviteState({
-          status: 'accepted',
-          message: 'This invitation has already been accepted',
-          inviteData: inviteData,
+          status: 'valid',
+          message: `${actualInviteData.inviterName} has invited you to join Bonded`,
+          inviteData: actualInviteData,
           error: null
         });
-        return;
+
+      } catch (inviteError) {
+        // Suppress certificate validation errors (expected in playground environment)
+        const isCertError = inviteError.message?.includes('Invalid certificate') || 
+                           inviteError.message?.includes('Invalid signature from replica');
+        
+        if (!isCertError) {
+          console.error('❌ Failed to get invite:', inviteError);
+        }
+
+        setInviteState({
+          status: 'error',
+          message: 'Failed to validate invitation - network connectivity issue',
+          inviteData: null,
+          error: isCertError ? 'Network connectivity issue (certificate validation)' : inviteError.message
+        });
       }
-
-      setInviteState({
-        status: 'valid',
-        message: `${inviteData.inviterName} has invited you to join Bonded`,
-        inviteData: inviteData,
-        error: null
-      });
-
     } catch (error) {
       setInviteState({
         status: 'error',
@@ -95,25 +116,14 @@ export const AcceptInvite = () => {
         message: 'Creating your relationship bond...'
       }));
 
-      // Accept invitation in ICP canister (production)
-      const relationshipResult = await canisterIntegration.acceptPartnerInvite(inviteState.inviteData.id);
+      // Accept invitation via proper ICP canister service
+      console.log('✅ Accepting invite via ICP canister service:', inviteState.inviteData.id);
+      const relationshipResult = await icpCanisterService.acceptPartnerInvite(inviteState.inviteData.id);
       
-      // Store relationship bond information securely in canister storage
-      const relationshipData = {
-        id: relationshipResult.relationshipId || `rel_${Date.now()}`,
-        inviteId: inviteState.inviteData.id,
-        status: 'bonded',
-        createdAt: Date.now(),
-        acceptedAsNewUser: asNewUser
-      };
-
-      // Use canister storage instead of localStorage for security
-      try {
-        const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
-        await canisterLocalStorage.setItem('relationshipBond', JSON.stringify(relationshipData));
-      } catch (error) {
-        console.warn('Failed to store relationship bond data in canister, continuing anyway:', error);
-      }
+      console.log('✅ Relationship created successfully:', relationshipResult);
+      
+      // The relationship is now stored in ICP canister storage
+      // No need for local storage - everything is on-chain
 
       setInviteState(prev => ({
         ...prev,
@@ -131,11 +141,19 @@ export const AcceptInvite = () => {
       }, 2000);
 
     } catch (error) {
+      // Suppress certificate validation errors (expected in playground environment)
+      const isCertError = error.message?.includes('Invalid certificate') || 
+                         error.message?.includes('Invalid signature from replica');
+      
+      if (!isCertError) {
+        console.error('❌ Failed to accept invite:', error);
+      }
+
       setInviteState(prev => ({
         ...prev,
         status: 'error',
-        message: 'Failed to accept invitation',
-        error: error.message
+        message: isCertError ? 'Failed to accept invitation - network connectivity issue' : 'Failed to accept invitation',
+        error: isCertError ? 'Network connectivity issue (certificate validation)' : error.message
       }));
     }
   };

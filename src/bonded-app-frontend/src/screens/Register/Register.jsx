@@ -64,7 +64,7 @@ export const Register = () => {
     setErrors({});
     
     try {
-      // Store registration data temporarily in sessionStorage
+      // Store registration data temporarily in component state
       // This will be used after authentication to complete registration
       const registrationData = {
         fullName,
@@ -72,7 +72,6 @@ export const Register = () => {
         password, // In production, this should be hashed
         timestamp: Date.now()
       };
-      sessionStorage.setItem('pendingRegistration', JSON.stringify(registrationData));
       
       // Configure the login options
       const loginOptions = {
@@ -90,18 +89,18 @@ export const Register = () => {
             
             // IMPORTANT: Update the canister integration service with the new authentication state
             // Import the canister integration service
-            const { default: canisterIntegration } = await import('../../services/canisterIntegration.js');
+            const { default: icpCanisterService } = await import('../../services/icpCanisterService.js');
             
             // Set the authentication state in the central service
-            canisterIntegration.isAuthenticated = true;
-            canisterIntegration.identity = identity;
-            canisterIntegration.authClient = authClient;
+            icpCanisterService.isAuthenticated = true;
+            icpCanisterService.identity = identity;
+            icpCanisterService.authClient = authClient;
             
             // Create the backend actor with the new identity
-            await canisterIntegration.createBackendActor();
+            await icpCanisterService.createActor();
             
             // Verify authentication is working
-            const isLoggedIn = await canisterIntegration.isLoggedIn();
+            const isLoggedIn = icpCanisterService.isAuthenticated;
             console.log('Post-authentication check:', { isLoggedIn, principal: principal });
             
             if (!isLoggedIn) {
@@ -111,16 +110,13 @@ export const Register = () => {
             // Initialize ICP user service (it will now use the authenticated canister integration)
             await icpUserService.initialize();
             
-            // Get the stored registration data
-            const storedData = sessionStorage.getItem('pendingRegistration');
-            if (storedData) {
-              const userData = JSON.parse(storedData);
-              
+            // Use the registration data from component scope
+            if (registrationData) {
               // Create profile metadata JSON
               const profileMetadata = JSON.stringify({
-                fullName: userData.fullName,
-                email: userData.email,
-                avatar: userData.fullName
+                fullName: registrationData.fullName,
+                email: registrationData.email,
+                avatar: registrationData.fullName
                   .split(' ')
                   .map(part => part[0])
                   .join('')
@@ -130,9 +126,6 @@ export const Register = () => {
               
               // Register user on ICP canister
               await icpUserService.registerUser(profileMetadata);
-              
-              // Clear the temporary data
-              sessionStorage.removeItem('pendingRegistration');
             }
             
             // Handle different flows based on how user arrived

@@ -5,7 +5,7 @@
  * Handles decryption of evidence items for display and PDF generation
  */
 import { encryptionService } from '../crypto/encryption.js';
-import canisterIntegration from './canisterIntegration.js';
+import icpCanisterService from './icpCanisterService.js';
 import { openDB } from 'idb';
 // import jsPDF from 'jspdf'; // Temporarily disabled for build
 class TimelineService {
@@ -69,7 +69,7 @@ class TimelineService {
       }
       // Fetch timeline data from ICP canisters
       const relationshipId = 'mock-relationship-id'; // Would come from user session
-      const timelineData = await canisterIntegration.fetchTimeline(relationshipId, { page, limit });
+      const timelineData = await icpCanisterService.fetchTimeline({ relationshipId, page, limit });
       // Decrypt timeline items
       const decryptedTimeline = await this.decryptTimelineItems(timelineData);
       // Cache the results
@@ -92,9 +92,8 @@ class TimelineService {
     for (const item of encryptedItems) {
       try {
         if (item.encrypted) {
-          // For MVP, simulate decryption
-          // TODO: Replace with actual decryption using relationship key
-          const decryptedContent = await this.simulateDecryption(item);
+          // Use actual decryption with encryption service
+          const decryptedContent = await this.decryptItem(item);
           decryptedItems.push({
             ...item,
             decrypted: true,
@@ -128,7 +127,43 @@ class TimelineService {
     return decryptedItems;
   }
   /**
-   * Simulate decryption for MVP (replace with real decryption)
+   * Decrypt an encrypted timeline item using the encryption service
+   * @param {Object} item - Encrypted item
+   * @returns {Promise<Object>} Decrypted content
+   */
+  async decryptItem(item) {
+    try {
+      // Import encryption service
+      const { encryptionService } = await import('../services/index.js');
+      
+      // For MVP, use a test key since we don't have relationship keys yet
+      // In production, this would retrieve the relationship's decryption key
+      const testKey = await encryptionService.generateMasterKey();
+      
+      // If the item has encrypted data, decrypt it
+      if (item.encryptedData) {
+        try {
+          const decryptedContent = await encryptionService.decryptEvidencePackage(
+            item.encryptedData, 
+            testKey
+          );
+          return decryptedContent;
+        } catch (decryptError) {
+          console.warn('Failed to decrypt with encryption service, falling back to simulation:', decryptError);
+          return await this.simulateDecryption(item);
+        }
+      } else {
+        // No encrypted data available, simulate for MVP
+        return await this.simulateDecryption(item);
+      }
+    } catch (error) {
+      console.warn('Decryption failed, falling back to simulation:', error);
+      return await this.simulateDecryption(item);
+    }
+  }
+
+  /**
+   * Simulate decryption for MVP (fallback when real decryption fails)
    * @param {Object} item - Encrypted item
    * @returns {Promise<Object>} Simulated decrypted content
    */

@@ -366,6 +366,10 @@ export default defineConfig({
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || (isDev ? 'development' : 'production')),
     'process.env.DFX_NETWORK': JSON.stringify(network),
+    // EmailJS Configuration - Replace with your actual credentials
+    'import.meta.env.VITE_EMAILJS_SERVICE_ID': JSON.stringify(process.env.VITE_EMAILJS_SERVICE_ID || 'service_n2rlbye'),
+    'import.meta.env.VITE_EMAILJS_TEMPLATE_ID': JSON.stringify(process.env.VITE_EMAILJS_TEMPLATE_ID || 'template_9qqunmm'),
+    'import.meta.env.VITE_EMAILJS_PUBLIC_KEY': JSON.stringify(process.env.VITE_EMAILJS_PUBLIC_KEY || '2C_y5Y8A7moWYpk96'),
     global: 'globalThis',
     __DEV__: isDev,
   },

@@ -71,7 +71,20 @@ export const TimelineCreated = () => {
       const evidenceHash = await encryptionService.computeHash(evidence);
       setUploadProgress({ stage: 'uploading', progress: 75 });
       // Upload to Evidence Canister
-      const relationshipId = 'mock-relationship-id'; // TODO: Get from actual relationship context
+      // Get relationship ID from user profile
+      let relationshipId = 'mock-relationship-id'; // fallback
+      try {
+        const { default: icpCanisterService } = await import('../../services/icpCanisterService.js');
+        if (icpCanisterService.isAuthenticated) {
+          const userProfile = await icpCanisterService.getUserProfile();
+          if (userProfile.relationships && userProfile.relationships.length > 0) {
+            relationshipId = userProfile.relationships[0]; // Use first relationship
+          }
+        }
+      } catch (error) {
+        console.warn('Could not get relationship ID, using mock:', error);
+      }
+      
       const uploadResult = await canisterIntegration.uploadEvidence(
         relationshipId,
         encryptedData,

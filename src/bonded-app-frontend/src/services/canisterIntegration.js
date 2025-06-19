@@ -269,15 +269,25 @@ class CanisterIntegrationService {
       environment: window.location.hostname
     };
     
+    // Store invites in publicly accessible localStorage since invite recipients
+    // won't be authenticated when they click the link
+    console.log('💾 Storing invite in public localStorage:', `invite_${inviteData.id}`);
+    localStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
+    localStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
+    
+    // Also store with a global key for cross-domain access
+    const globalInviteKey = `bonded_global_invite_${inviteData.id}`;
+    localStorage.setItem(globalInviteKey, JSON.stringify(fallbackInviteData));
+    console.log('💾 Also stored with global key:', globalInviteKey);
+    
+    // Also try to store in canister storage for the authenticated user
     try {
       const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
       await canisterLocalStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
       await canisterLocalStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
+      console.log('💾 Also stored in authenticated canister storage');
     } catch (storageError) {
-      console.warn('Failed to store invite in canister storage:', storageError);
-      // As last resort, fall back to localStorage
-      localStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
-      localStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
+      console.warn('Failed to store invite in canister storage (not critical):', storageError);
     }
     
     // Return success for UI continuity
@@ -354,9 +364,12 @@ class CanisterIntegrationService {
    * @returns {Promise<Object|null>} Invite data or null if not found
    */
   async getPartnerInvite(inviteId) {
+    console.log('🔍 Getting partner invite:', inviteId);
+    
     try {
       // Check if the method exists on the backend actor
       if (this.backendActor && typeof this.backendActor.get_partner_invite === 'function') {
+        console.log('📞 Trying canister method...');
         const result = await resilientCanisterCall(
           () => this.backendActor.get_partner_invite(inviteId),
           'get_partner_invite'
@@ -367,46 +380,127 @@ class CanisterIntegrationService {
           // Ensure the invite link is current for this environment
           invite.invite_link = this.generateDynamicInviteLink(invite.id || inviteId);
           invite.current_environment = window.location.hostname;
+          console.log('✅ Found invite via canister:', invite);
           return invite;
         }
+        console.log('❌ Canister returned:', result);
         return result;
       } else {
-        console.warn('get_partner_invite method not available on canister, checking local storage');
+        console.warn('⚠️ get_partner_invite method not available on canister, checking local storage');
         throw new Error('Canister method not implemented');
       }
     } catch (error) {
-      // Production fallback: check canister storage first, then localStorage
-      console.log('Checking canister storage for invite:', inviteId);
+      // Production fallback: check localStorage first (publicly accessible), then canister storage
+      console.log('🔄 Checking public localStorage for invite:', inviteId);
       
+      // Debug: List all localStorage keys that start with 'invite_'
+      const allKeys = Object.keys(localStorage);
+      const inviteKeys = allKeys.filter(key => key.startsWith('invite_'));
+      console.log('🔍 All invite keys in localStorage:', inviteKeys);
+      
+      // Check both normal and global keys
+      let localInvite = localStorage.getItem(`invite_${inviteId}`);
+      if (!localInvite) {
+        localInvite = localStorage.getItem(`bonded_global_invite_${inviteId}`);
+        if (localInvite) {
+          console.log('🎯 Found invite using global key');
+        }
+      }
+      
+      if (localInvite) {
+        const inviteData = JSON.parse(localInvite);
+        console.log('🎯 Found in localStorage:', inviteData);
+        
+        // Always update the invite link to match current environment
+        inviteData.inviteLink = this.generateDynamicInviteLink(inviteId);
+        inviteData.current_environment = window.location.hostname;
+        
+        // Ensure compatibility with AcceptInvite component expectations
+        const normalizedInvite = {
+          id: inviteData.id || inviteId,
+          inviterName: inviteData.inviterName,
+          inviterPrincipal: inviteData.inviterPrincipal,
+          partnerEmail: inviteData.partnerEmail,
+          createdAt: inviteData.createdAt,
+          status: inviteData.status || 'pending',
+          inviteLink: inviteData.inviteLink,
+          current_environment: inviteData.current_environment,
+          source: 'local_storage_public'
+        };
+        
+        console.log('✅ Normalized invite from localStorage:', normalizedInvite);
+        return normalizedInvite;
+      } else {
+        console.log('❌ Not found in public localStorage');
+        
+        // Fallback: Check if there's a recent pendingInvite that might match
+        const pendingInvite = localStorage.getItem('pendingInvite');
+        if (pendingInvite) {
+          const pendingData = JSON.parse(pendingInvite);
+          console.log('🔍 Found pendingInvite as fallback:', pendingData);
+          
+          // Check if this pending invite matches or is recent enough
+          const timeDiff = Date.now() - pendingData.createdAt;
+          const hoursDiff = timeDiff / (1000 * 60 * 60);
+          
+          if (hoursDiff < 24) { // If invite is less than 24 hours old, use it
+            console.log('✅ Using recent pendingInvite as fallback');
+            pendingData.inviteLink = this.generateDynamicInviteLink(pendingData.id);
+            pendingData.current_environment = window.location.hostname;
+            
+            const normalizedInvite = {
+              id: pendingData.id || inviteId,
+              inviterName: pendingData.inviterName,
+              inviterPrincipal: pendingData.inviterPrincipal,
+              partnerEmail: pendingData.partnerEmail,
+              createdAt: pendingData.createdAt,
+              status: pendingData.status || 'pending',
+              inviteLink: pendingData.inviteLink,
+              current_environment: pendingData.current_environment,
+              source: 'pending_invite_fallback'
+            };
+            
+            return normalizedInvite;
+          }
+        }
+      }
+      
+      // Secondary fallback: check canister storage (requires authentication)
+      console.log('🔄 Checking authenticated canister storage for invite:', inviteId);
       try {
         const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
         const inviteDataStr = await canisterLocalStorage.getItem(`invite_${inviteId}`);
         if (inviteDataStr) {
           const inviteData = JSON.parse(inviteDataStr);
+          console.log('🎯 Found in canister storage:', inviteData);
+          
           // Always update the invite link to match current environment
           inviteData.inviteLink = this.generateDynamicInviteLink(inviteId);
           inviteData.current_environment = window.location.hostname;
-          return { 
-            ...inviteData,
+          
+          // Ensure compatibility with AcceptInvite component expectations
+          const normalizedInvite = {
+            id: inviteData.id || inviteId,
+            inviterName: inviteData.inviterName,
+            inviterPrincipal: inviteData.inviterPrincipal,
+            partnerEmail: inviteData.partnerEmail,
+            createdAt: inviteData.createdAt,
+            status: inviteData.status || 'pending',
+            inviteLink: inviteData.inviteLink,
+            current_environment: inviteData.current_environment,
             source: 'canister_storage'
           };
+          
+          console.log('✅ Normalized invite:', normalizedInvite);
+          return normalizedInvite;
+        } else {
+          console.log('❌ Not found in canister storage either');
         }
       } catch (storageError) {
-        console.warn('Failed to check canister storage, trying localStorage:', storageError);
+        console.warn('Failed to check canister storage (user not authenticated):', storageError);
       }
       
-      // Final fallback: check localStorage
-      const localInvite = localStorage.getItem(`invite_${inviteId}`);
-      if (localInvite) {
-        const inviteData = JSON.parse(localInvite);
-        // Always update the invite link to match current environment
-        inviteData.inviteLink = this.generateDynamicInviteLink(inviteId);
-        inviteData.current_environment = window.location.hostname;
-        return { 
-          ...inviteData,
-          source: 'local_storage_fallback'
-        };
-      }
+      console.log('🚫 Invite not found anywhere');
       return null;
     }
   }

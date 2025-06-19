@@ -13,7 +13,7 @@ const getServices = async () => {
   try {
     // Import modules individually to avoid destructuring issues
     const servicesModule = await import('../services/index.js');
-    const canisterModule = await import('../services/canisterIntegration.js');
+    const icpCanisterModule = await import('../services/icpCanisterService.js');
     const encryptionModule = await import('../crypto/encryption.js');
     
     // Build services cache with proper fallbacks
@@ -23,12 +23,12 @@ const getServices = async () => {
       schedulerService: servicesModule.schedulerService,
       mediaAccessService: servicesModule.mediaAccessService,
       aiEvidenceFilter: servicesModule.aiEvidenceFilter || servicesModule.AIEvidenceFilter,
-      canisterIntegration: canisterModule.canisterIntegration || canisterModule.default,
+      icpCanisterService: icpCanisterModule.default,
       encryptionService: encryptionModule.encryptionService || encryptionModule.EncryptionService || encryptionModule.default
     };
     
     // Validate that all required services are available
-    const requiredServices = ['evidenceProcessor', 'timelineService', 'schedulerService', 'mediaAccessService', 'aiEvidenceFilter', 'canisterIntegration', 'encryptionService'];
+    const requiredServices = ['evidenceProcessor', 'timelineService', 'schedulerService', 'mediaAccessService', 'aiEvidenceFilter', 'icpCanisterService', 'encryptionService'];
     for (const serviceName of requiredServices) {
       if (!servicesCache[serviceName]) {
         throw new Error(`Failed to load required service: ${serviceName}`);
@@ -67,10 +67,16 @@ export const useBondedServices = () => {
       // Initialize encryption service first
       await services.encryptionService.initialize();
       setEncryptionReady(true);
-      // Initialize canister integration
+      // Initialize ICP canister service
       try {
-        const authStatus = await services.canisterIntegration.initialize();
-        setAuthState(authStatus || { isAuthenticated: false, principal: null, identity: null });
+        await services.icpCanisterService.initialize();
+        const isAuthenticated = services.icpCanisterService.isAuthenticated;
+        const principal = isAuthenticated ? services.icpCanisterService.getPrincipal()?.toString() : null;
+        setAuthState({ 
+          isAuthenticated, 
+          principal, 
+          identity: services.icpCanisterService.identity 
+        });
         setCanisterConnected(true);
       } catch (canisterErr) {
         setAuthState({ isAuthenticated: false, principal: null, identity: null });
@@ -100,7 +106,7 @@ export const useBondedServices = () => {
       let timelineData = [];
       if (canisterConnected && authState && authState.isAuthenticated) {
         try {
-          timelineData = await services.canisterIntegration.fetchTimeline();
+          timelineData = await services.icpCanisterService.getTimeline();
         } catch (canisterErr) {
           timelineData = await services.timelineService.fetchTimeline();
         }
@@ -115,7 +121,7 @@ export const useBondedServices = () => {
       let userSettings = {};
       if (canisterConnected && authState && authState.isAuthenticated) {
         try {
-          userSettings = await services.canisterIntegration.getUserSettings();
+          userSettings = await services.icpCanisterService.getUserSettings();
         } catch (settingsErr) {
         }
       }
@@ -128,7 +134,7 @@ export const useBondedServices = () => {
         ai: { ...aiSettings, ...userSettings.ai },
         media: { ...mediaConfig, ...userSettings.media },
         encryption: services.encryptionService.getSettings(),
-        canister: services.canisterIntegration.getConnectionInfo()
+        canister: { connected: canisterConnected, isAuthenticated: authState.isAuthenticated }
       });
     } catch (err) {
       throw err;
@@ -170,7 +176,7 @@ export const useBondedServices = () => {
       // Try canister first if available and properly initialized
       if (canisterConnected && authState && authState.isAuthenticated) {
         try {
-          timelineData = await services.canisterIntegration.fetchTimeline({ forceRefresh });
+          timelineData = await services.icpCanisterService.fetchTimeline({ forceRefresh });
         } catch (canisterErr) {
           timelineData = await services.timelineService.fetchTimeline({ forceRefresh });
         }
@@ -202,7 +208,7 @@ export const useBondedServices = () => {
           // Upload to canister
           // Get relationship ID from current user's relationships
     const relationshipId = currentUser?.relationships?.[0] || null;
-          const uploadResult = await services.canisterIntegration.uploadEvidence(
+          const uploadResult = await services.icpCanisterService.uploadEvidence(
             relationshipId,
             encryptedData,
             {
@@ -274,7 +280,7 @@ export const useBondedServices = () => {
       // Sync to canister if available
       if (canisterConnected && authState?.isAuthenticated) {
         try {
-          await services.canisterIntegration.updateUserSettings({
+          await services.icpCanisterService.updateUserSettings({
             ai: newSettings
           });
         } catch (syncErr) {
@@ -300,7 +306,7 @@ export const useBondedServices = () => {
       // Sync to canister if available
       if (canisterConnected && authState?.isAuthenticated) {
         try {
-          await services.canisterIntegration.updateUserSettings({
+          await services.icpCanisterService.updateUserSettings({
             scheduler: newSettings
           });
         } catch (syncErr) {
@@ -345,7 +351,7 @@ export const useBondedServices = () => {
   const testConnectivity = useCallback(async () => {
     try {
       const services = await getServices();
-      const canisterStatus = await services.canisterIntegration.testConnectivity();
+      const canisterStatus = await services.icpCanisterService.testConnectivity();
       setCanisterConnected(canisterStatus.connected);
       const encryptionStatus = await services.encryptionService.testEncryption();
       setEncryptionReady(encryptionStatus.ready);
@@ -413,7 +419,7 @@ export const useBondedServices = () => {
       // Clear canister data first if available
       if (canisterConnected && authState?.isAuthenticated) {
         try {
-          await services.canisterIntegration.deleteAllUserData();
+          await services.icpCanisterService.deleteAllUserData();
         } catch (canisterErr) {
         }
       }

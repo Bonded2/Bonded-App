@@ -9,7 +9,7 @@ export { EvidenceProcessor } from './evidenceProcessor.js';
 export { TimelineService } from './timelineService.js';
 export { schedulerService } from './scheduler.js';
 export { mediaAccessService } from './mediaAccess.js';
-export { default as canisterIntegration } from './canisterIntegration.js';
+export { default as icpCanisterService } from './icpCanisterService.js';
 export { webrtcService } from './webrtcService.js';
 
 // Re-export AI services for convenience

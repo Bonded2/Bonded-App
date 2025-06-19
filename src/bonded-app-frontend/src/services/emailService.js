@@ -24,10 +24,15 @@ class EmailService {
         await this.loadEmailJS();
       }
 
+      // Get EmailJS public key from environment variables
+      const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 
+                       import.meta.env?.VITE_EMAILJS_PUBLIC_KEY || 
+                       '2C_y5Y8A7moWYpk96'; // Fallback public key
+
       // Initialize EmailJS with production configuration
       // Note: This requires proper EmailJS account setup as documented in EMAILJS_PRODUCTION_SETUP.md
       emailjs.init({
-        publicKey: "vlDYn0B9JZX7ByYKG" // Production EmailJS public key (needs real setup)
+        publicKey: publicKey
       });
       
       this.senderEmail = userEmail;
@@ -165,17 +170,36 @@ class EmailService {
           to: recipientEmail
         });
 
-        // Log successful email sending
-        const emailLog = {
-          recipient: recipientEmail,
-          sender: this.senderEmail,
-          timestamp: Date.now(),
-          status: 'sent_successfully',
-          method: 'emailjs_real_sending',
-          response_status: response.status,
-          message_id: response.text || `msg_${Date.now()}`
-        };
-        localStorage.setItem(`email_log_${Date.now()}`, JSON.stringify(emailLog));
+        // Log email sending via canister storage instead of localStorage
+        try {
+          const { default: canisterStorage } = await import('./canisterStorage.js');
+          const emailLog = {
+            recipient: recipientEmail,
+            sender: this.senderEmail,
+            timestamp: Date.now(),
+            status: 'sent_successfully',
+            method: 'emailjs_real_sending',
+            response_status: response.status,
+            message_id: response.text || `msg_${Date.now()}`
+          };
+          await canisterStorage.setItem(`email_log_${Date.now()}`, emailLog);
+          
+          // Update email stats summary
+          const currentStats = await canisterStorage.getItem('email_stats_summary') || {
+            total_attempts: 0,
+            successful_sends: 0,
+            failed_attempts: 0,
+            last_activity: null
+          };
+          
+          currentStats.total_attempts += 1;
+          currentStats.successful_sends += 1;
+          currentStats.last_activity = Date.now();
+          
+          await canisterStorage.setItem('email_stats_summary', currentStats);
+        } catch (error) {
+          console.warn('Failed to log email to canister storage:', error);
+        }
 
         return {
           success: true,
@@ -341,28 +365,36 @@ ${inviterName}
   }
 
   /**
-   * Get email sending statistics
+   * Get email sending statistics from canister storage
    */
-  getEmailStats() {
-    const logs = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('email_log_')) {
-        try {
-          const log = JSON.parse(localStorage.getItem(key));
-          logs.push(log);
-        } catch (e) {
-          // Skip invalid logs
-        }
+  async getEmailStats() {
+    try {
+      const { default: canisterStorage } = await import('./canisterStorage.js');
+      
+      // Get email stats summary from canister storage
+      const emailStatsData = await canisterStorage.getItem('email_stats_summary');
+      
+      if (emailStatsData) {
+        return emailStatsData;
+      } else {
+        return {
+          total_attempts: 0,
+          successful_sends: 0,
+          failed_attempts: 0,
+          last_activity: null,
+          note: 'No email statistics available yet'
+        };
       }
+    } catch (error) {
+      console.warn('Failed to get email stats from canister storage:', error);
+      return {
+        total_attempts: 0,
+        successful_sends: 0,
+        failed_attempts: 0,
+        last_activity: null,
+        note: 'Email statistics unavailable - canister storage error'
+      };
     }
-    
-    return {
-      total_attempts: logs.length,
-      successful_sends: logs.filter(log => log.status === 'sent_successfully').length,
-      failed_attempts: logs.filter(log => log.status !== 'sent_successfully').length,
-      last_activity: logs.length > 0 ? Math.max(...logs.map(log => log.timestamp)) : null
-    };
   }
 }
 

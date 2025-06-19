@@ -17,19 +17,19 @@ class CanisterStorageService {
     }
 
     /**
-     * Initialize the service with backend actor
+     * Initialize the service with ICP canister service
      */
     async initialize() {
         if (this.isInitialized) return;
         
         try {
-            // Import and initialize canister integration service
-            const { default: canisterIntegration } = await import('./canisterIntegration.js');
-            await canisterIntegration.initialize();
+            // Import and initialize ICP canister service
+            const { default: icpCanisterService } = await import('./icpCanisterService.js');
+            await icpCanisterService.initialize();
             
             // Only set backend actor if user is authenticated
-            if (await canisterIntegration.isLoggedIn()) {
-                this.backendActor = canisterIntegration.backendActor;
+            if (icpCanisterService.isAuthenticated) {
+                this.backendActor = icpCanisterService.actor;
             }
             
             this.isInitialized = true;
@@ -47,8 +47,7 @@ class CanisterStorageService {
     }
 
     /**
-     * Save any type of user data to canister
-     * NOTE: Backend doesn't support get_user_data/save_user_data yet, so using localStorage fallback
+     * Save any type of user data to canister using client storage
      */
     async saveUserData(dataType, data) {
         try {
@@ -57,13 +56,32 @@ class CanisterStorageService {
             // Always cache locally first
             this.cache.set(dataType, data);
             
-            // TODO: Implement proper canister storage when backend supports it
-            // For now, the backend uses specific methods like update_user_settings, not generic data storage
-            // So we'll use localStorage as the primary storage mechanism
-            
-            return true;
+            if (this.backendActor) {
+                try {
+                    // Use the client storage canister method
+                    const result = await this.backendActor.store_client_data(dataType, jsonData);
+                    
+                    if ('Ok' in result) {
+                        return true;
+                    } else {
+                        console.warn('Failed to save to canister:', result.Err);
+                        // Cache locally as fallback
+                        this.pendingWrites.set(dataType, jsonData);
+                        return true;
+                    }
+                } catch (canisterError) {
+                    console.warn('Canister storage failed, queuing for retry:', canisterError);
+                    this.pendingWrites.set(dataType, jsonData);
+                    return true;
+                }
+            } else {
+                // Queue for when authentication is available
+                this.pendingWrites.set(dataType, jsonData);
+                return true;
+            }
             
         } catch (error) {
+            console.error('Failed to save user data:', error);
             // Emergency fallback: cache locally
             this.cache.set(dataType, data);
             return true;
@@ -71,8 +89,7 @@ class CanisterStorageService {
     }
 
     /**
-     * Get user data from canister
-     * NOTE: Backend doesn't support get_user_data/save_user_data yet, so using localStorage fallback
+     * Get user data from canister using client storage
      */
     async getUserData(dataType, defaultValue = null) {
         try {
@@ -81,13 +98,28 @@ class CanisterStorageService {
                 return this.cache.get(dataType);
             }
 
-            // TODO: Implement proper canister storage when backend supports it
-            // For now, the backend uses specific methods like get_user_settings, not generic data storage
-            // So we'll return the default value and rely on localStorage
-            
-            return defaultValue;
+            if (this.backendActor) {
+                try {
+                    const result = await this.backendActor.get_client_data(dataType);
+                    
+                    if ('Ok' in result && result.Ok.length > 0) {
+                        const data = JSON.parse(result.Ok[0]);
+                        // Cache the result
+                        this.cache.set(dataType, data);
+                        return data;
+                    } else {
+                        return defaultValue;
+                    }
+                } catch (canisterError) {
+                    console.warn('Failed to get data from canister, using default:', canisterError);
+                    return defaultValue;
+                }
+            } else {
+                return defaultValue;
+            }
             
         } catch (error) {
+            console.error('Failed to get user data:', error);
             return defaultValue;
         }
     }
