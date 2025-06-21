@@ -81,8 +81,7 @@ export const ProfileSetup = () => {
         }
         
         // Fallback: try the old method
-        await icpUserService.loadCurrentUser();
-        const currentUser = icpUserService.getCurrentUser();
+        const currentUser = await icpUserService.getCurrentUser(true);
         
         console.log('🔍 ProfileSetup checking current user (fallback):', currentUser);
         
@@ -399,7 +398,7 @@ export const ProfileSetup = () => {
       console.log('🚀 Starting profile completion...');
       
       // User is already authenticated and initialized from registration, just get current user
-      const currentUser = icpUserService.getCurrentUser();
+      const currentUser = await icpUserService.getCurrentUser(true);
       console.log('✅ Current user loaded:', currentUser);
       
       const userPrincipal = currentUser?.principal?.toString() || 'User';

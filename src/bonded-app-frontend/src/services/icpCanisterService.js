@@ -18,6 +18,7 @@ class ICPCanisterService {
     this.identity = null;
     this.isAuthenticated = false;
     this.isInitialized = false;
+    this.initializePromise = null;
   }
 
   /**
@@ -25,11 +26,21 @@ class ICPCanisterService {
    */
   async initialize() {
     if (this.isInitialized) {
-      console.log('🔄 ICP Canister Service already initialized');
       return;
     }
     
+    // Return existing initialization promise if already in progress
+    if (this.initializePromise) {
+      return this.initializePromise;
+    }
+    
     console.log('🚀 Initializing ICP Canister Service...');
+    
+    this.initializePromise = this._doInitialize();
+    return this.initializePromise;
+  }
+
+  async _doInitialize() {
     
     try {
       // Initialize auth client
@@ -47,7 +58,9 @@ class ICPCanisterService {
       }
       
       this.isInitialized = true;
+      this.initializePromise = null; // Clear the promise after successful initialization
     } catch (error) {
+      this.initializePromise = null; // Clear the promise on error to allow retry
       console.error('❌ Failed to initialize ICP service:', error);
       throw error;
     }
@@ -265,6 +278,29 @@ class ICPCanisterService {
     
     // If we get here, all retries failed
     throw lastError;
+  }
+
+  /**
+   * Make a graceful query call that returns null instead of throwing on certificate errors in playground
+   */
+  async makeGracefulQueryCall(callFunction, maxRetries = 2) {
+    try {
+      return await this.makeResilientCall(callFunction, maxRetries);
+    } catch (error) {
+      const isCertError = error.message && (
+        error.message.includes('Invalid certificate') ||
+        error.message.includes('Invalid signature from replica')
+      );
+      
+      // In playground environment, certificate errors are expected for new users
+      if (isCertError && this.isPlaygroundEnvironment()) {
+        console.debug('🔄 Query failed due to certificate validation in playground - this is expected for new users');
+        return null;
+      }
+      
+      // Re-throw other errors or certificate errors in production
+      throw error;
+    }
   }
 
   // ==========================================
@@ -579,31 +615,27 @@ The Bonded Team`
   async getUserProfile() {
     this.ensureAuthenticated();
     
-    try {
-      const result = await this.makeResilientCall(async () => {
-        return await this.actor.get_user_profile();
-      });
-      
-      if ('Ok' in result) {
-        const profile = result.Ok;
-        return {
-          principal: profile.principal,
-          createdAt: Number(profile.created_at),
-          relationships: profile.relationships,
-          totalEvidenceUploaded: Number(profile.total_evidence_uploaded),
-          kycVerified: profile.kyc_verified,
-          lastSeen: Number(profile.last_seen)
-        };
-      } else {
-        throw new Error(result.Err);
-      }
-    } catch (error) {
-      // Suppress certificate validation errors in playground - they're expected
-      const isCertError = error.message && error.message.includes('Invalid certificate');
-      if (!isCertError || !this.isPlaygroundEnvironment()) {
-        console.error('❌ Failed to get user profile:', error);
-      }
-      throw error;
+    const result = await this.makeGracefulQueryCall(async () => {
+      return await this.actor.get_user_profile();
+    });
+    
+    if (!result) {
+      // Graceful failure - return null for new users or certificate errors
+      return null;
+    }
+    
+    if ('Ok' in result) {
+      const profile = result.Ok;
+      return {
+        principal: profile.principal,
+        createdAt: Number(profile.created_at),
+        relationships: profile.relationships,
+        totalEvidenceUploaded: Number(profile.total_evidence_uploaded),
+        kycVerified: profile.kyc_verified,
+        lastSeen: Number(profile.last_seen)
+      };
+    } else {
+      throw new Error(result.Err);
     }
   }
 
@@ -613,33 +645,34 @@ The Bonded Team`
   async getUserSettings() {
     this.ensureAuthenticated();
     
-    try {
-      const result = await this.makeResilientCall(async () => {
-        return await this.actor.get_user_settings();
-      });
-      
-      if ('Ok' in result) {
-        const settings = result.Ok;
-        return {
-          aiFiltersEnabled: settings.ai_filters_enabled,
-          nsfwFilter: settings.nsfw_filter,
-          explicitTextFilter: settings.explicit_text_filter,
-          uploadSchedule: settings.upload_schedule,
-          geolocationEnabled: settings.geolocation_enabled,
-          notificationPreferences: settings.notification_preferences,
-          profileMetadata: settings.profile_metadata && settings.profile_metadata.length > 0 ? settings.profile_metadata[0] : null,
-          updatedAt: Number(settings.updated_at)
-        };
-      } else {
-        throw new Error(result.Err);
-      }
-    } catch (error) {
-      // Suppress certificate validation errors in playground - they're expected
-      const isCertError = error.message && error.message.includes('Invalid certificate');
-      if (!isCertError || !this.isPlaygroundEnvironment()) {
-        console.error('❌ Failed to get user settings:', error);
-      }
-      throw error;
+    console.log('🔍 Getting user settings for principal:', this.getPrincipal()?.toString());
+    
+    const result = await this.makeGracefulQueryCall(async () => {
+      return await this.actor.get_user_settings();
+    });
+    
+    console.log('🔍 getUserSettings result:', result);
+    
+    if (!result) {
+      // Graceful failure - return null for new users or certificate errors
+      console.log('🔍 getUserSettings returned null - could be new user or cert error');
+      return null;
+    }
+    
+    if ('Ok' in result) {
+      const settings = result.Ok;
+      return {
+        aiFiltersEnabled: settings.ai_filters_enabled,
+        nsfwFilter: settings.nsfw_filter,
+        explicitTextFilter: settings.explicit_text_filter,
+        uploadSchedule: settings.upload_schedule,
+        geolocationEnabled: settings.geolocation_enabled,
+        notificationPreferences: settings.notification_preferences,
+        profileMetadata: settings.profile_metadata && settings.profile_metadata.length > 0 ? settings.profile_metadata[0] : null,
+        updatedAt: Number(settings.updated_at)
+      };
+    } else {
+      throw new Error(result.Err);
     }
   }
 

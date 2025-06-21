@@ -44,12 +44,33 @@ export const Account = () => {
     const loadUserData = async () => {
       try {
         await icpUserService.initialize();
-        const currentUser = icpUserService.getCurrentUser();
         
-        if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
-          const profileData = JSON.parse(currentUser.settings.profile_metadata);
+        // Force refresh user data from canister - try multiple times to handle timing issues
+        let attempts = 0;
+        let currentUser = null;
+        
+        while (attempts < 3) {
+          currentUser = await icpUserService.getCurrentUser(true);
+          
+          console.log(`🔍 Account loading user data (attempt ${attempts + 1}):`, currentUser);
+          
+          // If we have settings, break out of the retry loop
+          if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
+            break;
+          }
+          
+          // Wait a bit before retrying to allow for potential network delays
+          if (attempts < 2) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          attempts++;
+        }
+        
+        if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
+          const profileData = JSON.parse(currentUser.settings.profileMetadata);
           setUserData(profileData);
         } else {
+          console.log('⚠️ No profile data found after retries in Account');
           // If no profile data, show empty profile
           setUserData({
             fullName: "",
@@ -61,6 +82,7 @@ export const Account = () => {
           });
         }
       } catch (error) {
+        console.error('❌ Failed to load user data in Account:', error);
         // If ICP data fails, show empty profile
         setUserData({
           fullName: "",
@@ -84,9 +106,9 @@ export const Account = () => {
     setShowEditModal(false);
     // Refresh user data from ICP
     try {
-      const currentUser = icpUserService.getCurrentUser();
-      if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
-        const profileData = JSON.parse(currentUser.settings.profile_metadata);
+      const currentUser = await icpUserService.getCurrentUser(true);
+      if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
+        const profileData = JSON.parse(currentUser.settings.profileMetadata);
         setUserData(profileData);
       }
     } catch (error) {

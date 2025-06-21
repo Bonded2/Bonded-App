@@ -40,11 +40,14 @@ class ICPUserService {
   async safeCanisterCall(callFunction, expectedErrorMessage) {
     try {
       const data = await callFunction();
+      console.log('🔍 SafeCanisterCall SUCCESS for', expectedErrorMessage, ':', data);
       return { success: true, data };
     } catch (err) {
       // Suppress certificate validation errors in playground - they're expected
       const isCertError = err.message?.includes('Invalid certificate') || 
                          err.message?.includes('Invalid signature from replica');
+      
+      console.log('🔍 SafeCanisterCall ERROR for', expectedErrorMessage, ':', err.message);
       
       if (!isCertError || !this.isPlaygroundEnvironment()) {
         console.log(expectedErrorMessage + ':', err.message);
@@ -153,9 +156,15 @@ class ICPUserService {
         )
       ]);
 
+      console.log('🔍 ProfileResult:', profileResult);
+      console.log('🔍 SettingsResult:', settingsResult);
+
       // Extract data from results, use null for failed calls (expected for new users)
       const profile = profileResult.success ? profileResult.data : null;
       const settings = settingsResult.success ? settingsResult.data : null;
+
+      console.log('🔍 Extracted profile:', profile);
+      console.log('🔍 Extracted settings:', settings);
 
       this.currentUser = {
         principal: icpCanisterService.getPrincipal()?.toString(),
@@ -179,9 +188,12 @@ class ICPUserService {
   }
 
   /**
-   * Get current user data
+   * Get current user data - with optional refresh
    */
-  getCurrentUser() {
+  async getCurrentUser(forceRefresh = false) {
+    if (forceRefresh || !this.currentUser) {
+      await this.loadCurrentUser();
+    }
     return this.currentUser;
   }
 
@@ -201,11 +213,11 @@ class ICPUserService {
         await this.loadCurrentUser();
       }
 
-      if (!this.currentUser || !this.currentUser.settings || !this.currentUser.settings.profile_metadata) {
+      if (!this.currentUser || !this.currentUser.settings || !this.currentUser.settings.profileMetadata) {
         return false;
       }
 
-      const profileData = JSON.parse(this.currentUser.settings.profile_metadata);
+      const profileData = JSON.parse(this.currentUser.settings.profileMetadata);
       return profileData.profileComplete === true;
     } catch (error) {
       console.error('Failed to check onboarding status:', error);
@@ -252,8 +264,30 @@ class ICPUserService {
     try {
       const result = await icpCanisterService.updateUserSettings(settings);
       
-      // Reload user data to get updated settings
-      await this.loadCurrentUser();
+      // Wait a moment for the canister to process the update
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Reload user data to get updated settings with retries
+      let attempts = 0;
+      let reloadedUser = null;
+      
+      while (attempts < 5) {
+        try {
+          reloadedUser = await this.loadCurrentUser();
+          
+          // If we successfully got settings back, break
+          if (reloadedUser && reloadedUser.settings && reloadedUser.settings.profileMetadata) {
+            break;
+          }
+        } catch (reloadError) {
+          console.log(`🔄 Reload attempt ${attempts + 1} failed:`, reloadError.message);
+        }
+        
+        attempts++;
+        if (attempts < 5) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempts)); // Exponential backoff
+        }
+      }
       
       return result;
     } catch (error) {

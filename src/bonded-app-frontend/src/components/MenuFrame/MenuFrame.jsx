@@ -29,11 +29,26 @@ export const MenuFrame = ({ onClose }) => {
       try {
         await icpUserService.initialize();
         
-        // Force refresh user data from canister
-        await icpUserService.loadCurrentUser();
-        const currentUser = icpUserService.getCurrentUser();
+        // Force refresh user data from canister - try multiple times to handle timing issues
+        let attempts = 0;
+        let currentUser = null;
         
-        console.log('🔍 MenuFrame loading user data:', currentUser);
+        while (attempts < 3) {
+          currentUser = await icpUserService.getCurrentUser(true);
+          
+          console.log(`🔍 MenuFrame loading user data (attempt ${attempts + 1}):`, currentUser);
+          
+          // If we have settings, break out of the retry loop
+          if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
+            break;
+          }
+          
+          // Wait a bit before retrying to allow for potential network delays
+          if (attempts < 2) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          attempts++;
+        }
         
         if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
           console.log('📋 Found profile metadata:', currentUser.settings.profileMetadata);
@@ -45,7 +60,7 @@ export const MenuFrame = ({ onClose }) => {
             avatar: profileData.avatar || "U",
           });
         } else {
-          console.log('⚠️ No profile metadata found, using defaults');
+          console.log('⚠️ No profile metadata found after retries, using defaults');
           // Keep default values if no profile data
           setUserData({
             fullName: "User",
@@ -106,13 +121,13 @@ export const MenuFrame = ({ onClose }) => {
   const handleEditProfile = () => {
     setShowEditModal(true);
   };
-  const handleCloseEditModal = () => {
+  const handleCloseEditModal = async () => {
     setShowEditModal(false);
     // Refresh user data after edit
     try {
-      const currentUser = icpUserService.getCurrentUser();
-      if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
-        const profileData = JSON.parse(currentUser.settings.profile_metadata);
+      const currentUser = await icpUserService.getCurrentUser(true);
+      if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
+        const profileData = JSON.parse(currentUser.settings.profileMetadata);
         setUserData({
           fullName: profileData.fullName || "User",
           email: profileData.email || "user@example.com",
