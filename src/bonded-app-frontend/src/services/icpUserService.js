@@ -113,8 +113,8 @@ class ICPUserService {
       
       // For existing users or successful new registrations, load current user data
       if (result.success) {
-        await this.loadCurrentUser();
-        return result;
+      await this.loadCurrentUser();
+      return result;
       }
       
       throw new Error('Registration failed');

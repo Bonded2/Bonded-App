@@ -459,6 +459,46 @@ pub fn get_user_data(data_type: String) -> BondedResult<String> {
 }
 
 // =======================
+// CLIENT DATA STORAGE (Frontend compatibility)
+// =======================
+
+#[update]
+pub fn store_client_data(data_key: String, data_value: String) -> BondedResult<String> {
+    let caller = caller_principal();
+    let content_id = format!("client_{}_{}", data_key, caller.to_text());
+    
+    let processed_content = ProcessedContent {
+        id: content_id.clone(),
+        user: caller,
+        relationship_id: None,
+        content_data: data_value,
+        content_type: "client_data".to_string(),
+        created_at: current_time(),
+        updated_at: current_time(),
+    };
+    
+    with_content_store(|store| {
+        store.insert(content_id.clone(), processed_content);
+    });
+    
+    // Log audit event
+    log_audit_event(caller, "store_client_data", Some(data_key));
+    
+    BondedResult::ok("Client data stored successfully".to_string())
+}
+
+#[query]
+pub fn get_client_data(data_key: String) -> BondedResult<String> {
+    let caller = caller_principal();
+    let content_id = format!("client_{}_{}", data_key, caller.to_text());
+    
+    match with_content_store_read(|store| store.get(&content_id)) {
+        Some(content) => BondedResult::ok(content.content_data),
+        None => BondedResult::ok("{}".to_string()), // Return empty JSON if not found
+    }
+}
+
+// =======================
 // BULK OPERATIONS
 // =======================
 

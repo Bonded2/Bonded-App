@@ -37,7 +37,7 @@ export const PartnerInvite = () => {
                          error.message?.includes('Invalid signature from replica');
       
       if (!isCertError) {
-        console.warn('Failed to load user data:', error);
+      console.warn('Failed to load user data:', error);
       }
     }
   };
@@ -56,7 +56,20 @@ export const PartnerInvite = () => {
 
   const generateInviteLink = (inviteId) => {
     // Generate dynamic invite link for current deployment
-    const baseUrl = window.location.origin;
+    // Ensure we use the correct protocol and domain
+    let baseUrl = window.location.origin;
+    
+    // Handle cases where the app might be served from different domains
+    // but we want consistent invite links
+    if (window.location.hostname.includes('localhost') || 
+        window.location.hostname.includes('127.0.0.1')) {
+      // Development environment - use localhost
+      baseUrl = `${window.location.protocol}//${window.location.host}`;
+    } else {
+      // Production - use the current origin
+      baseUrl = window.location.origin;
+    }
+    
     return `${baseUrl}/accept-invite?invite=${inviteId}`;
   };
 
@@ -312,7 +325,7 @@ export const PartnerInvite = () => {
         message: 'Creating your relationship bond...',
         inviteId: null
       });
-
+      
       // Get current user name from profile
       let inviterName = 'Your partner';
       if (currentUser?.name) {
@@ -325,6 +338,13 @@ export const PartnerInvite = () => {
         inviteId: null
       });
 
+      // Get consistent base URL for the canister
+      let frontendUrl = window.location.origin;    
+      if (window.location.hostname.includes('localhost') || 
+          window.location.hostname.includes('127.0.0.1')) {
+        frontendUrl = `${window.location.protocol}//${window.location.host}`;
+      }
+
       // Create invite data for ICP canister
       const inviteData = {
         partnerEmail: email,
@@ -332,7 +352,8 @@ export const PartnerInvite = () => {
         createdAt: Date.now(),
         metadata: JSON.stringify({
           created_from: 'partner_invite_screen',
-          deployment_environment: window.location.hostname
+          deployment_environment: window.location.hostname,
+          frontend_url: frontendUrl
         })
       };
 
@@ -374,25 +395,25 @@ export const PartnerInvite = () => {
             message: `✅ Invitation created and real email sent to ${email}! Check your inbox.`,
             inviteId: inviteResult.invite_id,
             inviteLink: inviteResult.invite_link
-          });
-          setIsEmailAccepted(true);
+        });
+        setIsEmailAccepted(true);
 
         } catch (emailError) {
           console.log('⚠️ EmailJS sending failed, providing manual sharing option:', emailError);
           
           // If EmailJS fails, provide manual sharing option
-          setInviteStatus({
-            status: 'manual_required',
+        setInviteStatus({
+          status: 'manual_required',
             message: 'Invitation created! Email service unavailable - please share the link manually.',
             inviteId: inviteResult.invite_id,
             inviteLink: inviteResult.invite_link,
-            manualInstructions: {
+          manualInstructions: {
               recipient: email,
               subject: `You're invited to join Bonded by ${inviterName}`,
               link: inviteResult.invite_link,
               message: `Hi! ${inviterName} has invited you to join Bonded - a secure platform for building your relationship timeline together.\n\nClick this link to accept the invitation:\n${inviteResult.invite_link}\n\nThis invitation will expire in 7 days.\n\nBest regards,\nThe Bonded Team`
-            }
-          });
+          }
+        });
           setIsEmailAccepted(true);
         }
       } else {

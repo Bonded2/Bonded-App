@@ -141,6 +141,15 @@ pub struct ProcessedContent {
 }
 
 #[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct UserKeyShare {
+    pub key_id: String, // relationship_id + user_principal
+    pub user: Principal,
+    pub relationship_id: String,
+    pub key_share: Vec<u8>, // Encrypted key share for this user
+    pub created_at: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
 pub struct AuditLogEntry {
     pub id: String,
     pub user: Principal,
@@ -453,4 +462,16 @@ impl Storable for ProcessedContent {
     fn from_bytes(bytes: Cow<[u8]>) -> Self {
         Decode!(bytes.as_ref(), Self).unwrap()
     }
-} 
+}
+
+impl Storable for UserKeyShare {
+    const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+
+    fn to_bytes(&self) -> Cow<[u8]> {
+        Cow::Owned(Encode!(self).unwrap())
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        Decode!(bytes.as_ref(), Self).unwrap()
+    }
+}

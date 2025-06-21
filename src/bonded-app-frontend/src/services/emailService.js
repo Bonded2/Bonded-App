@@ -150,7 +150,7 @@ class EmailService {
         templateId: templateId,
         publicKey: publicKey.substring(0, 8) + '...' // Partial key for security
       });
-      
+
       // Send email using EmailJS
       // This will use our production email service configured in EmailJS dashboard
       const response = await emailjs.send(
@@ -173,15 +173,15 @@ class EmailService {
         // Log email sending via canister storage instead of localStorage
         try {
           const { default: canisterStorage } = await import('./canisterStorage.js');
-          const emailLog = {
-            recipient: recipientEmail,
-            sender: this.senderEmail,
-            timestamp: Date.now(),
-            status: 'sent_successfully',
-            method: 'emailjs_real_sending',
-            response_status: response.status,
-            message_id: response.text || `msg_${Date.now()}`
-          };
+        const emailLog = {
+          recipient: recipientEmail,
+          sender: this.senderEmail,
+          timestamp: Date.now(),
+          status: 'sent_successfully',
+          method: 'emailjs_real_sending',
+          response_status: response.status,
+          message_id: response.text || `msg_${Date.now()}`
+        };
           await canisterStorage.setItem(`email_log_${Date.now()}`, emailLog);
           
           // Update email stats summary
@@ -377,7 +377,7 @@ ${inviterName}
       if (emailStatsData) {
         return emailStatsData;
       } else {
-        return {
+    return {
           total_attempts: 0,
           successful_sends: 0,
           failed_attempts: 0,
@@ -393,7 +393,7 @@ ${inviterName}
         failed_attempts: 0,
         last_activity: null,
         note: 'Email statistics unavailable - canister storage error'
-      };
+    };
     }
   }
 }

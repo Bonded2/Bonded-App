@@ -20,3 +20,13 @@ hex = "0.4"
 getrandom = { version = "0.2", features = ["custom"], default-features = false }
 ic-stable-structures = "0.6"
 time = "0.3"
+
+# Real cryptography dependencies for threshold schemes
+curve25519-dalek = { version = "4.1", features = ["rand_core"], default-features = false }
+ed25519-dalek = { version = "2.1", features = ["rand_core"], default-features = false }
+rand_core = { version = "0.6", default-features = false }
+hkdf = "0.12"
+aes-gcm = "0.10"
+
+# Note: Simplified XOR-based threshold cryptography for MVP
+# sharks = "0.3"  # Can be added later for full Shamir's Secret Sharing

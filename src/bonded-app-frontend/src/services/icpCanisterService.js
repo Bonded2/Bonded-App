@@ -62,27 +62,31 @@ class ICPCanisterService {
     }
 
     try {
+      const host = this.getCanisterHost();
       const isLocal = process.env.DFX_NETWORK === 'local';
-      const host = isLocal ? 'http://127.0.0.1:4943' : 'https://icp0.io';
       
       // Use the generated createActor function from declarations
       // Create or reuse agent with proper configuration
       if (!this.agent) {
         const { HttpAgent } = await import('@dfinity/agent');
-        this.agent = new HttpAgent({ host });
+        this.agent = new HttpAgent({ 
+          host,
+          // For playground environments, we need to disable certificate verification
+          verifyQuerySignatures: isLocal ? false : true
+        });
         
         if (this.identity) {
           this.agent.replaceIdentity(this.identity);
         }
         
-        // Fetch root key for all non-mainnet environments (including playground)
-        if (!isLocal) {
+        // Fetch root key for all non-IC-mainnet environments
+        if (isLocal || this.isPlaygroundEnvironment()) {
           try {
             await this.agent.fetchRootKey();
             console.log('✅ Root key fetched for certificate validation');
           } catch (rootKeyError) {
             console.warn('⚠️ Root key fetch failed:', rootKeyError.message);
-            // Continue anyway - might still work without root key
+            // For playground, this might be expected
           }
         }
       } else if (this.identity) {
@@ -94,8 +98,6 @@ class ICPCanisterService {
       this.actor = createActor(canisterId, {
         agent: this.agent
       });
-
-
       
       console.log('✅ Backend actor created successfully');
       return this.actor;
@@ -193,6 +195,23 @@ class ICPCanisterService {
   }
 
   /**
+   * Get the correct host for the current environment
+   */
+  getCanisterHost() {
+    if (process.env.DFX_NETWORK === 'local') {
+      return 'http://127.0.0.1:4943';
+    }
+    
+    // For playground and production deployments
+    if (window.location.hostname.includes('icp0.io')) {
+      return 'https://icp0.io';
+    }
+    
+    // Default to IC mainnet
+    return 'https://icp-api.io';
+  }
+
+  /**
    * Make a resilient canister call with automatic retry and root key refresh
    * Suppresses expected certificate validation errors in playground environments
    */
@@ -261,12 +280,19 @@ class ICPCanisterService {
     console.log('📝 Creating partner invite via ICP canister...');
     
     try {
+      // Get consistent frontend URL (same logic as in PartnerInvite component)
+      let frontendUrl = window.location.origin;
+      if (window.location.hostname.includes('localhost') || 
+          window.location.hostname.includes('127.0.0.1')) {
+        frontendUrl = `${window.location.protocol}//${window.location.host}`;
+      }
+
       const request = {
         partner_email: inviteData.partnerEmail,
         inviter_name: inviteData.inviterName,
-        expires_at: BigInt(Date.now() + (7 * 24 * 60 * 60 * 1000)), // 7 days from now in milliseconds
+        expires_at: BigInt((Date.now() + (7 * 24 * 60 * 60 * 1000)) * 1_000_000), // 7 days from now in nanoseconds (convert ms to ns)
         metadata: inviteData.metadata ? [JSON.stringify(inviteData.metadata)] : [],
-        frontend_url: [window.location.origin] // Current deployment URL
+        frontend_url: [frontendUrl] // Consistent deployment URL
       };
 
       const result = await this.actor.create_partner_invite(request);
@@ -340,39 +366,75 @@ The Bonded Team`
     console.log('🔍 Getting partner invite from ICP canister:', inviteId);
     
     try {
-      // This is a query call, so we can call it even if not authenticated
-      let actor = this.actor;
+      // For playground environment, try multiple approaches to get invite data
+      const isPlayground = this.isPlaygroundEnvironment();
       
-      if (!actor) {
-        const isLocal = process.env.DFX_NETWORK === 'local';
-        const host = isLocal ? 'http://127.0.0.1:4943' : 'https://icp0.io';
-        
-        actor = createActor(canisterId, {
-          agentOptions: {
-            host: host
+      // First attempt: Try with existing actor if available
+      if (this.actor) {
+        try {
+          const result = await this.actor.get_partner_invite(inviteId);
+          console.log('🔍 Raw canister result for invite (existing actor):', result);
+          
+          if ('Ok' in result) {
+            const invite = result.Ok;
+            console.log('✅ Found invite in canister:', invite);
+            
+            // Convert BigInt timestamps to regular numbers for frontend use
+            return {
+              id: invite.id,
+              inviterName: invite.inviter_name,
+              inviterPrincipal: invite.inviter_principal,
+              partnerEmail: invite.partner_email,
+              status: Object.keys(invite.status)[0], // Extract the variant key
+              createdAt: Number(invite.created_at),
+              expiresAt: Number(invite.expires_at),
+              metadata: invite.metadata && invite.metadata.length > 0 ? invite.metadata[0] : null
+            };
+          } else {
+            console.log('❌ Invite not found in canister, error:', result.Err);
+            return null;
           }
-        });
-
-        // Handle certificate validation for non-mainnet deployments
-        if (!isLocal && (
-          window.location.hostname.includes('icp0.io') ||
-          window.location.hostname.includes('playground') ||
-          host !== 'https://ic0.app'
-        )) {
-          try {
-            await actor._agent.fetchRootKey();
-            console.log('✅ Root key fetched for unauthenticated actor');
-          } catch (rootKeyError) {
-            console.warn('⚠️ Root key fetch failed for unauthenticated actor:', rootKeyError.message);
-          }
+        } catch (actorError) {
+          console.log('⚠️ Existing actor failed, trying fresh actor:', actorError.message);
+          // Continue to fresh actor attempt below
         }
       }
+      
+      // Second attempt: Create fresh actor using the same configuration as main actor
+      const host = this.getCanisterHost();
+      const isLocal = process.env.DFX_NETWORK === 'local';
+      
+      const { HttpAgent, AnonymousIdentity } = await import('@dfinity/agent');
+      
+      console.log('🔄 Creating fresh actor for query call');
+      
+      const freshAgent = new HttpAgent({ 
+        host,
+        identity: new AnonymousIdentity(), // Use anonymous identity for query calls
+        verifyQuerySignatures: false // Disable signature verification for playground
+      });
+      
+      // Fetch root key for non-mainnet environments
+      if (isLocal || isPlayground) {
+        try {
+          await freshAgent.fetchRootKey();
+          console.log('✅ Root key fetched for fresh query actor');
+        } catch (rootKeyError) {
+          console.warn('⚠️ Root key fetch failed:', rootKeyError.message);
+          // Continue anyway for query calls
+        }
+      }
+      
+      const freshActor = createActor(canisterId, {
+        agent: freshAgent
+      });
 
-      const result = await actor.get_partner_invite(inviteId);
+      const result = await freshActor.get_partner_invite(inviteId);
+      console.log('🔍 Raw canister result for invite (fresh actor):', result);
       
       if ('Ok' in result) {
         const invite = result.Ok;
-        console.log('✅ Found invite in canister:', invite);
+        console.log('✅ Found invite in canister with fresh actor:', invite);
         
         // Convert BigInt timestamps to regular numbers for frontend use
         return {
@@ -386,11 +448,50 @@ The Bonded Team`
           metadata: invite.metadata && invite.metadata.length > 0 ? invite.metadata[0] : null
         };
       } else {
-        console.log('❌ Invite not found in canister:', result.Err);
+        console.log('❌ Invite not found in canister, error:', result.Err);
+        console.log(`❌ Looking for invite ID: ${inviteId}`);
+        
+        // For debugging - try to list all invites and check connectivity
+        if (this.isPlaygroundEnvironment()) {
+          try {
+            console.log('🔍 Debugging: Attempting to verify canister connectivity...');
+            const healthResult = await freshActor.health_check();
+            console.log('🔍 Canister health check successful:', healthResult);
+            
+            // Try to list all invites for debugging
+            try {
+              const debugResult = await freshActor.debug_list_all_invites();
+              console.log('🔍 Debug: All stored invites:', debugResult);
+            } catch (debugError) {
+              console.log('❌ Failed to list debug invites:', debugError.message);
+            }
+          } catch (healthError) {
+            console.log('❌ Even health check failed:', healthError.message);
+          }
+        }
+        
         return null;
       }
+      
     } catch (error) {
-      console.error('❌ Failed to get invite:', error);
+      // Distinguish between network/certificate errors and genuine failures
+      const isCertError = error.message?.includes('Invalid certificate') || 
+                         error.message?.includes('Invalid signature from replica');
+      
+      console.log('💥 Error in getPartnerInvite:', { 
+        message: error.message, 
+        isCertError, 
+        isPlayground: this.isPlaygroundEnvironment() 
+      });
+      
+      if (isCertError) {
+        console.log('❌ Certificate validation failed');
+        throw new Error('Certificate validation failed - unable to connect to canister');
+      } else {
+        console.error('❌ Non-certificate error getting invite:', error);
+        throw error;
+      }
+      
       return null;
     }
   }

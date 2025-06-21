@@ -145,7 +145,7 @@ export const handleCertificateError = async (error, recoveryAction = null) => {
 export const generateFallbackProfile = (principal) => ({
   principal: principal || 'offline-user',
   kyc_verified: false,
-  created_at: Date.now() * 1000000, // Convert to nanoseconds
+      created_at: Date.now() * 1000000, // Convert to nanoseconds
   last_seen: Date.now() * 1000000,
   relationships: [],
   total_evidence_uploaded: 0,
@@ -158,10 +158,10 @@ export const generateFallbackProfile = (principal) => ({
  * @returns {Object} Fallback settings
  */
 export const generateFallbackSettings = () => ({
-  ai_filters_enabled: true,
+    ai_filters_enabled: true,
   nsfw_filter: true,
   explicit_text_filter: true,
-  geolocation_enabled: true,
+    geolocation_enabled: true,
   upload_schedule: 'daily',
   notification_preferences: ['email', 'push'],
   profile_metadata: null,
@@ -196,8 +196,8 @@ export class NetworkStatusMonitor {
     // Listen for browser online/offline events
     window.addEventListener('online', () => this.updateStatus(true));
     window.addEventListener('offline', () => this.updateStatus(false));
-  }
-  
+    }
+    
   updateStatus(online) {
     this.isOnline = online;
     this.notifyListeners();
@@ -251,8 +251,8 @@ export const testIcpConnection = async (canisterIntegration) => {
   try {
     if (!canisterIntegration || !canisterIntegration.backendActor) {
       return false;
-    }
-    
+}
+
     // Try a simple canister call
     await resilientCanisterCall(
       () => canisterIntegration.backendActor.health_check(),

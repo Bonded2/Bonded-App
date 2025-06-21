@@ -19,6 +19,7 @@ pub type EmailLogStorage = StableBTreeMap<String, EmailLog, Memory>;
 pub type GeoCacheStorage = StableBTreeMap<String, GeolocationCache, Memory>;
 pub type SchedulerStorage = StableBTreeMap<Principal, SchedulerSettings, Memory>;
 pub type ContentStorage = StableBTreeMap<String, ProcessedContent, Memory>;
+pub type KeyShareStorage = StableBTreeMap<String, UserKeyShare, Memory>;
 
 // Memory layout
 const EVIDENCE_MEMORY_ID: MemoryId = MemoryId::new(0);
@@ -34,6 +35,7 @@ const EMAIL_LOG_MEMORY_ID: MemoryId = MemoryId::new(9);
 const GEO_CACHE_MEMORY_ID: MemoryId = MemoryId::new(10);
 const SCHEDULER_MEMORY_ID: MemoryId = MemoryId::new(11);
 const CONTENT_MEMORY_ID: MemoryId = MemoryId::new(12);
+const KEY_SHARE_MEMORY_ID: MemoryId = MemoryId::new(13);
 
 // Global state management
 thread_local! {
@@ -115,6 +117,12 @@ thread_local! {
     static CONTENT_STORE: RefCell<ContentStorage> = RefCell::new(
         StableBTreeMap::init(
             MEMORY_MANAGER.with(|m| m.borrow().get(CONTENT_MEMORY_ID)),
+        )
+    );
+    
+    static KEY_SHARE_STORE: RefCell<KeyShareStorage> = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(KEY_SHARE_MEMORY_ID)),
         )
     );
     
@@ -251,6 +259,15 @@ pub fn with_content_store<R>(f: impl FnOnce(&mut ContentStorage) -> R) -> R {
 
 pub fn with_content_store_read<R>(f: impl FnOnce(&ContentStorage) -> R) -> R {
     CONTENT_STORE.with(|store| f(&store.borrow()))
+}
+
+// Key share storage accessors
+pub fn with_key_share_store<R>(f: impl FnOnce(&mut KeyShareStorage) -> R) -> R {
+    KEY_SHARE_STORE.with(|store| f(&mut store.borrow_mut()))
+}
+
+pub fn with_key_share_store_read<R>(f: impl FnOnce(&KeyShareStorage) -> R) -> R {
+    KEY_SHARE_STORE.with(|store| f(&store.borrow()))
 }
 
 // Statistics functions

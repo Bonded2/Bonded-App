@@ -36,7 +36,7 @@ class CanisterStorageService {
             
             // Process any pending writes only if authenticated
             if (this.backendActor) {
-                await this.processPendingWrites();
+            await this.processPendingWrites();
             }
             
         } catch (error) {
@@ -108,8 +108,8 @@ class CanisterStorageService {
                         this.cache.set(dataType, data);
                         return data;
                     } else {
-                        return defaultValue;
-                    }
+                return defaultValue;
+            }
                 } catch (canisterError) {
                     console.warn('Failed to get data from canister, using default:', canisterError);
                     return defaultValue;

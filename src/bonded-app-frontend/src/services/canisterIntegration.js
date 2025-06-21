@@ -196,9 +196,9 @@ class CanisterIntegrationService {
    */
   async isLoggedIn() {
     try {
-      if (!this.authClient) {
-        await this.initialize();
-      }
+    if (!this.authClient) {
+      await this.initialize();
+    }
       // Check both our flag and the auth client's status
       const clientAuthenticated = await this.authClient.isAuthenticated();
       this.isAuthenticated = clientAuthenticated; // Keep our flag in sync
@@ -242,16 +242,16 @@ class CanisterIntegrationService {
           })],
           frontend_url: [frontendUrl] // Pass dynamic frontend URL to backend
         });
-        
-        if (canisterResponse && canisterResponse.Ok) {
+      
+      if (canisterResponse && canisterResponse.Ok) {
           console.log('✅ Canister invite created successfully');
-          return {
-            success: true,
-            invite_id: canisterResponse.Ok.invite_id,
-            invite_link: canisterResponse.Ok.invite_link,
-            method: 'canister',
-            environment: window.location.hostname
-          };
+        return {
+          success: true,
+          invite_id: canisterResponse.Ok.invite_id,
+          invite_link: canisterResponse.Ok.invite_link,
+          method: 'canister',
+          environment: window.location.hostname
+        };
         }
       } else {
         console.log('⚠️ Backend actor not available or method missing, using fallback');

@@ -26,9 +26,20 @@ export const AcceptInvite = () => {
       if (!inviteId) {
         setInviteState({
           status: 'invalid',
-          message: 'Invalid invitation link',
+          message: 'Invalid invitation link - missing invite ID',
           inviteData: null,
           error: 'Missing invite ID'
+        });
+        return;
+      }
+
+      // Validate invite ID format (should be like "invite_123")
+      if (!inviteId.startsWith('invite_')) {
+        setInviteState({
+          status: 'invalid',
+          message: 'Invalid invitation link format',
+          inviteData: null,
+          error: 'Invalid invite ID format'
         });
         return;
       }
@@ -39,21 +50,27 @@ export const AcceptInvite = () => {
       try {
         const inviteData = await icpCanisterService.getPartnerInvite(inviteId);
         
-        if (!inviteData || (typeof inviteData === 'object' && !inviteData.success)) {
+        console.log('🔍 Received invite data:', inviteData);
+        
+        // Handle network error (certificate validation issues) - removed as this is now handled in service
+        
+        if (!inviteData || !inviteData.id) {
+          console.log('❌ Invite not found in canister for ID:', inviteId);
           setInviteState({
             status: 'invalid',
-            message: 'Invitation not found or has expired',
+            message: 'Invitation not found or has expired. Please check the link or ask for a new invitation.',
             inviteData: null,
             error: 'Invite not found'
           });
           return;
         }
 
-        // Handle both direct data and wrapped response formats
-        const actualInviteData = inviteData.success ? inviteData.data : inviteData;
+        // The service now returns the invite data directly
+        const actualInviteData = inviteData;
       
-        // Check if invite is still valid (using proper timestamp fields)
-        const isExpired = Date.now() > actualInviteData.expiresAt;
+        // Check if invite is still valid (convert milliseconds to nanoseconds for comparison)
+        const currentTimeNs = Date.now() * 1_000_000; // Convert to nanoseconds
+        const isExpired = currentTimeNs > actualInviteData.expiresAt;
         if (isExpired) {
           setInviteState({
             status: 'invalid',
@@ -93,7 +110,7 @@ export const AcceptInvite = () => {
 
         setInviteState({
           status: 'error',
-          message: 'Failed to validate invitation - network connectivity issue',
+          message: isCertError ? 'Unable to connect to verify invitation. Please try again or join Bonded anyway.' : 'Failed to validate invitation - network connectivity issue',
           inviteData: null,
           error: isCertError ? 'Network connectivity issue (certificate validation)' : inviteError.message
         });
@@ -113,6 +130,36 @@ export const AcceptInvite = () => {
       setInviteState(prev => ({
         ...prev,
         status: 'processing',
+        message: asNewUser ? 'Authenticating and creating your account...' : 'Authenticating...'
+      }));
+
+      // First, ensure user is authenticated
+      await icpCanisterService.initialize();
+      
+      if (!icpCanisterService.isAuthenticated) {
+        console.log('🔐 User not authenticated, starting login process...');
+        const loginResult = await icpCanisterService.login();
+        
+        if (!loginResult.success) {
+          throw new Error('Authentication failed');
+        }
+        
+        console.log('✅ User authenticated successfully');
+      }
+
+      // Register user if new
+      if (asNewUser) {
+        setInviteState(prev => ({
+          ...prev,
+          message: 'Creating your account...'
+        }));
+        
+        await icpCanisterService.registerUser();
+        console.log('✅ User registered successfully');
+      }
+
+      setInviteState(prev => ({
+        ...prev,
         message: 'Creating your relationship bond...'
       }));
 
@@ -122,8 +169,13 @@ export const AcceptInvite = () => {
       
       console.log('✅ Relationship created successfully:', relationshipResult);
       
-      // The relationship is now stored in ICP canister storage
-      // No need for local storage - everything is on-chain
+      // Store invite and relationship data for later use during profile setup
+      const acceptedInviteData = {
+        inviteData: inviteState.inviteData,
+        relationshipResult: relationshipResult,
+        acceptedAt: Date.now()
+      };
+      sessionStorage.setItem('acceptedInviteData', JSON.stringify(acceptedInviteData));
 
       setInviteState(prev => ({
         ...prev,
