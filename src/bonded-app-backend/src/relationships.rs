@@ -203,7 +203,7 @@ pub fn accept_partner_invite(invite_id: String) -> BondedResult<AcceptInviteResp
         ic_cdk::println!("   Accepter: {}", accepter.to_text());
         
         // In a real production environment, uncomment this line:
-        // return BondedResult::err("Cannot accept your own invite");
+        return BondedResult::err("Cannot accept your own invite");
     }
     
     // Create relationship
