@@ -24,9 +24,7 @@ import { fontLoader } from "./utils/fontLoader"; // Load Google Fonts with fallb
 const initializeApp = async () => {
   try {
     // Initialize ICP canister service first
-    console.log('🚀 Initializing ICP Canister Service...');
     await icpCanisterService.initialize();
-    console.log('✅ ICP Canister Service initialized');
     
     // Only reset user data on first page load of a new session
     // Remove sessionStorage usage - ICP canister service handles session state
@@ -40,10 +38,10 @@ const initializeApp = async () => {
         </StrictMode>
       );
     } else {
-      console.error('Root container not found');
+      // Root container not found
     }
   } catch (error) {
-    console.error('Failed to initialize app:', error);
+    // Failed to initialize app
   }
 };
 // Initialize immediately or wait for DOM

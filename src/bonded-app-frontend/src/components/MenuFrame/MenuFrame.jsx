@@ -36,8 +36,6 @@ export const MenuFrame = ({ onClose }) => {
         while (attempts < 3) {
           currentUser = await icpUserService.getCurrentUser(true);
           
-          console.log(`🔍 MenuFrame loading user data (attempt ${attempts + 1}):`, currentUser);
-          
           // If we have settings, break out of the retry loop
           if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
             break;
@@ -51,7 +49,6 @@ export const MenuFrame = ({ onClose }) => {
         }
         
         if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
-          console.log('📋 Found profile metadata:', currentUser.settings.profileMetadata);
           const profileData = JSON.parse(currentUser.settings.profileMetadata);
           
           setUserData({
@@ -60,7 +57,6 @@ export const MenuFrame = ({ onClose }) => {
             avatar: profileData.avatar || "U",
           });
         } else {
-          console.log('⚠️ No profile metadata found after retries, using defaults');
           // Keep default values if no profile data
           setUserData({
             fullName: "User",
@@ -69,7 +65,6 @@ export const MenuFrame = ({ onClose }) => {
           });
         }
       } catch (error) {
-        console.error('❌ Failed to load user info:', error);
         // Keep default values if loading fails
         setUserData({
           fullName: "User",

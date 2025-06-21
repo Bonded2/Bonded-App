@@ -103,7 +103,6 @@ export const Register = () => {
             
             // Verify authentication is working
             const isLoggedIn = icpCanisterService.isAuthenticated;
-            console.log('Post-authentication check:', { isLoggedIn, principal: principal });
             
             if (!isLoggedIn) {
               throw new Error('Authentication verification failed after login');
@@ -121,16 +120,14 @@ export const Register = () => {
               if (acceptedInviteData) {
                 try {
                   const inviteData = JSON.parse(acceptedInviteData);
-                  console.log('✅ Accepting invite after registration:', inviteData.inviteData.id);
                   
                   const relationshipResult = await icpCanisterService.acceptPartnerInvite(inviteData.inviteData.id);
-                  console.log('✅ Relationship created successfully:', relationshipResult);
                   
                   // Update stored data with relationship info
                   inviteData.relationshipResult = relationshipResult;
                   sessionStorage.setItem('acceptedInviteData', JSON.stringify(inviteData));
                 } catch (inviteError) {
-                  console.error('❌ Failed to accept invite:', inviteError);
+                  // Failed to accept invite
                 }
               }
             }

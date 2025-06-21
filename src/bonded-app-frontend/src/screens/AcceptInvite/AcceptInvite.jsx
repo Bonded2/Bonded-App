@@ -45,17 +45,13 @@ export const AcceptInvite = () => {
       }
 
       // Get invite from ICP canister using proper service with resilient error handling
-      console.log('🔍 Getting invite from ICP canister:', inviteId);
       
       try {
         const inviteData = await icpCanisterService.getPartnerInvite(inviteId);
         
-        console.log('🔍 Received invite data:', inviteData);
-        
         // Handle network error (certificate validation issues) - removed as this is now handled in service
         
         if (!inviteData || !inviteData.id) {
-          console.log('❌ Invite not found in canister for ID:', inviteId);
           setInviteState({
             status: 'invalid',
             message: 'Invitation not found or has expired. Please check the link or ask for a new invitation.',
@@ -160,9 +156,7 @@ export const AcceptInvite = () => {
       const isCertError = error.message?.includes('Invalid certificate') || 
                          error.message?.includes('Invalid signature from replica');
       
-      if (!isCertError) {
-        console.error('❌ Failed to accept invite:', error);
-      }
+      // Log non-certificate errors only
 
       setInviteState(prev => ({
         ...prev,

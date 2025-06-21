@@ -40,18 +40,11 @@ class ICPUserService {
   async safeCanisterCall(callFunction, expectedErrorMessage) {
     try {
       const data = await callFunction();
-      console.log('🔍 SafeCanisterCall SUCCESS for', expectedErrorMessage, ':', data);
       return { success: true, data };
     } catch (err) {
       // Suppress certificate validation errors in playground - they're expected
       const isCertError = err.message?.includes('Invalid certificate') || 
                          err.message?.includes('Invalid signature from replica');
-      
-      console.log('🔍 SafeCanisterCall ERROR for', expectedErrorMessage, ':', err.message);
-      
-      if (!isCertError || !this.isPlaygroundEnvironment()) {
-        console.log(expectedErrorMessage + ':', err.message);
-      }
       
       return { success: false, error: err.message };
     }
@@ -156,15 +149,9 @@ class ICPUserService {
         )
       ]);
 
-      console.log('🔍 ProfileResult:', profileResult);
-      console.log('🔍 SettingsResult:', settingsResult);
-
       // Extract data from results, use null for failed calls (expected for new users)
       const profile = profileResult.success ? profileResult.data : null;
       const settings = settingsResult.success ? settingsResult.data : null;
-
-      console.log('🔍 Extracted profile:', profile);
-      console.log('🔍 Extracted settings:', settings);
 
       this.currentUser = {
         principal: icpCanisterService.getPrincipal()?.toString(),
@@ -280,7 +267,7 @@ class ICPUserService {
             break;
           }
         } catch (reloadError) {
-          console.log(`🔄 Reload attempt ${attempts + 1} failed:`, reloadError.message);
+          // Retry on error
         }
         
         attempts++;

@@ -52,8 +52,6 @@ export const Account = () => {
         while (attempts < 3) {
           currentUser = await icpUserService.getCurrentUser(true);
           
-          console.log(`🔍 Account loading user data (attempt ${attempts + 1}):`, currentUser);
-          
           // If we have settings, break out of the retry loop
           if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
             break;
@@ -70,7 +68,6 @@ export const Account = () => {
           const profileData = JSON.parse(currentUser.settings.profileMetadata);
           setUserData(profileData);
         } else {
-          console.log('⚠️ No profile data found after retries in Account');
           // If no profile data, show empty profile
           setUserData({
             fullName: "",
@@ -82,7 +79,6 @@ export const Account = () => {
           });
         }
       } catch (error) {
-        console.error('❌ Failed to load user data in Account:', error);
         // If ICP data fails, show empty profile
         setUserData({
           fullName: "",

@@ -247,7 +247,7 @@ class ICPCanisterService {
         if (isCertError) {
           // Only log certificate errors in non-playground environments or on final attempt
           if (!isPlayground || attempt === maxRetries - 1) {
-            console.debug(`🔄 Certificate validation issue (attempt ${attempt + 1}/${maxRetries})`);
+            // Certificate validation issue - expected in playground
           }
           
           try {
@@ -294,7 +294,6 @@ class ICPCanisterService {
       
       // In playground environment, certificate errors are expected for new users
       if (isCertError && this.isPlaygroundEnvironment()) {
-        console.debug('🔄 Query failed due to certificate validation in playground - this is expected for new users');
         return null;
       }
       
@@ -645,17 +644,12 @@ The Bonded Team`
   async getUserSettings() {
     this.ensureAuthenticated();
     
-    console.log('🔍 Getting user settings for principal:', this.getPrincipal()?.toString());
-    
     const result = await this.makeGracefulQueryCall(async () => {
       return await this.actor.get_user_settings();
     });
     
-    console.log('🔍 getUserSettings result:', result);
-    
     if (!result) {
       // Graceful failure - return null for new users or certificate errors
-      console.log('🔍 getUserSettings returned null - could be new user or cert error');
       return null;
     }
     

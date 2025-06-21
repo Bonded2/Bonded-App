@@ -36,9 +36,7 @@ export const PartnerInvite = () => {
       const isCertError = error.message?.includes('Invalid certificate') || 
                          error.message?.includes('Invalid signature from replica');
       
-      if (!isCertError) {
-      console.warn('Failed to load user data:', error);
-      }
+      // Ignore user data loading errors
     }
   };
 
@@ -358,11 +356,9 @@ export const PartnerInvite = () => {
       };
 
       // Create invite in ICP canister (proper canister storage)
-      console.log('📝 Creating invite via proper ICP canister service...');
       const inviteResult = await icpCanisterService.createPartnerInvite(inviteData);
 
       if (inviteResult.success) {
-        console.log('✅ Invite created in canister:', inviteResult);
         
         setInviteStatus({
           status: 'sending',
@@ -387,8 +383,6 @@ export const PartnerInvite = () => {
             inviteResult.invite_link,
             inviterName
           );
-
-          console.log('✅ Real email sent via EmailJS:', emailResult);
           
           setInviteStatus({
             status: 'sent',
@@ -399,7 +393,7 @@ export const PartnerInvite = () => {
         setIsEmailAccepted(true);
 
         } catch (emailError) {
-          console.log('⚠️ EmailJS sending failed, providing manual sharing option:', emailError);
+          // EmailJS sending failed, providing manual sharing option
           
           // If EmailJS fails, provide manual sharing option
         setInviteStatus({
@@ -421,7 +415,7 @@ export const PartnerInvite = () => {
       }
 
     } catch (error) {
-      console.error('❌ Failed to create invite via ICP canister:', error);
+      // Failed to create invite via ICP canister
       
       // Provide clear error message for canister failures
       let errorMessage = 'Failed to create invitation in ICP canister. ';
