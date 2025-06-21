@@ -130,49 +130,12 @@ export const AcceptInvite = () => {
       setInviteState(prev => ({
         ...prev,
         status: 'processing',
-        message: asNewUser ? 'Authenticating and creating your account...' : 'Authenticating...'
+        message: 'Preparing your invitation...'
       }));
 
-      // First, ensure user is authenticated
-      await icpCanisterService.initialize();
-      
-      if (!icpCanisterService.isAuthenticated) {
-        console.log('🔐 User not authenticated, starting login process...');
-        const loginResult = await icpCanisterService.login();
-        
-        if (!loginResult.success) {
-          throw new Error('Authentication failed');
-        }
-        
-        console.log('✅ User authenticated successfully');
-      }
-
-      // Register user if new
-      if (asNewUser) {
-        setInviteState(prev => ({
-          ...prev,
-          message: 'Creating your account...'
-        }));
-        
-        await icpCanisterService.registerUser();
-        console.log('✅ User registered successfully');
-      }
-
-      setInviteState(prev => ({
-        ...prev,
-        message: 'Creating your relationship bond...'
-      }));
-
-      // Accept invitation via proper ICP canister service
-      console.log('✅ Accepting invite via ICP canister service:', inviteState.inviteData.id);
-      const relationshipResult = await icpCanisterService.acceptPartnerInvite(inviteState.inviteData.id);
-      
-      console.log('✅ Relationship created successfully:', relationshipResult);
-      
-      // Store invite and relationship data for later use during profile setup
+      // Store invite data for later use during registration
       const acceptedInviteData = {
         inviteData: inviteState.inviteData,
-        relationshipResult: relationshipResult,
         acceptedAt: Date.now()
       };
       sessionStorage.setItem('acceptedInviteData', JSON.stringify(acceptedInviteData));
@@ -180,7 +143,7 @@ export const AcceptInvite = () => {
       setInviteState(prev => ({
         ...prev,
         status: 'accepted',
-        message: 'Relationship bond created successfully!'
+        message: 'Ready to register!'
       }));
 
       // Navigate based on user choice
@@ -190,7 +153,7 @@ export const AcceptInvite = () => {
         } else {
           navigate('/login?from=invite');
         }
-      }, 2000);
+      }, 1000);
 
     } catch (error) {
       // Suppress certificate validation errors (expected in playground environment)

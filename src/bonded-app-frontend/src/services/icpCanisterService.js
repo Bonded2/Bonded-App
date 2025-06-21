@@ -760,8 +760,8 @@ The Bonded Team`
         explicit_text_filter: [settings.ai?.explicitTextFilter || true],
         upload_schedule: [settings.scheduler?.interval || 'daily'],
         geolocation_enabled: [settings.geolocation?.enabled || true],
-        notification_preferences: [JSON.stringify(settings.notifications || {})],
-        profile_metadata: settings.profile ? [JSON.stringify(settings.profile)] : []
+        notification_preferences: [], // Empty array for now since the format is unclear
+        profile_metadata: settings.profile ? [settings.profile] : []
       };
 
       const result = await this.actor.update_user_settings(canisterSettings);

@@ -64,14 +64,16 @@ export const Register = () => {
     setErrors({});
     
     try {
-      // Store registration data temporarily in component state
-      // This will be used after authentication to complete registration
+      // Store registration data temporarily for use in ProfileSetup
       const registrationData = {
         fullName,
         email,
         password, // In production, this should be hashed
         timestamp: Date.now()
       };
+      
+      // Store in sessionStorage for ProfileSetup to use
+      sessionStorage.setItem('registrationData', JSON.stringify(registrationData));
       
       // Configure the login options
       const loginOptions = {
@@ -110,10 +112,33 @@ export const Register = () => {
             // Initialize ICP user service (it will now use the authenticated canister integration)
             await icpUserService.initialize();
             
+            // Register user first (basic registration)
+            await icpUserService.registerUser();
+            
+            // Handle invite acceptance if coming from invite
+            if (fromInvite) {
+              const acceptedInviteData = sessionStorage.getItem('acceptedInviteData');
+              if (acceptedInviteData) {
+                try {
+                  const inviteData = JSON.parse(acceptedInviteData);
+                  console.log('✅ Accepting invite after registration:', inviteData.inviteData.id);
+                  
+                  const relationshipResult = await icpCanisterService.acceptPartnerInvite(inviteData.inviteData.id);
+                  console.log('✅ Relationship created successfully:', relationshipResult);
+                  
+                  // Update stored data with relationship info
+                  inviteData.relationshipResult = relationshipResult;
+                  sessionStorage.setItem('acceptedInviteData', JSON.stringify(inviteData));
+                } catch (inviteError) {
+                  console.error('❌ Failed to accept invite:', inviteError);
+                }
+              }
+            }
+            
             // Use the registration data from component scope
             if (registrationData) {
-              // Create profile metadata JSON
-              const profileMetadata = JSON.stringify({
+              // Create profile metadata with basic registration info
+              const profileData = {
                 fullName: registrationData.fullName,
                 email: registrationData.email,
                 avatar: registrationData.fullName
@@ -121,11 +146,15 @@ export const Register = () => {
                   .map(part => part[0])
                   .join('')
                   .toUpperCase()
-                  .slice(0, 2)
-              });
+                  .slice(0, 2),
+                hasBasicInfo: true,
+                registeredAt: Date.now()
+              };
               
-              // Register user on ICP canister
-              await icpUserService.registerUser(profileMetadata);
+              // Save profile data using proper settings update
+              await icpUserService.updateUserSettings({
+                profile: JSON.stringify(profileData)
+              });
             }
             
             // Handle different flows based on how user arrived

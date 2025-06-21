@@ -28,16 +28,24 @@ export const MenuFrame = ({ onClose }) => {
     const loadUserInfo = async () => {
       try {
         await icpUserService.initialize();
+        
+        // Force refresh user data from canister
+        await icpUserService.loadCurrentUser();
         const currentUser = icpUserService.getCurrentUser();
         
-        if (currentUser && currentUser.settings && currentUser.settings.profile_metadata) {
-          const profileData = JSON.parse(currentUser.settings.profile_metadata);
+        console.log('🔍 MenuFrame loading user data:', currentUser);
+        
+        if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
+          console.log('📋 Found profile metadata:', currentUser.settings.profileMetadata);
+          const profileData = JSON.parse(currentUser.settings.profileMetadata);
+          
           setUserData({
             fullName: profileData.fullName || "User",
-            email: profileData.email || "user@example.com",
+            email: profileData.email || "No email provided",
             avatar: profileData.avatar || "U",
           });
         } else {
+          console.log('⚠️ No profile metadata found, using defaults');
           // Keep default values if no profile data
           setUserData({
             fullName: "User",
@@ -46,6 +54,7 @@ export const MenuFrame = ({ onClose }) => {
           });
         }
       } catch (error) {
+        console.error('❌ Failed to load user info:', error);
         // Keep default values if loading fails
         setUserData({
           fullName: "User",
