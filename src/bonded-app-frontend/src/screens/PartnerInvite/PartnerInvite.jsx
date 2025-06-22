@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { MainAppTopBar } from "../../components/ConsistentTopBar/ConsistentTopBar";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import icpCanisterService from "../../services/icpCanisterService";
 import emailService from "../../services/emailService";
@@ -459,7 +460,11 @@ export const PartnerInvite = () => {
   };
 
   return (
-    <div className="partner-invite-screen">
+    <div className="partner-invite-screen improved-contrast">
+      <MainAppTopBar 
+        title="Invite Partner"
+        showUploadButton={false}
+      />
       <div className="partner-invite-container">
         <img
           className="bonded-logo-blue"

@@ -1,0 +1,366 @@
+/**
+ * MOBILE RESPONSIVE ENHANCEMENTS
+ * 
+ * Improved mobile experience with:
+ * - Touch-friendly interface elements
+ * - Optimized layouts for small screens
+ * - PWA installation prompts
+ * - Gesture support
+ */
+
+/* Touch-friendly improvements */
+.mobile-enhanced {
+  -webkit-tap-highlight-color: rgba(44, 76, 223, 0.2);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Improved button sizing for mobile */
+@media (max-width: 768px) {
+  .btn, 
+  button:not(.icon-button) {
+    min-height: 48px !important;
+    padding: 12px 20px !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    border-radius: 8px !important;
+  }
+  
+  /* Icon buttons need proper touch targets */
+  .icon-button,
+  .top-bar-button {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  /* Input improvements */
+  input, 
+  textarea, 
+  select {
+    min-height: 44px !important;
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+  }
+  
+  /* Card and container improvements */
+  .card, 
+  .container, 
+  .modal {
+    margin: 8px !important;
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  /* Typography scaling */
+  h1 { font-size: 24px !important; }
+  h2 { font-size: 20px !important; }
+  h3 { font-size: 18px !important; }
+  h4 { font-size: 16px !important; }
+  h5 { font-size: 14px !important; }
+  h6 { font-size: 12px !important; }
+  
+  /* Content spacing */
+  .screen-container {
+    padding: 12px !important;
+  }
+  
+  .content-wrapper {
+    max-width: 100% !important;
+    padding: 0 8px !important;
+  }
+  
+  /* Navigation improvements */
+  .consistent-top-bar {
+    height: 56px !important;
+  }
+  
+  .top-bar-title {
+    font-size: 18px !important;
+  }
+  
+  /* Form improvements */
+  .form-group {
+    margin-bottom: 20px !important;
+  }
+  
+  .form-row {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+  
+  /* Grid improvements */
+  .grid-2, .grid-3, .grid-4 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 320px) {
+  .btn, button {
+    font-size: 14px !important;
+    padding: 10px 16px !important;
+  }
+  
+  .consistent-top-bar {
+    height: 48px !important;
+  }
+  
+  .top-bar-title {
+    font-size: 16px !important;
+  }
+  
+  .card, .container {
+    margin: 4px !important;
+    padding: 12px !important;
+  }
+}
+
+/* Landscape orientation on mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .consistent-top-bar {
+    height: 48px !important;
+  }
+  
+  .screen-container {
+    padding: 8px 16px !important;
+  }
+  
+  /* Make modals smaller in landscape */
+  .modal {
+    max-height: 80vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* PWA-specific improvements */
+@media (display-mode: standalone) {
+  /* Hide URL bar indicators when in PWA mode */
+  .pwa-only {
+    display: block !important;
+  }
+  
+  .browser-only {
+    display: none !important;
+  }
+  
+  /* Adjust for status bar in PWA */
+  .consistent-top-bar {
+    padding-top: calc(8px + env(safe-area-inset-top)) !important;
+    height: calc(64px + env(safe-area-inset-top)) !important;
+  }
+  
+  /* Bottom safe area for PWA */
+  .bottom-navigation {
+    padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Dark mode mobile improvements */
+@media (prefers-color-scheme: dark) and (max-width: 768px) {
+  .card, .container, .modal {
+    background-color: #1F2937 !important;
+    border-color: #374151 !important;
+  }
+  
+  input, textarea, select {
+    background-color: #374151 !important;
+    border-color: #4B5563 !important;
+    color: #F9FAFB !important;
+  }
+}
+
+/* Touch gesture improvements */
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+.pull-to-refresh {
+  overscroll-behavior-y: contain;
+}
+
+/* Swipe gesture indicators */
+.swipeable {
+  position: relative;
+}
+
+.swipeable::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  width: 20px;
+  height: 2px;
+  background-color: #D1D5DB;
+  border-radius: 1px;
+  transform: translateY(-50%);
+  opacity: 0.5;
+}
+
+.swipeable::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 0;
+  height: 0;
+  border-left: 6px solid #D1D5DB;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transform: translateY(-50%);
+  opacity: 0.5;
+}
+
+/* Loading states mobile optimization */
+@media (max-width: 768px) {
+  .loading-spinner.large {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  
+  .loading-message {
+    font-size: 16px !important;
+  }
+  
+  .skeleton-card {
+    padding: 12px !important;
+  }
+  
+  .timeline-loading {
+    padding: 12px !important;
+  }
+}
+
+/* Improved focus states for mobile */
+@media (max-width: 768px) {
+  button:focus,
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: 3px solid #2C4CDF !important;
+    outline-offset: 2px !important;
+  }
+  
+  /* Remove focus outline on touch */
+  button:focus:not(:focus-visible),
+  input:focus:not(:focus-visible),
+  textarea:focus:not(:focus-visible) {
+    outline: none !important;
+  }
+}
+
+/* Accessibility improvements for mobile */
+@media (max-width: 768px) {
+  /* Larger click targets */
+  .clickable {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  /* Better contrast in mobile context */
+  .high-contrast {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+  }
+  
+  /* Voice over improvements */
+  .sr-only-mobile {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+  }
+}
+
+/* Tablet-specific improvements */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .content-wrapper {
+    max-width: 600px !important;
+  }
+  
+  .grid-tablet-2 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  
+  .grid-tablet-3 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* Reduce animations on low-end devices */
+@media (max-width: 768px) and (prefers-reduced-motion: no-preference) {
+  .reduced-animation * {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+}
+
+/* High DPI display improvements */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .crisp-edges {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  
+  /* Sharper borders on high DPI */
+  .precise-border {
+    border-width: 0.5px !important;
+  }
+}
+
+/* Print styles for mobile browsers */
+@media print {
+  .mobile-enhanced {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* iOS-specific improvements */
+@supports (-webkit-touch-callout: none) {
+  .ios-safe-area {
+    padding-top: env(safe-area-inset-top) !important;
+    padding-bottom: env(safe-area-inset-bottom) !important;
+    padding-left: env(safe-area-inset-left) !important;
+    padding-right: env(safe-area-inset-right) !important;
+  }
+  
+  /* Fix iOS input zoom */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+  
+  /* Fix iOS button appearance */
+  button, input[type="submit"] {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+}
+
+/* Android-specific improvements */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  .android-optimization {
+    transform: translateZ(0) !important; /* Hardware acceleration */
+    will-change: transform !important;
+  }
+}

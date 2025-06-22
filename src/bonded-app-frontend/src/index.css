@@ -10,8 +10,9 @@ body {
   height: 100%; /* Full height */
   width: 100%;
   position: relative;
-  background-color: #FF704D; /* Default background for most screens */
-  color: #FFFFFF; /* Default text color for contrast on orange */
+  /* Improved background with better contrast */
+  background: linear-gradient(135deg, #FFF4F0 0%, #FEFEFE 100%);
+  color: #1A1A1A; /* High contrast dark text */
 }
 
 html {
@@ -26,7 +27,8 @@ html {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Trocchi', serif;
-  color: #2C4CDF; /* Default heading color (Bonded Blue) */
+  color: #1E2F8F; /* Improved contrast blue for headings */
+  font-weight: 600;
 }
 
 /* Global link styling */
@@ -82,4 +84,10 @@ button, input, select, textarea {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #2342C8; /* Darker blue on hover */
-} 
+}
+
+/* Import improved contrast styles */
+@import './styles/improved-contrast.css';
+
+/* Import mobile responsive enhancements */
+@import './styles/mobile-responsive.css'; 

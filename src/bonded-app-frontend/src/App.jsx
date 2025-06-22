@@ -274,6 +274,14 @@ export const App = () => {
       };
     }
   }, []);
+  // Add improved contrast class to body
+  useEffect(() => {
+    document.body.classList.add('improved-contrast');
+    return () => {
+      document.body.classList.remove('improved-contrast');
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <GeoMetadataProvider>

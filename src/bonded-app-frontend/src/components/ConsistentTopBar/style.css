@@ -1,0 +1,270 @@
+/**
+ * CONSISTENT TOP BAR STYLES
+ * 
+ * Unified styling for the standardized top bar component
+ * with improved contrast and accessibility
+ */
+
+.consistent-top-bar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 64px;
+  background: linear-gradient(135deg, #4C2CDF 0%, #2C4CDF 100%);
+  box-shadow: 0 2px 12px rgba(44, 76, 223, 0.15);
+  z-index: 1000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.top-bar-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  position: relative;
+}
+
+/* Left section */
+.top-bar-left {
+  display: flex;
+  align-items: center;
+  min-width: 48px;
+  justify-content: flex-start;
+}
+
+/* Center section */
+.top-bar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  margin: 0 16px;
+}
+
+.top-bar-title {
+  color: #FFFFFF;
+  font-family: "Trocchi", serif;
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  max-width: 100%;
+}
+
+/* Right section */
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 48px;
+  justify-content: flex-end;
+}
+
+/* Button styling */
+.top-bar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background-color: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  position: relative;
+}
+
+.top-bar-button:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.top-bar-button:active {
+  transform: translateY(0);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.top-bar-button:focus {
+  outline: 2px solid #FFFFFF;
+  outline-offset: 2px;
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Icon styling */
+.top-bar-button .icon {
+  width: 24px;
+  height: 24px;
+  color: #FFFFFF;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+}
+
+/* Special button variants */
+.upload-button {
+  background-color: rgba(255, 112, 77, 0.2);
+  border: 1px solid rgba(255, 112, 77, 0.3);
+}
+
+.upload-button:hover {
+  background-color: rgba(255, 112, 77, 0.35);
+  border-color: rgba(255, 112, 77, 0.5);
+}
+
+.back-button .icon {
+  transform: translateX(-1px); /* Visual adjustment for arrow */
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .top-bar-container {
+    padding: 0 12px;
+  }
+  
+  .top-bar-title {
+    font-size: 18px;
+    margin: 0 8px;
+  }
+  
+  .top-bar-button {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .top-bar-button .icon {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .top-bar-right {
+    gap: 4px;
+  }
+}
+
+@media (max-width: 320px) {
+  .consistent-top-bar {
+    height: 56px;
+  }
+  
+  .top-bar-container {
+    padding: 0 8px;
+  }
+  
+  .top-bar-title {
+    font-size: 16px;
+    margin: 0 4px;
+  }
+  
+  .top-bar-button {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .top-bar-button .icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Safe area support for notched devices */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .consistent-top-bar {
+    padding-top: env(safe-area-inset-top);
+    height: calc(64px + env(safe-area-inset-top));
+  }
+}
+
+/* Theme variants */
+.consistent-top-bar.orange-theme {
+  background: linear-gradient(135deg, #FF704D 0%, #E85D3D 100%);
+  box-shadow: 0 2px 12px rgba(255, 112, 77, 0.15);
+}
+
+.consistent-top-bar.light-theme {
+  background: #FFFFFF;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.consistent-top-bar.light-theme .top-bar-title {
+  color: #1F2937;
+  text-shadow: none;
+}
+
+.consistent-top-bar.light-theme .top-bar-button {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.consistent-top-bar.light-theme .top-bar-button:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.consistent-top-bar.light-theme .top-bar-button .icon {
+  color: #374151;
+  filter: none;
+}
+
+.consistent-top-bar.light-theme .top-bar-button:focus {
+  outline-color: #2C4CDF;
+}
+
+/* Animation for smooth transitions */
+.consistent-top-bar {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Loading state */
+.consistent-top-bar.loading .top-bar-title::after {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  margin-left: 8px;
+  background-color: currentColor;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .consistent-top-bar {
+    border-bottom: 2px solid #FFFFFF;
+  }
+  
+  .top-bar-button {
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .top-bar-button,
+  .consistent-top-bar {
+    transition: none;
+  }
+  
+  .top-bar-button:hover {
+    transform: none;
+  }
+  
+  .consistent-top-bar.loading .top-bar-title::after {
+    animation: none;
+  }
+}

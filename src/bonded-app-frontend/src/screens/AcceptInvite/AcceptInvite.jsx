@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { ModalTopBar } from "../../components/ConsistentTopBar/ConsistentTopBar";
 import icpCanisterService from "../../services/icpCanisterService";
 import "./style.css";
 
@@ -298,7 +299,11 @@ export const AcceptInvite = () => {
   };
 
   return (
-    <div className="accept-invite-screen">
+    <div className="accept-invite-screen improved-contrast">
+      <ModalTopBar 
+        title="Accept Invitation"
+        onBackClick={() => navigate('/')}
+      />
       <div className="accept-invite-container">
         <img
           className="bonded-logo"
