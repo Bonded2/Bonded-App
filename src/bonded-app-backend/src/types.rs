@@ -225,6 +225,15 @@ pub struct AcceptInviteResponse {
 }
 
 #[derive(CandidType, Serialize, Deserialize)]
+pub struct UserDashboardData {
+    pub profile: UserProfile,
+    pub settings: UserSettings,
+    pub relationships: Vec<Relationship>,
+    pub recent_evidence: Vec<Evidence>,
+    pub last_updated: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize)]
 pub struct CreateRelationshipRequest {
     pub partner_principal: Principal,
 }

@@ -168,6 +168,25 @@ class RealCanisterStorage {
   }
 
   /**
+   * Get all user dashboard data in one optimized call
+   */
+  async getUserDashboardData() {
+    await this.initialize();
+    
+    try {
+      const result = await canisterIntegrationService.backendActor.get_user_dashboard_data();
+      
+      if ('Err' in result) {
+        throw new Error(result.Err);
+      }
+      
+      return result.Ok;
+    } catch (error) {
+      throw new Error(`Failed to get dashboard data: ${error.message}`);
+    }
+  }
+
+  /**
    * Store timeline data in canister
    */
   async setTimelineData(timeline) {

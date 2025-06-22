@@ -48,6 +48,47 @@ fn health_check() -> String {
     )
 }
 
+// ==============
+// BATCH OPERATIONS FOR PERFORMANCE
+// ==============
+
+#[query]
+fn get_user_dashboard_data() -> BondedResult<UserDashboardData> {
+    let user = ic_cdk::api::caller();
+    
+    // Single optimized call to get all user data
+    let profile = with_user_store_read(|store| store.get(&user))
+        .ok_or("User not found")?;
+    
+    let settings = with_settings_store_read(|store| store.get(&user))
+        .unwrap_or_default();
+    
+    let relationships: Vec<Relationship> = profile.relationships.iter()
+        .filter_map(|rel_id| {
+            with_relationship_store_read(|store| store.get(rel_id))
+        })
+        .collect();
+    
+    // Get recent evidence (limited to 10 for performance)
+    let recent_evidence: Vec<Evidence> = with_evidence_store_read(|store| {
+        store.iter()
+            .filter(|(_, evidence)| {
+                relationships.iter().any(|rel| rel.id == evidence.relationship_id)
+            })
+            .take(10)
+            .map(|(_, evidence)| evidence)
+            .collect()
+    });
+    
+    BondedResult::ok(UserDashboardData {
+        profile,
+        settings,
+        relationships,
+        recent_evidence,
+        last_updated: current_time(),
+    })
+}
+
 #[query]
 fn get_canister_stats() -> HashMap<String, u64> {
     let (evidence_count, relationship_count, user_count, settings_count) = get_storage_stats();
