@@ -1,0 +1,85 @@
+/* Optimized Loading Skeleton Styles */
+.loading-skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  display: block;
+}
+
+.loading-skeleton.animate {
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.loading-skeleton-container {
+  width: 100%;
+}
+
+.loading-skeleton-card {
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.skeleton-header {
+  border-radius: 6px;
+}
+
+.skeleton-button {
+  border-radius: 6px;
+}
+
+.skeleton-avatar {
+  flex-shrink: 0;
+}
+
+/* Timeline Skeleton */
+.timeline-skeleton {
+  padding: 16px;
+}
+
+.timeline-item-skeleton {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f9f9f9;
+}
+
+.timeline-content-skeleton {
+  flex: 1;
+}
+
+/* Settings Skeleton */
+.settings-skeleton {
+  padding: 20px;
+  max-width: 600px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .loading-skeleton {
+    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+    background-size: 200% 100%;
+  }
+  
+  .loading-skeleton-card {
+    background: #1a1a1a;
+    border-color: #333;
+  }
+  
+  .timeline-item-skeleton {
+    background: #222;
+  }
+}

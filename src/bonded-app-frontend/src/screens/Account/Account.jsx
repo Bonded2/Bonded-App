@@ -4,6 +4,7 @@ import { ArrowBack } from "../../icons/ArrowBack";
 import { EditProfileModal } from "../../components/EditProfileModal";
 import icpUserService from "../../services/icpUserService";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
+import { SettingsLoadingSkeleton } from "../../components/LoadingSkeleton/LoadingSkeleton";
 import "./style.css";
 const AccountTopBar = ({ onBackClick }) => {
   return (
@@ -22,6 +23,7 @@ export const Account = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showUnbondConfirm, setShowUnbondConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // OPTIMIZATION: Loading state
   const [userData, setUserData] = useState({
     fullName: "",
     email: "",
@@ -39,30 +41,21 @@ export const Account = () => {
   });
   const [passwordErrors, setPasswordErrors] = useState({});
   const [passwordSuccess, setPasswordSuccess] = useState(false);
-  // Load user data from ICP
+  // OPTIMIZED: Load user data from ICP with loading states
   useEffect(() => {
     const loadUserData = async () => {
       try {
-        await icpUserService.initialize();
+        setIsLoading(true); // Start loading
         
-        // Force refresh user data from canister - try multiple times to handle timing issues
-        let attempts = 0;
-        let currentUser = null;
-        
-        while (attempts < 3) {
-          currentUser = await icpUserService.getCurrentUser(true);
-          
-          // If we have settings, break out of the retry loop
-          if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
-            break;
-          }
-          
-          // Wait a bit before retrying to allow for potential network delays
-          if (attempts < 2) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          attempts++;
-        }
+        // OPTIMIZATION: Start initialization and user fetch concurrently
+        const [_, currentUser] = await Promise.all([
+          icpUserService.initialize(),
+          // Use timeout to prevent hanging
+          Promise.race([
+            icpUserService.getCurrentUser(true),
+            new Promise(resolve => setTimeout(() => resolve(null), 5000)) // 5 second timeout
+          ])
+        ]);
         
         if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
           const profileData = JSON.parse(currentUser.settings.profileMetadata);
@@ -88,6 +81,8 @@ export const Account = () => {
           currentCity: null,
           currentCountry: null
         });
+      } finally {
+        setIsLoading(false); // End loading regardless of success/failure
       }
     };
     loadUserData();
@@ -224,6 +219,18 @@ export const Account = () => {
       return dateString;
     }
   };
+  // OPTIMIZATION: Show loading skeleton while data loads
+  if (isLoading) {
+    return (
+      <div className="account-screen">
+        <AccountTopBar onBackClick={handleBackClick} />
+        <div className="account-content">
+          <SettingsLoadingSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="account-screen">
       <AccountTopBar onBackClick={handleBackClick} />

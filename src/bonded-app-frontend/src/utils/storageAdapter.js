@@ -19,8 +19,14 @@
 
 import canisterStorage from '../services/canisterStorage.js';
 
+// PERFORMANCE OPTIMIZATIONS
+const cache = new Map();
+const cacheTimestamps = new Map();
+const CACHE_TTL = 15000; // 15 seconds cache
+const pendingOperations = new Map(); // Deduplication
+
 /**
- * Canister-based localStorage replacement
+ * Canister-based localStorage replacement - OPTIMIZED FOR SPEED
  * All data persists permanently on ICP blockchain
  */
 export const canisterLocalStorage = {
@@ -28,7 +34,25 @@ export const canisterLocalStorage = {
         try {
             // Convert to string like localStorage does
             const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-            await canisterStorage.setItem(`local_${key}`, stringValue);
+            const storageKey = `local_${key}`;
+            
+            // OPTIMIZATION: Update cache immediately for instant response
+            cache.set(storageKey, stringValue);
+            cacheTimestamps.set(storageKey, Date.now());
+            
+            // OPTIMIZATION: Deduplicate concurrent operations
+            const operationKey = `set_${storageKey}`;
+            if (pendingOperations.has(operationKey)) {
+                return pendingOperations.get(operationKey);
+            }
+            
+            // Async write to canister (non-blocking for UI)
+            const operation = canisterStorage.setItem(storageKey, stringValue)
+                .finally(() => pendingOperations.delete(operationKey));
+            
+            pendingOperations.set(operationKey, operation);
+            
+            // Return immediately for better UX
             return true;
         } catch (error) {
             return false;
@@ -37,8 +61,33 @@ export const canisterLocalStorage = {
 
     async getItem(key) {
         try {
-            const value = await canisterStorage.getItem(`local_${key}`, null);
-            return value; // Return null if not found, like localStorage
+            const storageKey = `local_${key}`;
+            
+            // OPTIMIZATION: Check cache first
+            const cached = cache.get(storageKey);
+            const timestamp = cacheTimestamps.get(storageKey);
+            
+            if (cached !== undefined && timestamp && Date.now() - timestamp < CACHE_TTL) {
+                return cached;
+            }
+            
+            // OPTIMIZATION: Deduplicate concurrent reads
+            const operationKey = `get_${storageKey}`;
+            if (pendingOperations.has(operationKey)) {
+                return pendingOperations.get(operationKey);
+            }
+            
+            const operation = canisterStorage.getItem(storageKey, null)
+                .then(value => {
+                    // Update cache
+                    cache.set(storageKey, value);
+                    cacheTimestamps.set(storageKey, Date.now());
+                    return value;
+                })
+                .finally(() => pendingOperations.delete(operationKey));
+            
+            pendingOperations.set(operationKey, operation);
+            return operation;
         } catch (error) {
             return null;
         }

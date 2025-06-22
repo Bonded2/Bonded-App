@@ -40,19 +40,24 @@ export class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-// Loader function for protected routes - checks ICP authentication instead of sessionStorage
+// OPTIMIZED Loader function - non-blocking and concurrent
 const enforceFirstTimeUserLoader = async () => {
   try {
-    // Check ICP authentication status instead of using sessionStorage
+    // OPTIMIZATION: Start initialization but don't block navigation
     const icpCanisterService = (await import('./services/icpCanisterService.js')).default;
-    await icpCanisterService.initialize();
     
-    // Let the app flow naturally through ICP authentication
-    // No need to force redirects based on session storage
+    // Non-blocking initialization with timeout
+    Promise.race([
+      icpCanisterService.initialize(),
+      new Promise(resolve => setTimeout(resolve, 2000)) // 2 second max wait
+    ]).catch(() => {
+      // Ignore errors - components will handle auth individually
+    });
+    
+    // Don't block navigation - return immediately
     return null;
   } catch (error) {
     // ICP authentication check failed - allow navigation to continue
-    // Authentication will be handled by individual components
     return null;
   }
 };

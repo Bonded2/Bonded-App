@@ -36,13 +36,14 @@ export const checkNetworkHealth = async (host) => {
  * Provides better user experience when running on playground/development environments
  */
 
-// Configuration for better error handling
+// Configuration for better error handling - OPTIMIZED FOR SPEED
 const NETWORK_CONFIG = {
-  MAX_RETRIES: 3,
-  RETRY_DELAY_MS: 1000,
-  CERTIFICATE_ERROR_RETRY_DELAY: 2000,
+  MAX_RETRIES: 2, // Reduced from 3 to 2 for faster failure detection
+  RETRY_DELAY_MS: 500, // Reduced from 1000ms to 500ms
+  CERTIFICATE_ERROR_RETRY_DELAY: 800, // Reduced from 2000ms to 800ms
   FALLBACK_ENABLED: true,
-  SUPPRESS_EXPECTED_ERRORS: true // Suppress certificate errors that are expected in dev
+  SUPPRESS_EXPECTED_ERRORS: true, // Suppress certificate errors that are expected in dev
+  FAST_FAIL_TIMEOUT: 3000 // 3 second timeout for individual calls
 };
 
 /**
@@ -58,27 +59,35 @@ export const resilientCanisterCall = async (canisterCall, fallbackResult = null,
   
   for (let attempt = 1; attempt <= config.MAX_RETRIES; attempt++) {
     try {
-      const result = await canisterCall();
+      // OPTIMIZATION: Add timeout to individual calls for faster failure detection
+      const result = await Promise.race([
+        canisterCall(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Call timeout')), config.FAST_FAIL_TIMEOUT)
+        )
+      ]);
       return { success: true, data: result, source: 'canister' };
     } catch (error) {
       lastError = error;
       
-      // Check if this is a certificate validation error (expected in development)
+      // OPTIMIZATION: Fast fail on certain error types
+      const isTimeoutError = error.message?.includes('timeout') || error.message?.includes('Call timeout');
       const isCertificateError = error.message && (
         error.message.includes('Invalid certificate') ||
         error.message.includes('Invalid signature from replica') ||
         error.message.includes('certificate verification failed')
       );
       
-      if (config.SUPPRESS_EXPECTED_ERRORS && isCertificateError) {
-        // Don't log certificate errors on every attempt - they're expected in dev
-        if (attempt === config.MAX_RETRIES) {
-          // Only log on final attempt
-// Console statement removed for production
-        }
-      } else {
-        // Log other types of errors normally
-// Console statement removed for production
+      // OPTIMIZATION: Fast fail on non-recoverable errors
+      const isNonRecoverableError = error.message && (
+        error.message.includes('Canister not found') ||
+        error.message.includes('Method does not exist') ||
+        error.message.includes('Invalid principal')
+      );
+      
+      if (isNonRecoverableError) {
+        // Don't retry on non-recoverable errors
+        break;
       }
       
       // If this is the last attempt, break out of loop
@@ -86,10 +95,13 @@ export const resilientCanisterCall = async (canisterCall, fallbackResult = null,
         break;
       }
       
-      // Wait before retrying, with longer delay for certificate errors
-      const delay = isCertificateError ? 
-        config.CERTIFICATE_ERROR_RETRY_DELAY : 
-        config.RETRY_DELAY_MS;
+      // OPTIMIZATION: Reduced retry delays and smarter retry logic
+      let delay = config.RETRY_DELAY_MS;
+      if (isCertificateError) {
+        delay = config.CERTIFICATE_ERROR_RETRY_DELAY;
+      } else if (isTimeoutError) {
+        delay = 200; // Very fast retry for timeouts
+      }
       
       await new Promise(resolve => setTimeout(resolve, delay));
     }

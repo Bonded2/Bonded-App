@@ -40,6 +40,12 @@ class CanisterIntegrationService {
     this.isInitialized = false;
     this.isAuthenticated = false;
     
+    // Performance optimizations
+    this.initPromise = null; // Single initialization promise
+    this.cache = new Map(); // In-memory cache for frequent operations
+    this.lastCacheTime = new Map(); // Cache timestamps
+    this.CACHE_TTL = 30000; // 30 second cache TTL
+    
     // Network detection - playground should be treated as remote
     this.isLocal = process.env.DFX_NETWORK === 'local' || (!process.env.DFX_NETWORK && window.location.hostname === 'localhost');
     
@@ -59,62 +65,144 @@ class CanisterIntegrationService {
   }
 
   /**
-   * Initialize the service with authentication client
+   * Initialize the service with authentication client - OPTIMIZED FOR SPEED
    */
   async initialize() {
     if (this.isInitialized) return;
     
+    // Return existing initialization promise if already in progress
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    
+    this.initPromise = this._performInitialization();
+    return this.initPromise;
+  }
+
+  async _performInitialization() {
     try {
-      // Create AuthClient
-      this.authClient = await AuthClient.create();
+      // OPTIMIZATION: Check cache first for auth state
+      const cachedAuthState = this._getCached('authState');
+      if (cachedAuthState && Date.now() - cachedAuthState.timestamp < 10000) { // 10 sec cache
+        this.isAuthenticated = cachedAuthState.isAuthenticated;
+        this.identity = cachedAuthState.identity;
+        if (this.isAuthenticated && cachedAuthState.identity) {
+          await this.createBackendActor();
+        }
+        this.isInitialized = true;
+        this.initPromise = null;
+        return;
+      }
+
+      // Create AuthClient with optimized settings
+      this.authClient = await AuthClient.create({
+        // Reduce idle timeout to fail faster
+        idleOptions: {
+          disableDefaultIdleCallback: true,
+          idleTimeout: 30 * 60 * 1000, // 30 minutes
+        }
+      });
       
       // Check if already authenticated
       this.isAuthenticated = await this.authClient.isAuthenticated();
       
       if (this.isAuthenticated) {
         this.identity = this.authClient.getIdentity();
-        await this.createBackendActor();
+        // OPTIMIZATION: Create backend actor concurrently with caching auth state
+        await Promise.all([
+          this.createBackendActor(),
+          this._setCached('authState', {
+            isAuthenticated: this.isAuthenticated,
+            identity: this.identity,
+            timestamp: Date.now()
+          })
+        ]);
+      } else {
+        // Cache negative auth state to avoid repeated checks
+        this._setCached('authState', {
+          isAuthenticated: false,
+          identity: null,
+          timestamp: Date.now()
+        });
       }
       
       this.isInitialized = true;
+      this.initPromise = null;
       
     } catch (error) {
+      this.initPromise = null;
       throw error;
     }
   }
 
   /**
-   * Create backend actor with current identity
+   * Cache helper methods for performance
+   */
+  _getCached(key) {
+    const cached = this.cache.get(key);
+    const timestamp = this.lastCacheTime.get(key);
+    if (cached && timestamp && Date.now() - timestamp < this.CACHE_TTL) {
+      return cached;
+    }
+    return null;
+  }
+
+  _setCached(key, value) {
+    this.cache.set(key, value);
+    this.lastCacheTime.set(key, Date.now());
+  }
+
+  _clearCache(key = null) {
+    if (key) {
+      this.cache.delete(key);
+      this.lastCacheTime.delete(key);
+    } else {
+      this.cache.clear();
+      this.lastCacheTime.clear();
+    }
+  }
+
+  /**
+   * Create backend actor with current identity - OPTIMIZED
    */
   async createBackendActor() {
     try {
+      // OPTIMIZATION: Reduce timeout and improve failure detection
       const agent = new HttpAgent({
         host: this.host,
         identity: this.identity,
-        // Add additional agent options for better reliability
-        retryTimes: 3,
-        // Increase timeout for network requests
+        // Reduced timeout for faster failure detection
         callOptions: {
-          requestTimeout: 30000 // 30 seconds
+          requestTimeout: 8000 // 8 seconds instead of 30
         }
       });
 
-      // Fetch root key for non-mainnet networks to handle certificate validation
-      // This fixes the "Invalid certificate" errors in playground/testnet deployments
-      const needsRootKey = (
-        this.isLocal || 
-        window.location.hostname.includes('playground') || 
-        window.location.hostname.includes('localhost') ||
-        window.location.hostname.includes('icp0.io') ||
-        this.host !== 'https://ic0.app'
-      );
+      // OPTIMIZATION: Cache root key check result
+      const rootKeyNeeded = this._getCached('rootKeyNeeded');
+      let needsRootKey;
+      
+      if (rootKeyNeeded !== null) {
+        needsRootKey = rootKeyNeeded;
+      } else {
+        needsRootKey = (
+          this.isLocal || 
+          window.location.hostname.includes('playground') || 
+          window.location.hostname.includes('localhost') ||
+          window.location.hostname.includes('icp0.io') ||
+          this.host !== 'https://ic0.app'
+        );
+        this._setCached('rootKeyNeeded', needsRootKey);
+      }
       
       if (needsRootKey) {
         try {
-          await agent.fetchRootKey();
-          
-          // Force a small delay to ensure the root key is properly set
-          await new Promise(resolve => setTimeout(resolve, 50));
+          // OPTIMIZATION: Concurrent root key fetch with timeout
+          await Promise.race([
+            agent.fetchRootKey(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Root key timeout')), 3000)
+            )
+          ]);
         } catch (rootKeyError) {
           // This is expected in some environments - continue with degraded functionality
         }
