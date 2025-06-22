@@ -77,10 +77,6 @@ class CanisterIntegrationService {
       }
       
       this.isInitialized = true;
-        isAuthenticated: this.isAuthenticated,
-        isLocal: this.isLocal,
-        backendCanisterId
-      });
       
     } catch (error) {
       throw error;
@@ -240,11 +236,14 @@ class CanisterIntegrationService {
           method: 'canister',
           environment: window.location.hostname
         };
-        }
       } else {
         throw new Error('Canister method not available');
       }
+      } else {
+        throw new Error('Backend actor not available');
+      }
     } catch (error) {
+      // Fall through to fallback storage method
     }
     
     // Reliable fallback: store securely in canister storage
@@ -269,6 +268,7 @@ class CanisterIntegrationService {
       await canisterLocalStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
       await canisterLocalStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
     } catch (storageError) {
+      // Continue with fallback - storage error won't prevent invite creation
     }
     
     // Return success for UI continuity
@@ -373,8 +373,6 @@ class CanisterIntegrationService {
       let localInvite = localStorage.getItem(`invite_${inviteId}`);
       if (!localInvite) {
         localInvite = localStorage.getItem(`bonded_global_invite_${inviteId}`);
-        if (localInvite) {
-        }
       }
       
       if (localInvite) {
@@ -456,8 +454,10 @@ class CanisterIntegrationService {
           
           return normalizedInvite;
         } else {
+          // No invite found in canister storage
         }
       } catch (storageError) {
+        // Continue to return null if storage access fails
       }
       
       return null;
@@ -550,11 +550,6 @@ class CanisterIntegrationService {
     // Don't use ensureAuthenticated for registration - it creates a circular dependency
     // We need to be logged in to register, but we can't register if we require authentication
     const isLoggedIn = await this.isLoggedIn();
-      isLoggedIn, 
-      hasIdentity: !!this.identity, 
-      hasBackendActor: !!this.backendActor,
-      principal: this.identity?.getPrincipal()?.toString()
-    });
     
     if (!isLoggedIn) {
       throw new Error('User not authenticated. Please login first.');
