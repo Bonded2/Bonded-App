@@ -216,9 +216,9 @@ export const Capture = () => {
   // Handle save button click
   const handleSave = async () => {
     try {
-      const { canisterLocalStorage } = await import('../../../utils/storageAdapter.js');
-      await canisterLocalStorage.setItem("captureSettings", JSON.stringify(captureSettings));
-      await canisterLocalStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
+      const { default: realCanisterStorage } = await import('../../../services/realCanisterStorage.js');
+      await realCanisterStorage.setItem("captureSettings", JSON.stringify(captureSettings));
+      await realCanisterStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
       
       const toast = document.createElement("div");
       toast.className = "toast success";
@@ -261,9 +261,9 @@ export const Capture = () => {
   useEffect(() => {
     const initializeSettings = async () => {
       try {
-        const { canisterLocalStorage } = await import('../../../utils/storageAdapter.js');
+        const { default: realCanisterStorage } = await import('../../../services/realCanisterStorage.js');
         
-        const isFirstRun = !(await canisterLocalStorage.getItem("settings_configured"));
+        const isFirstRun = !(await realCanisterStorage.getItem("settings_configured"));
         if (isFirstRun) {
           // Fetch user nationality/region from profile data
           let userNationality = "US"; // Default fallback
@@ -313,15 +313,15 @@ export const Capture = () => {
           }
           setCaptureSettings(initialSettings);
           setFileTypeOverrides(initialOverrides);
-          await canisterLocalStorage.setItem("settings_configured", "true");
+          await realCanisterStorage.setItem("settings_configured", "true");
         }
         
         // Load saved settings if not first run
-        const savedCaptureSettings = await canisterLocalStorage.getItem("captureSettings");
+        const savedCaptureSettings = await realCanisterStorage.getItem("captureSettings");
         if (savedCaptureSettings) {
           setCaptureSettings(JSON.parse(savedCaptureSettings));
         }
-        const savedFileTypeOverrides = await canisterLocalStorage.getItem("fileTypeOverrides");
+        const savedFileTypeOverrides = await realCanisterStorage.getItem("fileTypeOverrides");
         if (savedFileTypeOverrides) {
           setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
         }

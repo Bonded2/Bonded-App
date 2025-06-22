@@ -57,7 +57,7 @@ pub struct UserProfile {
     pub last_seen: u64,
 }
 
-#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug, Default)]
 pub struct UserSettings {
     pub ai_filters_enabled: bool,
     pub nsfw_filter: bool,

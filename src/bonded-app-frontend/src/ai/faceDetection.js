@@ -773,7 +773,7 @@ export class FaceDetectionService {
       };
       // Store in canister with partner ID - importing storage adapter dynamically to avoid circular imports
       try {
-        const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
+        const { canisterLocalStorage } = await import('../utils/realCanisterStorage.js');
         await canisterLocalStorage.setItem(`bonded_face_${partnerId}`, JSON.stringify(data));
       } catch (error) {
 // Console statement removed for production
@@ -789,7 +789,7 @@ export class FaceDetectionService {
     try {
       // Get stored face embeddings from canister storage
       try {
-        const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
+        const { canisterLocalStorage } = await import('../utils/realCanisterStorage.js');
         
         // For now, we'll try to get common face embedding keys
         // In production, this should be replaced with a proper canister query for all face embeddings
@@ -818,7 +818,7 @@ export class FaceDetectionService {
     this.storedEmbeddings.clear();
     // Clear from canister storage
     try {
-      const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
+      const { canisterLocalStorage } = await import('../utils/realCanisterStorage.js');
       
       // Clear known face embedding keys
       for (const partnerId of ['partner1', 'partner2', 'current_user', 'self']) {

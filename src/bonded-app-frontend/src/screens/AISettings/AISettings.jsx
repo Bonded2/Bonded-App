@@ -32,8 +32,8 @@ export const AISettings = () => {
     // Load saved settings from canister storage
     const loadSettings = async () => {
       try {
-        const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
-        const savedSettings = await canisterLocalStorage.getItem('bonded_ai_settings');
+        const { default: realCanisterStorage } = await import('../../services/realCanisterStorage.js');
+        const savedSettings = await realCanisterStorage.getItem('bonded_ai_settings');
         if (savedSettings) {
           setAiSettings(JSON.parse(savedSettings));
         }
@@ -97,8 +97,8 @@ export const AISettings = () => {
     
     // Save to canister storage
     try {
-      const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
-      await canisterLocalStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
+      const { default: realCanisterStorage } = await import('../../services/realCanisterStorage.js');
+      await realCanisterStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
     } catch (error) {
 // Console statement removed for production
       localStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));

@@ -23,7 +23,8 @@ pub use client_storage::*;
 // Imports
 use candid::Principal;
 use ic_cdk_macros::query;
-use storage::get_storage_stats;
+use storage::{get_storage_stats, with_user_store_read, with_settings_store_read, with_relationship_store_read, with_evidence_store_read};
+use utils::current_time;
 use std::collections::HashMap;
 
 // ==============
@@ -53,7 +54,7 @@ fn health_check() -> String {
 // ==============
 
 #[query]
-fn get_user_dashboard_data() -> BondedResult<UserDashboardData> {
+fn get_user_dashboard_data() -> Result<UserDashboardData, String> {
     let user = ic_cdk::api::caller();
     
     // Single optimized call to get all user data

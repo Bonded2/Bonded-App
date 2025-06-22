@@ -41,7 +41,7 @@ export class AutoAIScanner {
    */
   async asyncLoadSettings(defaultSettings) {
     try {
-      const { canisterLocalStorage } = await import('./storageAdapter.js');
+      const { canisterLocalStorage } = await import('./realCanisterStorage.js');
       const saved = await canisterLocalStorage.getItem('autoAIScannerSettings');
       if (saved) {
         this.settings = { ...defaultSettings, ...JSON.parse(saved) };
@@ -67,7 +67,7 @@ export class AutoAIScanner {
   async saveSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
     try {
-      const { canisterLocalStorage } = await import('./storageAdapter.js');
+      const { canisterLocalStorage } = await import('./realCanisterStorage.js');
       await canisterLocalStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
       this.notifyObservers('settingsUpdated', this.settings);
     } catch (error) {
@@ -353,7 +353,7 @@ export class AutoAIScanner {
    */
   async saveTimelineEntry(entry) {
     try {
-      const { canisterLocalStorage } = await import('./storageAdapter.js');
+      const { canisterLocalStorage } = await import('./realCanisterStorage.js');
       const existingTimelineStr = await canisterLocalStorage.getItem('aiProcessedTimeline') || '[]';
       const existingTimeline = JSON.parse(existingTimelineStr);
       existingTimeline.push(entry);
