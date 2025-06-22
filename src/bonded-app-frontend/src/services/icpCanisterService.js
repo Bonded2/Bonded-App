@@ -34,7 +34,6 @@ class ICPCanisterService {
       return this.initializePromise;
     }
     
-    console.log('🚀 Initializing ICP Canister Service...');
     
     this.initializePromise = this._doInitialize();
     return this.initializePromise;
@@ -52,16 +51,13 @@ class ICPCanisterService {
       if (this.isAuthenticated) {
         this.identity = this.authClient.getIdentity();
         await this.createActor();
-        console.log('✅ Already authenticated, actor created');
       } else {
-        console.log('⚠️ Not authenticated, actor will be created after login');
       }
       
       this.isInitialized = true;
       this.initializePromise = null; // Clear the promise after successful initialization
     } catch (error) {
       this.initializePromise = null; // Clear the promise on error to allow retry
-      console.error('❌ Failed to initialize ICP service:', error);
       throw error;
     }
   }
@@ -96,9 +92,7 @@ class ICPCanisterService {
         if (isLocal || this.isPlaygroundEnvironment()) {
           try {
             await this.agent.fetchRootKey();
-            console.log('✅ Root key fetched for certificate validation');
           } catch (rootKeyError) {
-            console.warn('⚠️ Root key fetch failed:', rootKeyError.message);
             // For playground, this might be expected
           }
         }
@@ -112,10 +106,8 @@ class ICPCanisterService {
         agent: this.agent
       });
       
-      console.log('✅ Backend actor created successfully');
       return this.actor;
     } catch (error) {
-      console.error('❌ Failed to create actor:', error);
       throw error;
     }
   }
@@ -124,7 +116,6 @@ class ICPCanisterService {
    * Login using Internet Identity
    */
   async login() {
-    console.log('🔐 Starting Internet Identity login...');
     
     try {
       const success = await new Promise((resolve) => {
@@ -134,7 +125,6 @@ class ICPCanisterService {
             : 'https://identity.ic0.app',
           onSuccess: () => resolve(true),
           onError: (error) => {
-            console.error('❌ Login failed:', error);
             resolve(false);
           }
         });
@@ -145,13 +135,11 @@ class ICPCanisterService {
         this.identity = this.authClient.getIdentity();
         await this.createActor();
         
-        console.log('✅ Login successful!');
         return { success: true };
       } else {
         return { success: false, error: 'Login failed' };
       }
     } catch (error) {
-      console.error('❌ Login error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -160,7 +148,6 @@ class ICPCanisterService {
    * Logout and clear session
    */
   async logout() {
-    console.log('🚪 Logging out...');
     
     try {
       await this.authClient.logout();
@@ -168,10 +155,8 @@ class ICPCanisterService {
       this.identity = null;
       this.actor = null;
       
-      console.log('✅ Logout successful');
       return { success: true };
     } catch (error) {
-      console.error('❌ Logout error:', error);
       return { success: false, error: error.message };
     }
   }
@@ -265,7 +250,6 @@ class ICPCanisterService {
             continue;
           } catch (recreateError) {
             if (!isPlayground) {
-              console.warn('Failed to recreate actor:', recreateError);
             }
             break;
           }
@@ -312,7 +296,6 @@ class ICPCanisterService {
   async createPartnerInvite(inviteData) {
     this.ensureAuthenticated();
     
-    console.log('📝 Creating partner invite via ICP canister...');
     
     try {
       // Get consistent frontend URL (same logic as in PartnerInvite component)
@@ -333,7 +316,6 @@ class ICPCanisterService {
       const result = await this.actor.create_partner_invite(request);
       
       if ('Ok' in result) {
-        console.log('✅ Invite created successfully in canister:', result.Ok);
         return {
           success: true,
           invite_id: result.Ok.invite_id,
@@ -341,11 +323,9 @@ class ICPCanisterService {
           expires_at: Number(result.Ok.expires_at)
         };
       } else {
-        console.error('❌ Canister returned error:', result.Err);
         throw new Error(result.Err);
       }
     } catch (error) {
-      console.error('❌ Failed to create invite:', error);
       throw error;
     }
   }
@@ -356,7 +336,6 @@ class ICPCanisterService {
   async sendInviteEmail(email, inviteLink, senderName) {
     this.ensureAuthenticated();
     
-    console.log('📧 Sending invite email via ICP canister...');
     
     try {
       const request = {
@@ -378,18 +357,15 @@ The Bonded Team`
       const result = await this.actor.send_invite_email(request);
       
       if ('Ok' in result) {
-        console.log('✅ Email sent via canister:', result.Ok);
         return {
           success: true,
           message_id: result.Ok.message_id,
           provider: result.Ok.provider
         };
       } else {
-        console.error('❌ Email sending failed:', result.Err);
         throw new Error(result.Err);
       }
     } catch (error) {
-      console.error('❌ Failed to send email:', error);
       throw error;
     }
   }
@@ -398,7 +374,6 @@ The Bonded Team`
    * Get partner invite from canister
    */
   async getPartnerInvite(inviteId) {
-    console.log('🔍 Getting partner invite from ICP canister:', inviteId);
     
     try {
       // For playground environment, try multiple approaches to get invite data
@@ -408,11 +383,9 @@ The Bonded Team`
       if (this.actor) {
         try {
           const result = await this.actor.get_partner_invite(inviteId);
-          console.log('🔍 Raw canister result for invite (existing actor):', result);
           
           if ('Ok' in result) {
             const invite = result.Ok;
-            console.log('✅ Found invite in canister:', invite);
             
             // Convert BigInt timestamps to regular numbers for frontend use
             return {
@@ -426,11 +399,9 @@ The Bonded Team`
               metadata: invite.metadata && invite.metadata.length > 0 ? invite.metadata[0] : null
             };
           } else {
-            console.log('❌ Invite not found in canister, error:', result.Err);
             return null;
           }
         } catch (actorError) {
-          console.log('⚠️ Existing actor failed, trying fresh actor:', actorError.message);
           // Continue to fresh actor attempt below
         }
       }
@@ -441,7 +412,6 @@ The Bonded Team`
       
       const { HttpAgent, AnonymousIdentity } = await import('@dfinity/agent');
       
-      console.log('🔄 Creating fresh actor for query call');
       
       const freshAgent = new HttpAgent({ 
         host,
@@ -453,9 +423,7 @@ The Bonded Team`
       if (isLocal || isPlayground) {
         try {
           await freshAgent.fetchRootKey();
-          console.log('✅ Root key fetched for fresh query actor');
         } catch (rootKeyError) {
-          console.warn('⚠️ Root key fetch failed:', rootKeyError.message);
           // Continue anyway for query calls
         }
       }
@@ -465,11 +433,9 @@ The Bonded Team`
       });
 
       const result = await freshActor.get_partner_invite(inviteId);
-      console.log('🔍 Raw canister result for invite (fresh actor):', result);
       
       if ('Ok' in result) {
         const invite = result.Ok;
-        console.log('✅ Found invite in canister with fresh actor:', invite);
         
         // Convert BigInt timestamps to regular numbers for frontend use
         return {
@@ -483,25 +449,18 @@ The Bonded Team`
           metadata: invite.metadata && invite.metadata.length > 0 ? invite.metadata[0] : null
         };
       } else {
-        console.log('❌ Invite not found in canister, error:', result.Err);
-        console.log(`❌ Looking for invite ID: ${inviteId}`);
         
         // For debugging - try to list all invites and check connectivity
         if (this.isPlaygroundEnvironment()) {
           try {
-            console.log('🔍 Debugging: Attempting to verify canister connectivity...');
             const healthResult = await freshActor.health_check();
-            console.log('🔍 Canister health check successful:', healthResult);
             
             // Try to list all invites for debugging
             try {
               const debugResult = await freshActor.debug_list_all_invites();
-              console.log('🔍 Debug: All stored invites:', debugResult);
             } catch (debugError) {
-              console.log('❌ Failed to list debug invites:', debugError.message);
             }
           } catch (healthError) {
-            console.log('❌ Even health check failed:', healthError.message);
           }
         }
         
@@ -513,17 +472,11 @@ The Bonded Team`
       const isCertError = error.message?.includes('Invalid certificate') || 
                          error.message?.includes('Invalid signature from replica');
       
-      console.log('💥 Error in getPartnerInvite:', { 
-        message: error.message, 
-        isCertError, 
-        isPlayground: this.isPlaygroundEnvironment() 
-      });
+        // Error handled silently
       
       if (isCertError) {
-        console.log('❌ Certificate validation failed');
         throw new Error('Certificate validation failed - unable to connect to canister');
       } else {
-        console.error('❌ Non-certificate error getting invite:', error);
         throw error;
       }
       
@@ -537,14 +490,12 @@ The Bonded Team`
   async acceptPartnerInvite(inviteId) {
     this.ensureAuthenticated();
     
-    console.log('✅ Accepting partner invite via ICP canister:', inviteId);
     
     try {
       const result = await this.actor.accept_partner_invite(inviteId);
       
       if ('Ok' in result) {
         const response = result.Ok;
-        console.log('✅ Invite accepted successfully:', response);
         
         return {
           success: true,
@@ -559,11 +510,9 @@ The Bonded Team`
           public_key: Array.from(response.public_key)
         };
       } else {
-        console.error('❌ Failed to accept invite:', result.Err);
         throw new Error(result.Err);
       }
     } catch (error) {
-      console.error('❌ Failed to accept invite:', error);
       throw error;
     }
   }
@@ -578,7 +527,6 @@ The Bonded Team`
   async registerUser(profileMetadata = null) {
     this.ensureAuthenticated();
     
-    console.log('👤 Registering user in ICP canister...');
     
     try {
       const result = await this.makeResilientCall(async () => {
@@ -586,24 +534,20 @@ The Bonded Team`
       });
       
       if ('Ok' in result) {
-        console.log('✅ User registered successfully');
         return { success: true, message: result.Ok };
       } else {
         const errorMsg = result.Err;
         if (errorMsg === 'User already registered') {
-          console.log('✅ User already registered - this is expected for returning users');
           return { 
             success: true, 
             message: 'User already exists',
             isExistingUser: true 
           };
         } else {
-          console.error('❌ Registration failed:', errorMsg);
           throw new Error(errorMsg);
         }
       }
     } catch (error) {
-      console.error('❌ Failed to register user:', error);
       throw error;
     }
   }
@@ -688,7 +632,6 @@ The Bonded Team`
       });
       return principal;
     } catch (error) {
-      console.error('❌ Failed to get whoami:', error);
       throw error;
     }
   }
@@ -705,10 +648,8 @@ The Bonded Team`
       });
 
       const result = await actor.health_check();
-      console.log('💚 Backend health check:', result);
       return result;
     } catch (error) {
-      console.error('❌ Health check failed:', error);
       throw error;
     }
   }
@@ -726,7 +667,6 @@ The Bonded Team`
     try {
       // For now, return empty timeline since backend doesn't have evidence yet
       // This will be implemented when evidence upload is ready
-      console.log('📋 Getting timeline from canister...');
       
       return {
         success: true,
@@ -735,7 +675,6 @@ The Bonded Team`
         message: 'Timeline functionality ready - evidence upload to be implemented'
       };
     } catch (error) {
-      console.error('❌ Failed to get timeline:', error);
       throw error;
     }
   }
@@ -754,7 +693,6 @@ The Bonded Team`
     this.ensureAuthenticated();
     
     try {
-      console.log('📤 Uploading evidence to canister...');
       
       // For now, return success without actual upload since backend needs evidence storage
       // This will be implemented when evidence storage is ready in the backend
@@ -766,7 +704,6 @@ The Bonded Team`
         message: 'Evidence upload functionality ready - backend storage to be implemented'
       };
     } catch (error) {
-      console.error('❌ Failed to upload evidence:', error);
       throw error;
     }
   }
@@ -778,7 +715,6 @@ The Bonded Team`
     this.ensureAuthenticated();
     
     try {
-      console.log('⚙️ Updating user settings in canister...');
       
       // Convert settings to canister format
       const canisterSettings = {
@@ -794,13 +730,11 @@ The Bonded Team`
       const result = await this.actor.update_user_settings(canisterSettings);
       
       if ('Ok' in result) {
-        console.log('✅ Settings updated successfully');
         return { success: true };
       } else {
         throw new Error(result.Err);
       }
     } catch (error) {
-      console.error('❌ Failed to update settings:', error);
       throw error;
     }
   }
@@ -810,7 +744,6 @@ The Bonded Team`
    */
   async testConnectivity() {
     try {
-      console.log('🔗 Testing canister connectivity...');
       
       // Test health check
       await this.healthCheck();
@@ -827,7 +760,6 @@ The Bonded Team`
         message: 'Canister connectivity successful'
       };
     } catch (error) {
-      console.error('❌ Connectivity test failed:', error);
       return {
         connected: false,
         isAuthenticated: false,
@@ -844,12 +776,10 @@ The Bonded Team`
     this.ensureAuthenticated();
     
     try {
-      console.log('🗑️ Deleting all user data from canister...');
       
       const result = await this.actor.delete_user_account();
       
       if ('Ok' in result) {
-        console.log('✅ User data deleted successfully');
         
         // Clear local authentication after successful deletion
         this.isAuthenticated = false;
@@ -861,7 +791,6 @@ The Bonded Team`
         throw new Error(result.Err);
       }
     } catch (error) {
-      console.error('❌ Failed to delete user data:', error);
       throw error;
     }
   }

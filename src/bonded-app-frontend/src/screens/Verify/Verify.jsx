@@ -264,7 +264,7 @@ export const Verify = () => {
         await icpUserService.verifyKYC();
       } catch (canisterError) {
         // Log but don't fail the whole process
-        console.warn('Failed to update canister KYC status:', canisterError);
+// Console statement removed for production
       }
       
       setVerificationState({

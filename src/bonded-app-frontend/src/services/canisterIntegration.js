@@ -77,14 +77,12 @@ class CanisterIntegrationService {
       }
       
       this.isInitialized = true;
-      console.log('CanisterIntegrationService initialized', {
         isAuthenticated: this.isAuthenticated,
         isLocal: this.isLocal,
         backendCanisterId
       });
       
     } catch (error) {
-      console.error('Failed to initialize CanisterIntegrationService:', error);
       throw error;
     }
   }
@@ -118,12 +116,10 @@ class CanisterIntegrationService {
       if (needsRootKey) {
         try {
           await agent.fetchRootKey();
-          console.log('✅ Root key fetched successfully for development environment');
           
           // Force a small delay to ensure the root key is properly set
           await new Promise(resolve => setTimeout(resolve, 50));
         } catch (rootKeyError) {
-          console.warn('⚠️ Root key fetch failed, but continuing:', rootKeyError.message);
           // This is expected in some environments - continue with degraded functionality
         }
       }
@@ -134,11 +130,9 @@ class CanisterIntegrationService {
         // Note: agentOptions removed to avoid warning about redundant options
       });
 
-      console.log('Backend actor created successfully');
       return this.backendActor;
       
     } catch (error) {
-      console.error('Failed to create backend actor:', error);
       throw error;
     }
   }
@@ -161,15 +155,12 @@ class CanisterIntegrationService {
             this.identity = this.authClient.getIdentity();
             await this.createBackendActor();
             
-            console.log('Login successful');
             resolve(this.identity);
           } catch (error) {
-            console.error('Post-login setup failed:', error);
             reject(error);
           }
         },
         onError: (error) => {
-          console.error('Login failed:', error);
           reject(error);
         }
       });
@@ -188,7 +179,6 @@ class CanisterIntegrationService {
     this.identity = null;
     this.backendActor = null;
     
-    console.log('Logged out successfully');
   }
 
   /**
@@ -231,7 +221,6 @@ class CanisterIntegrationService {
     try {
       // Check if backend actor exists and has the method
       if (this.backendActor && typeof this.backendActor.create_partner_invite === 'function') {
-        console.log('🔄 Attempting canister invite creation...');
         const canisterResponse = await this.backendActor.create_partner_invite({
           partner_email: inviteData.partnerEmail,
           inviter_name: inviteData.inviterName,
@@ -244,7 +233,6 @@ class CanisterIntegrationService {
         });
       
       if (canisterResponse && canisterResponse.Ok) {
-          console.log('✅ Canister invite created successfully');
         return {
           success: true,
           invite_id: canisterResponse.Ok.invite_id,
@@ -254,15 +242,12 @@ class CanisterIntegrationService {
         };
         }
       } else {
-        console.log('⚠️ Backend actor not available or method missing, using fallback');
         throw new Error('Canister method not available');
       }
     } catch (error) {
-      console.warn('⚠️ Canister invite creation failed, using reliable fallback:', error.message);
     }
     
     // Reliable fallback: store securely in canister storage
-    console.log('Using canister storage fallback for invite creation');
     const fallbackInviteData = {
       ...inviteData,
       inviteLink: this.generateDynamicInviteLink(inviteData.id),
@@ -271,23 +256,19 @@ class CanisterIntegrationService {
     
     // Store invites in publicly accessible localStorage since invite recipients
     // won't be authenticated when they click the link
-    console.log('💾 Storing invite in public localStorage:', `invite_${inviteData.id}`);
     localStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
     localStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
     
     // Also store with a global key for cross-domain access
     const globalInviteKey = `bonded_global_invite_${inviteData.id}`;
     localStorage.setItem(globalInviteKey, JSON.stringify(fallbackInviteData));
-    console.log('💾 Also stored with global key:', globalInviteKey);
     
     // Also try to store in canister storage for the authenticated user
     try {
       const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
       await canisterLocalStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
       await canisterLocalStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
-      console.log('💾 Also stored in authenticated canister storage');
     } catch (storageError) {
-      console.warn('Failed to store invite in canister storage (not critical):', storageError);
     }
     
     // Return success for UI continuity
@@ -327,11 +308,9 @@ class CanisterIntegrationService {
       const result = await emailService.sendInviteEmail(email, inviteLink, userName);
       
       if (result.success) {
-        console.log(`✅ Email sent successfully from ${userEmail} to ${email}`);
         return result;
       } else {
         // Email service returned manual sharing instructions (expected behavior)
-        console.log(`📋 Manual sharing required for email to ${email}`);
         return {
           success: false,
           method: result.method,
@@ -341,7 +320,6 @@ class CanisterIntegrationService {
       }
       
     } catch (error) {
-      console.error('❌ Direct email sending failed:', error);
       
       // Fallback: Provide manual sharing instructions
       return {
@@ -364,12 +342,10 @@ class CanisterIntegrationService {
    * @returns {Promise<Object|null>} Invite data or null if not found
    */
   async getPartnerInvite(inviteId) {
-    console.log('🔍 Getting partner invite:', inviteId);
     
     try {
       // Check if the method exists on the backend actor
       if (this.backendActor && typeof this.backendActor.get_partner_invite === 'function') {
-        console.log('📞 Trying canister method...');
         const result = await resilientCanisterCall(
           () => this.backendActor.get_partner_invite(inviteId),
           'get_partner_invite'
@@ -380,36 +356,29 @@ class CanisterIntegrationService {
           // Ensure the invite link is current for this environment
           invite.invite_link = this.generateDynamicInviteLink(invite.id || inviteId);
           invite.current_environment = window.location.hostname;
-          console.log('✅ Found invite via canister:', invite);
           return invite;
         }
-        console.log('❌ Canister returned:', result);
         return result;
       } else {
-        console.warn('⚠️ get_partner_invite method not available on canister, checking local storage');
         throw new Error('Canister method not implemented');
       }
     } catch (error) {
       // Production fallback: check localStorage first (publicly accessible), then canister storage
-      console.log('🔄 Checking public localStorage for invite:', inviteId);
       
       // Debug: List all localStorage keys that start with 'invite_'
       const allKeys = Object.keys(localStorage);
       const inviteKeys = allKeys.filter(key => key.startsWith('invite_'));
-      console.log('🔍 All invite keys in localStorage:', inviteKeys);
       
       // Check both normal and global keys
       let localInvite = localStorage.getItem(`invite_${inviteId}`);
       if (!localInvite) {
         localInvite = localStorage.getItem(`bonded_global_invite_${inviteId}`);
         if (localInvite) {
-          console.log('🎯 Found invite using global key');
         }
       }
       
       if (localInvite) {
         const inviteData = JSON.parse(localInvite);
-        console.log('🎯 Found in localStorage:', inviteData);
         
         // Always update the invite link to match current environment
         inviteData.inviteLink = this.generateDynamicInviteLink(inviteId);
@@ -428,23 +397,19 @@ class CanisterIntegrationService {
           source: 'local_storage_public'
         };
         
-        console.log('✅ Normalized invite from localStorage:', normalizedInvite);
         return normalizedInvite;
       } else {
-        console.log('❌ Not found in public localStorage');
         
         // Fallback: Check if there's a recent pendingInvite that might match
         const pendingInvite = localStorage.getItem('pendingInvite');
         if (pendingInvite) {
           const pendingData = JSON.parse(pendingInvite);
-          console.log('🔍 Found pendingInvite as fallback:', pendingData);
           
           // Check if this pending invite matches or is recent enough
           const timeDiff = Date.now() - pendingData.createdAt;
           const hoursDiff = timeDiff / (1000 * 60 * 60);
           
           if (hoursDiff < 24) { // If invite is less than 24 hours old, use it
-            console.log('✅ Using recent pendingInvite as fallback');
             pendingData.inviteLink = this.generateDynamicInviteLink(pendingData.id);
             pendingData.current_environment = window.location.hostname;
             
@@ -466,13 +431,11 @@ class CanisterIntegrationService {
       }
       
       // Secondary fallback: check canister storage (requires authentication)
-      console.log('🔄 Checking authenticated canister storage for invite:', inviteId);
       try {
         const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
         const inviteDataStr = await canisterLocalStorage.getItem(`invite_${inviteId}`);
         if (inviteDataStr) {
           const inviteData = JSON.parse(inviteDataStr);
-          console.log('🎯 Found in canister storage:', inviteData);
           
           // Always update the invite link to match current environment
           inviteData.inviteLink = this.generateDynamicInviteLink(inviteId);
@@ -491,16 +454,12 @@ class CanisterIntegrationService {
             source: 'canister_storage'
           };
           
-          console.log('✅ Normalized invite:', normalizedInvite);
           return normalizedInvite;
         } else {
-          console.log('❌ Not found in canister storage either');
         }
       } catch (storageError) {
-        console.warn('Failed to check canister storage (user not authenticated):', storageError);
       }
       
-      console.log('🚫 Invite not found anywhere');
       return null;
     }
   }
@@ -523,12 +482,10 @@ class CanisterIntegrationService {
         
         return result;
       } else {
-        console.warn('accept_partner_invite method not available on canister, using fallback');
         throw new Error('Canister method not implemented');
       }
     } catch (error) {
       // Production fallback: simulate relationship creation locally
-      console.log('Creating fallback relationship for invite:', inviteId);
       
       const invite = await this.getPartnerInvite(inviteId);
       if (!invite) {
@@ -555,7 +512,6 @@ class CanisterIntegrationService {
         // Remove the processed invite
         await canisterLocalStorage.removeItem(`invite_${inviteId}`);
       } catch (storageError) {
-        console.warn('Failed to store relationship in canister storage, using localStorage fallback:', storageError);
         localStorage.setItem(`relationship_${relationshipId}`, JSON.stringify(relationship));
         localStorage.setItem('currentRelationship', JSON.stringify(relationship));
         localStorage.removeItem(`invite_${inviteId}`);
@@ -594,7 +550,6 @@ class CanisterIntegrationService {
     // Don't use ensureAuthenticated for registration - it creates a circular dependency
     // We need to be logged in to register, but we can't register if we require authentication
     const isLoggedIn = await this.isLoggedIn();
-    console.log('registerUser auth check:', { 
       isLoggedIn, 
       hasIdentity: !!this.identity, 
       hasBackendActor: !!this.backendActor,
@@ -607,7 +562,6 @@ class CanisterIntegrationService {
     
     // Ensure backend actor exists
     if (!this.backendActor) {
-      console.log('Creating backend actor for registration...');
       await this.createBackendActor();
     }
     
@@ -619,12 +573,10 @@ class CanisterIntegrationService {
       if ('Err' in result) {
         // If user is already registered, this might not be an error
         if (result.Err === 'User already registered') {
-          console.warn('User already registered - this is expected for returning users');
           // Try to get the existing user profile instead
           try {
             return await this.getUserProfile();
           } catch (profileError) {
-            console.warn('Could not get existing user profile:', profileError);
             // Return a basic success response
             return { principal: this.getPrincipal().toString() };
           }
@@ -634,7 +586,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to register user:', error);
       throw error;
     }
   }
@@ -696,7 +647,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to update user settings:', error);
       throw error;
     }
   }
@@ -718,7 +668,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to create relationship:', error);
       throw error;
     }
   }
@@ -738,7 +687,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to accept relationship:', error);
       throw error;
     }
   }
@@ -758,7 +706,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to get user relationships:', error);
       throw error;
     }
   }
@@ -778,7 +725,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to get relationship:', error);
       throw error;
     }
   }
@@ -802,7 +748,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to upload evidence:', error);
       throw error;
     }
   }
@@ -822,7 +767,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to get timeline:', error);
       throw error;
     }
   }
@@ -842,7 +786,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to get evidence:', error);
       throw error;
     }
   }
@@ -862,7 +805,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to update face embedding:', error);
       throw error;
     }
   }
@@ -882,7 +824,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to get key share:', error);
       throw error;
     }
   }
@@ -902,7 +843,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to verify KYC:', error);
       throw error;
     }
   }
@@ -922,7 +862,6 @@ class CanisterIntegrationService {
       
       return result.Ok;
     } catch (error) {
-      console.error('Failed to delete user account:', error);
       throw error;
     }
   }
@@ -937,7 +876,6 @@ class CanisterIntegrationService {
       const result = await this.backendActor.get_canister_stats();
       return result;
     } catch (error) {
-      console.error('Failed to get canister stats:', error);
       throw error;
     }
   }
@@ -960,7 +898,6 @@ class CanisterIntegrationService {
       
       return await this.backendActor.health_check();
     } catch (error) {
-      console.error('Health check failed:', error);
       throw error;
     }
   }
@@ -975,7 +912,6 @@ class CanisterIntegrationService {
       const result = await this.backendActor.whoami();
       return result;
     } catch (error) {
-      console.error('Whoami failed:', error);
       throw error;
     }
   }

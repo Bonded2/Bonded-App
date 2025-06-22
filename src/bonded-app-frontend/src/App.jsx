@@ -51,8 +51,8 @@ const enforceFirstTimeUserLoader = async () => {
     // No need to force redirects based on session storage
     return null;
   } catch (error) {
-    console.warn('ICP authentication check failed:', error);
-    // Allow navigation to continue - authentication will be handled by individual components
+    // ICP authentication check failed - allow navigation to continue
+    // Authentication will be handled by individual components
     return null;
   }
 };
@@ -242,7 +242,7 @@ export const App = () => {
         
         // Let the app flow naturally - no forced redirects based on session storage
       } catch (error) {
-        console.warn('Failed to initialize ICP service on app load:', error);
+        // Failed to initialize ICP service on app load
         // Continue - individual components will handle authentication
       }
     };

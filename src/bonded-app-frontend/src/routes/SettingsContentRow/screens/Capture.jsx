@@ -232,7 +232,7 @@ export const Capture = () => {
         }, 300);
       }, 3000);
     } catch (error) {
-      console.warn('Failed to save capture settings to canister, using localStorage fallback:', error);
+// Console statement removed for production
       localStorage.setItem("captureSettings", JSON.stringify(captureSettings));
       localStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
       
@@ -299,7 +299,7 @@ export const Capture = () => {
               }
             }
           } catch (error) {
-            console.warn('Could not fetch user profile for smart settings, using defaults:', error);
+// Console statement removed for production
           }
           let initialSettings = { ...captureSettings };
           let initialOverrides = { ...fileTypeOverrides };
@@ -326,7 +326,7 @@ export const Capture = () => {
           setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
         }
       } catch (error) {
-        console.warn('Failed to load capture settings from canister, using localStorage fallback:', error);
+// Console statement removed for production
         // Fallback to localStorage
         const isFirstRun = !localStorage.getItem("settings_configured");
         if (isFirstRun) {

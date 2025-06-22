@@ -31,7 +31,6 @@ export const canisterLocalStorage = {
             await canisterStorage.setItem(`local_${key}`, stringValue);
             return true;
         } catch (error) {
-            console.error(`❌ canisterLocalStorage.setItem failed for ${key}:`, error);
             return false;
         }
     },
@@ -41,7 +40,6 @@ export const canisterLocalStorage = {
             const value = await canisterStorage.getItem(`local_${key}`, null);
             return value; // Return null if not found, like localStorage
         } catch (error) {
-            console.error(`❌ canisterLocalStorage.getItem failed for ${key}:`, error);
             return null;
         }
     },
@@ -51,7 +49,6 @@ export const canisterLocalStorage = {
             await canisterStorage.removeItem(`local_${key}`);
             return true;
         } catch (error) {
-            console.error(`❌ canisterLocalStorage.removeItem failed for ${key}:`, error);
             return false;
         }
     },
@@ -60,11 +57,9 @@ export const canisterLocalStorage = {
         try {
             // Note: This clears ALL user data, not just localStorage items
             // In a real implementation, we'd want to only clear items with 'local_' prefix
-            console.warn('⚠️ canisterLocalStorage.clear() clears ALL user data from canister');
             await canisterStorage.clear();
             return true;
         } catch (error) {
-            console.error('❌ canisterLocalStorage.clear failed:', error);
             return false;
         }
     },
@@ -72,13 +67,11 @@ export const canisterLocalStorage = {
     async key(index) {
         // This would require getting all keys and returning the nth one
         // For now, return null (not commonly used)
-        console.warn('⚠️ canisterLocalStorage.key() not implemented');
         return null;
     },
 
     get length() {
         // This would require async operation, not supported in getter
-        console.warn('⚠️ canisterLocalStorage.length not supported (async required)');
         return 0;
     }
 };
@@ -95,7 +88,6 @@ export const canisterSessionStorage = {
             await canisterStorage.setItem(`session_${key}`, stringValue);
             return true;
         } catch (error) {
-            console.error(`❌ canisterSessionStorage.setItem failed for ${key}:`, error);
             return false;
         }
     },
@@ -105,7 +97,6 @@ export const canisterSessionStorage = {
             const value = await canisterStorage.getItem(`session_${key}`, null);
             return value; // Return null if not found, like sessionStorage
         } catch (error) {
-            console.error(`❌ canisterSessionStorage.getItem failed for ${key}:`, error);
             return null;
         }
     },
@@ -115,7 +106,6 @@ export const canisterSessionStorage = {
             await canisterStorage.removeItem(`session_${key}`);
             return true;
         } catch (error) {
-            console.error(`❌ canisterSessionStorage.removeItem failed for ${key}:`, error);
             return false;
         }
     },
@@ -123,11 +113,9 @@ export const canisterSessionStorage = {
     async clear() {
         try {
             // Note: This clears ALL user data, not just sessionStorage items
-            console.warn('⚠️ canisterSessionStorage.clear() clears ALL user data from canister');
             await canisterStorage.clear();
             return true;
         } catch (error) {
-            console.error('❌ canisterSessionStorage.clear failed:', error);
             return false;
         }
     },
@@ -135,13 +123,11 @@ export const canisterSessionStorage = {
     async key(index) {
         // This would require getting all keys and returning the nth one
         // For now, return null (not commonly used)
-        console.warn('⚠️ canisterSessionStorage.key() not implemented');
         return null;
     },
 
     get length() {
         // This would require async operation, not supported in getter
-        console.warn('⚠️ canisterSessionStorage.length not supported (async required)');
         return 0;
     }
 };
@@ -152,7 +138,6 @@ export const canisterSessionStorage = {
  */
 export async function migrateLocalStorageToCanister() {
     try {
-        console.log('🔄 Starting localStorage to canister migration...');
         
         const migratedKeys = [];
         
@@ -166,14 +151,12 @@ export async function migrateLocalStorageToCanister() {
             }
         }
         
-        console.log(`✅ Migrated ${migratedKeys.length} localStorage items to canister:`, migratedKeys);
         
         // Optionally clear localStorage after migration
         // localStorage.clear();
         
         return migratedKeys;
     } catch (error) {
-        console.error('❌ localStorage migration failed:', error);
         return [];
     }
 }
@@ -183,7 +166,6 @@ export async function migrateLocalStorageToCanister() {
  */
 export async function migrateSessionStorageToCanister() {
     try {
-        console.log('🔄 Starting sessionStorage to canister migration...');
         
         const migratedKeys = [];
         
@@ -197,14 +179,12 @@ export async function migrateSessionStorageToCanister() {
             }
         }
         
-        console.log(`✅ Migrated ${migratedKeys.length} sessionStorage items to canister:`, migratedKeys);
         
         // Optionally clear sessionStorage after migration
         // sessionStorage.clear();
         
         return migratedKeys;
     } catch (error) {
-        console.error('❌ sessionStorage migration failed:', error);
         return [];
     }
 }
@@ -237,17 +217,14 @@ export function createAsyncStorageWrapper(storageType = 'local') {
         // Sync fallback versions (for backwards compatibility)
         // These will return promises that need to be awaited
         setItemSync(key, value) {
-            console.warn('⚠️ Using sync storage API with async backend - await the result!');
             return storage.setItem(key, value);
         },
         
         getItemSync(key) {
-            console.warn('⚠️ Using sync storage API with async backend - await the result!');
             return storage.getItem(key);
         },
         
         removeItemSync(key) {
-            console.warn('⚠️ Using sync storage API with async backend - await the result!');
             return storage.removeItem(key);
         }
     };
@@ -268,13 +245,11 @@ export function createFallbackStorage(storageType = 'local') {
                 if (!success) {
                     // Fallback to browser storage
                     browserStorage.setItem(key, value);
-                    console.warn(`⚠️ Fell back to browser ${storageType}Storage for ${key}`);
                 }
                 return true;
             } catch (error) {
                 // Emergency fallback
                 browserStorage.setItem(key, value);
-                console.warn(`⚠️ Emergency fallback to browser ${storageType}Storage for ${key}`);
                 return true;
             }
         },
@@ -289,17 +264,15 @@ export function createFallbackStorage(storageType = 'local') {
                 // Check browser storage as fallback
                 const fallbackValue = browserStorage.getItem(key);
                 if (fallbackValue !== null) {
-                    console.warn(`⚠️ Retrieved ${key} from browser ${storageType}Storage fallback`);
                     // Try to migrate to canister for next time
-                    canisterStorageObj.setItem(key, fallbackValue).catch(err => 
-                        console.error('Failed to migrate fallback value:', err)
-                    );
+                    canisterStorageObj.setItem(key, fallbackValue).catch(err => {
+                        // Migration error handled silently
+                    });
                 }
                 return fallbackValue;
             } catch (error) {
                 // Emergency fallback
                 const value = browserStorage.getItem(key);
-                console.warn(`⚠️ Emergency fallback read from browser ${storageType}Storage for ${key}`);
                 return value;
             }
         },
@@ -308,7 +281,6 @@ export function createFallbackStorage(storageType = 'local') {
             try {
                 await canisterStorageObj.removeItem(key);
             } catch (error) {
-                console.warn(`⚠️ Failed to remove ${key} from canister, removing from browser storage`);
             }
             
             // Always remove from browser storage too
@@ -320,7 +292,6 @@ export function createFallbackStorage(storageType = 'local') {
             try {
                 await canisterStorageObj.clear();
             } catch (error) {
-                console.warn(`⚠️ Failed to clear canister storage, clearing browser storage`);
             }
             
             // Always clear browser storage too

@@ -48,7 +48,7 @@ export class AutoAIScanner {
         this.notifyObservers('settingsLoaded', this.settings);
       }
     } catch (error) {
-      console.warn('Failed to load scanner settings from canister storage:', error);
+// Console statement removed for production
       // Fallback to localStorage
       try {
         const saved = localStorage.getItem('autoAIScannerSettings');
@@ -57,7 +57,7 @@ export class AutoAIScanner {
           this.notifyObservers('settingsLoaded', this.settings);
         }
       } catch (fallbackError) {
-        console.warn('Fallback localStorage loading also failed:', fallbackError);
+// Console statement removed for production
       }
     }
   }
@@ -71,12 +71,12 @@ export class AutoAIScanner {
       await canisterLocalStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
       this.notifyObservers('settingsUpdated', this.settings);
     } catch (error) {
-      console.warn('Failed to save scanner settings to canister storage, using localStorage fallback:', error);
+// Console statement removed for production
       try {
         localStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
         this.notifyObservers('settingsUpdated', this.settings);
       } catch (fallbackError) {
-        console.warn('Fallback localStorage saving also failed:', fallbackError);
+// Console statement removed for production
       }
     }
   }
@@ -360,14 +360,14 @@ export class AutoAIScanner {
       await canisterLocalStorage.setItem('aiProcessedTimeline', JSON.stringify(existingTimeline));
       this.notifyObservers('timelineUpdated', entry);
     } catch (error) {
-      console.warn('Failed to save timeline entry to canister storage, using localStorage fallback:', error);
+// Console statement removed for production
       try {
         const existingTimeline = JSON.parse(localStorage.getItem('aiProcessedTimeline') || '[]');
         existingTimeline.push(entry);
         localStorage.setItem('aiProcessedTimeline', JSON.stringify(existingTimeline));
         this.notifyObservers('timelineUpdated', entry);
       } catch (fallbackError) {
-        console.warn('Fallback localStorage saving also failed:', fallbackError);
+// Console statement removed for production
       }
     }
   }

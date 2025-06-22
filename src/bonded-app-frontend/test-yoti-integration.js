@@ -16,11 +16,4 @@ const TEST_CONFIG = {
   verificationType: 'identity',
   placeholder: true
 };
-
-console.log('📋 Yoti Integration Test Suite ready!');
-console.log('🚧 Note: This is a placeholder implementation');
-console.log('   Load Yoti service and run tests manually');
-console.log('   Navigate to /verify to test the integration');
-console.log('   Awaiting Yoti account verification for full functionality');
-
 export { TEST_CONFIG }; 

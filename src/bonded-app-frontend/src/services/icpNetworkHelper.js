@@ -74,11 +74,11 @@ export const resilientCanisterCall = async (canisterCall, fallbackResult = null,
         // Don't log certificate errors on every attempt - they're expected in dev
         if (attempt === config.MAX_RETRIES) {
           // Only log on final attempt
-          console.debug(`ICP certificate validation failed after ${config.MAX_RETRIES} attempts - using fallback`);
+// Console statement removed for production
         }
       } else {
         // Log other types of errors normally
-        console.debug(`Canister call attempt ${attempt} failed:`, error.message);
+// Console statement removed for production
       }
       
       // If this is the last attempt, break out of loop
@@ -98,7 +98,7 @@ export const resilientCanisterCall = async (canisterCall, fallbackResult = null,
   // All retries failed - use fallback if enabled
   if (config.FALLBACK_ENABLED && fallbackResult !== null) {
     if (!config.SUPPRESS_EXPECTED_ERRORS) {
-      console.debug('Canister call failed after all retries, using fallback result');
+// Console statement removed for production
     }
     const result = typeof fallbackResult === 'function' ? fallbackResult() : fallbackResult;
     return { success: true, data: result, source: 'fallback' };
@@ -120,15 +120,15 @@ export const handleCertificateError = async (error, recoveryAction = null) => {
     throw error; // Not a certificate error
   }
   
-  console.warn('Certificate validation error detected:', error.message);
+// Console statement removed for production
   
   // If recovery action is provided, try it
   if (recoveryAction && typeof recoveryAction === 'function') {
     try {
-      console.log('Attempting certificate error recovery...');
+// Console statement removed for production
       return await recoveryAction();
     } catch (recoveryError) {
-      console.error('Certificate recovery failed:', recoveryError.message);
+// Console statement removed for production
       throw recoveryError;
     }
   }
@@ -225,7 +225,7 @@ export class NetworkStatusMonitor {
           isFullyOnline: this.isOnline && this.icpNetworkStatus === 'connected'
         });
       } catch (error) {
-        console.error('Error notifying network status listener:', error);
+// Console statement removed for production
       }
     });
   }

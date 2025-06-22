@@ -36,15 +36,15 @@ export const clearAllSessionData = async () => {
     try {
       const { canisterStorage } = await import('../services/canisterStorage.js');
       await canisterStorage.clear();
-      console.log('✅ Cleared canister storage data');
+// Console statement removed for production
     } catch (canisterError) {
-      console.warn('⚠️ Could not clear canister storage (may be offline):', canisterError.message);
+// Console statement removed for production
     }
     
-    console.log('✅ Cleared all session data');
+// Console statement removed for production
     return true;
   } catch (error) {
-    console.error('❌ Error clearing session data:', error);
+// Console statement removed for production
     return false;
   }
 };
@@ -86,15 +86,15 @@ export const clearUserProfileData = async () => {
       await Promise.all(userKeys.map(key => canisterLocalStorage.removeItem(key)));
       await Promise.all(userKeys.map(key => canisterSessionStorage.removeItem(key)));
       
-      console.log('✅ Cleared user profile data from canister storage');
+// Console statement removed for production
     } catch (canisterError) {
-      console.warn('⚠️ Could not clear user profile data from canister storage:', canisterError.message);
+// Console statement removed for production
     }
     
-    console.log('✅ Cleared user profile data');
+// Console statement removed for production
     return true;
   } catch (error) {
-    console.error('❌ Error clearing user profile data:', error);
+// Console statement removed for production
     return false;
   }
 };
@@ -112,7 +112,7 @@ export const forceICPDataRefresh = async () => {
     
     return true;
   } catch (error) {
-    console.error('❌ Error forcing ICP data refresh:', error);
+// Console statement removed for production
     return false;
   }
 };

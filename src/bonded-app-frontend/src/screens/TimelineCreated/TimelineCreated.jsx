@@ -82,7 +82,7 @@ export const TimelineCreated = () => {
           }
         }
       } catch (error) {
-        console.warn('Could not get relationship ID, using mock:', error);
+// Console statement removed for production
       }
       
       const uploadResult = await canisterIntegration.uploadEvidence(

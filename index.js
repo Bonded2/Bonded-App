@@ -20,7 +20,7 @@ app.get('*', (req, res) => {
 // Start server if running directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    // Server started - running silently in production
   });
 }
 

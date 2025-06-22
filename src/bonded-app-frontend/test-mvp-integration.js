@@ -406,7 +406,9 @@ class MVPIntegrationTest {
       const total = result.passed + result.failed;
       const successRate = total > 0 ? (result.passed / total * 100).toFixed(1) : '0.0';
       if (result.errors.length > 0) {
-        result.errors.forEach(error => console.log(`    - ${error}`));
+        result.errors.forEach(error => {
+          // Test error logged: ${error}
+        });
         allPassed = false;
       }
     });

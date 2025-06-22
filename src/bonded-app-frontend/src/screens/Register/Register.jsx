@@ -22,9 +22,9 @@ export const Register = () => {
       try {
         const client = await AuthClient.create();
         setAuthClient(client);
-      } catch (error) {
-        console.error("Failed to initialize auth client:", error);
-      }
+          } catch (error) {
+      // Failed to initialize auth client - continue with component render
+    }
     };
     initAuth();
   }, []);

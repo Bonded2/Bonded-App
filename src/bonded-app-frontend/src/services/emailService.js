@@ -39,10 +39,8 @@ class EmailService {
       this.senderName = userName;
       this.isInitialized = true;
       
-      console.log('✅ EmailJS service initialized for:', userEmail);
       return true;
     } catch (error) {
-      console.error('❌ Failed to initialize EmailJS service:', error);
       throw new Error(`Email service initialization failed: ${error.message}`);
     }
   }
@@ -62,12 +60,10 @@ class EmailService {
       script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
       script.async = true;
       script.onload = () => {
-        console.log('✅ EmailJS library loaded successfully');
         this.emailJSLoaded = true;
         resolve();
       };
       script.onerror = (error) => {
-        console.error('❌ Failed to load EmailJS library:', error);
         reject(new Error('Failed to load EmailJS library'));
       };
       document.head.appendChild(script);
@@ -88,38 +84,17 @@ class EmailService {
     }
 
     try {
-      // Prepare template parameters for EmailJS
-      // REALISTIC APPROACH: Send FROM Bonded domain, REPLY-TO user's email
+      // Create template parameters for EmailJS
       const templateParams = {
-        // Recipient info
         to_email: recipientEmail,
-        to_name: recipientEmail.split('@')[0], // Use email prefix as name fallback
-        
-        // Sender info (realistic production approach)
-        from_email: 'noreply@bonded.app', // Send from our domain
-        from_name: `${this.senderName || inviterName} (via Bonded)`, // Clear attribution
-        reply_to: this.senderEmail, // Replies go to user's actual email
-        
-        // Invitation details
-        inviter_name: inviterName,
-        inviter_email: this.senderEmail, // User's actual email for display
+        to_name: recipientEmail.split('@')[0], // Use email prefix as fallback name
         invite_link: inviteLink,
-        
-        // Email content
-        subject: `You're invited to join Bonded by ${inviterName}`,
-        message: this.generateEmailContent(recipientEmail, inviteLink, inviterName),
-        
-        // Additional metadata
-        app_name: 'Bonded',
+        inviter_name: inviterName,
+        from_name: this.senderName || 'Your Partner',
+        from_email: this.senderEmail,
         timestamp: new Date().toLocaleString(),
         user_email: this.senderEmail // For template display
       };
-
-      console.log('📧 Sending real email via EmailJS...', {
-        from: this.senderEmail,
-        to: recipientEmail,
-        service: 'Bonded Email Service'
-      });
 
       // Check if EmailJS is properly configured before attempting to send
       // Get EmailJS configuration from environment variables (support both REACT_APP and VITE prefixes)
@@ -133,23 +108,10 @@ class EmailService {
                        import.meta.env?.VITE_EMAILJS_PUBLIC_KEY || 
                        '2C_y5Y8A7moWYpk96'; // Your actual public key as fallback
       
-      // Log EmailJS configuration status
-      console.log('📧 EmailJS environment variables:', {
-        serviceId: serviceId ? serviceId : 'MISSING',
-        templateId: templateId ? templateId : 'MISSING', 
-        publicKey: publicKey ? publicKey.substring(0, 8) + '...' : 'MISSING'
-      });
-
       // Validate configuration - all should be available now with fallbacks
       if (!serviceId || !templateId || !publicKey) {
         throw new Error('EmailJS not configured - missing environment variables');
       }
-
-      console.log('📧 Using EmailJS configuration:', {
-        serviceId: serviceId,
-        templateId: templateId,
-        publicKey: publicKey.substring(0, 8) + '...' // Partial key for security
-      });
 
       // Send email using EmailJS
       // This will use our production email service configured in EmailJS dashboard
@@ -163,25 +125,18 @@ class EmailService {
       );
 
       if (response.status === 200) {
-        console.log('✅ Email sent successfully!', {
-          status: response.status,
-          text: response.text,
-          from: this.senderEmail,
-          to: recipientEmail
-        });
-
         // Log email sending via canister storage instead of localStorage
         try {
           const { default: canisterStorage } = await import('./canisterStorage.js');
-        const emailLog = {
-          recipient: recipientEmail,
-          sender: this.senderEmail,
-          timestamp: Date.now(),
-          status: 'sent_successfully',
-          method: 'emailjs_real_sending',
-          response_status: response.status,
-          message_id: response.text || `msg_${Date.now()}`
-        };
+          const emailLog = {
+            recipient: recipientEmail,
+            sender: this.senderEmail,
+            timestamp: Date.now(),
+            status: 'sent_successfully',
+            method: 'emailjs_real_sending',
+            response_status: response.status,
+            message_id: response.text || `msg_${Date.now()}`
+          };
           await canisterStorage.setItem(`email_log_${Date.now()}`, emailLog);
           
           // Update email stats summary
@@ -198,7 +153,7 @@ class EmailService {
           
           await canisterStorage.setItem('email_stats_summary', currentStats);
         } catch (error) {
-          console.warn('Failed to log email to canister storage:', error);
+          // Failed to log to canister storage - handled silently
         }
 
         return {
@@ -220,7 +175,6 @@ class EmailService {
       }
 
     } catch (error) {
-      console.error('❌ EmailJS sending failed:', error);
       
       // Provide clear instructions about EmailJS setup needed
       let helpfulMessage = `❌ Email service not configured yet. `;
@@ -329,7 +283,6 @@ ${inviterName}
         return success;
       }
     } catch (error) {
-      console.error('❌ Failed to copy to clipboard:', error);
       return false;
     }
   }
@@ -386,7 +339,6 @@ ${inviterName}
         };
       }
     } catch (error) {
-      console.warn('Failed to get email stats from canister storage:', error);
       return {
         total_attempts: 0,
         successful_sends: 0,

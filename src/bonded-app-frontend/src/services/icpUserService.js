@@ -65,9 +65,9 @@ class ICPUserService {
       }
       
       this.isInitialized = true;
-      console.log('ICPUserService initialized');
+// Console statement removed for production
     } catch (error) {
-      console.error('Failed to initialize ICPUserService:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -81,7 +81,7 @@ class ICPUserService {
       await this.loadCurrentUser();
       return this.currentUser;
     } catch (error) {
-      console.error('Login failed:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -93,9 +93,9 @@ class ICPUserService {
     try {
       await icpCanisterService.logout();
       this.currentUser = null;
-      console.log('User logged out');
+// Console statement removed for production
     } catch (error) {
-      console.error('Logout failed:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -117,12 +117,12 @@ class ICPUserService {
     } catch (error) {
       // For returning users, this might not be an error
       if (error.message && error.message.includes('User already registered')) {
-        console.log('User already registered - loading existing user data');
+// Console statement removed for production
         await this.loadCurrentUser();
         return { success: true, isExistingUser: true };
       }
       
-      console.error('User registration failed:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -162,7 +162,7 @@ class ICPUserService {
 
       return this.currentUser;
     } catch (error) {
-      console.error('Failed to load current user:', error);
+// Console statement removed for production
       // For new users or auth issues, create minimal user object
       this.currentUser = {
         principal: icpCanisterService.getPrincipal()?.toString(),
@@ -207,7 +207,7 @@ class ICPUserService {
       const profileData = JSON.parse(this.currentUser.settings.profileMetadata);
       return profileData.profileComplete === true;
     } catch (error) {
-      console.error('Failed to check onboarding status:', error);
+// Console statement removed for production
       return false;
     }
   }
@@ -223,7 +223,7 @@ class ICPUserService {
       }
       return profile;
     } catch (error) {
-      console.error('Failed to get user profile:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -239,7 +239,7 @@ class ICPUserService {
       }
       return settings;
     } catch (error) {
-      console.error('Failed to get user settings:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -278,7 +278,7 @@ class ICPUserService {
       
       return result;
     } catch (error) {
-      console.error('Failed to update user settings:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -289,10 +289,10 @@ class ICPUserService {
   async createRelationship(partnerPrincipal) {
     try {
       // For now, relationships will be handled later - return placeholder
-      console.log('Create relationship - feature coming soon');
+// Console statement removed for production
       return { success: true, relationship_id: 'relationship-placeholder' };
     } catch (error) {
-      console.error('Failed to create relationship:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -303,10 +303,10 @@ class ICPUserService {
   async acceptRelationship(relationshipId) {
     try {
       // For now, relationships will be handled later - return placeholder
-      console.log('Accept relationship - feature coming soon');
+// Console statement removed for production
       return { success: true, relationship_id: relationshipId };
     } catch (error) {
-      console.error('Failed to accept relationship:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -319,7 +319,7 @@ class ICPUserService {
       // For now, return empty relationships array
       return [];
     } catch (error) {
-      console.error('Failed to get user relationships:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -331,7 +331,7 @@ class ICPUserService {
     try {
       return await icpCanisterService.uploadEvidence(relationshipId, encryptedData, metadata);
     } catch (error) {
-      console.error('Failed to upload evidence:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -343,7 +343,7 @@ class ICPUserService {
     try {
       return await icpCanisterService.getTimeline(query);
     } catch (error) {
-      console.error('Failed to get timeline:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -354,10 +354,10 @@ class ICPUserService {
   async updateFaceEmbedding(embedding) {
     try {
       // For now, face embeddings will be handled later - return placeholder
-      console.log('Update face embedding - feature coming soon');
+// Console statement removed for production
       return { success: true };
     } catch (error) {
-      console.error('Failed to update face embedding:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -371,7 +371,7 @@ class ICPUserService {
       this.currentUser = null;
       return result;
     } catch (error) {
-      console.error('Failed to delete account:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -384,7 +384,7 @@ class ICPUserService {
       // For now, return basic health stats
       return await icpCanisterService.testConnectivity();
     } catch (error) {
-      console.error('Failed to get canister stats:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -396,7 +396,7 @@ class ICPUserService {
     try {
       return await icpCanisterService.healthCheck();
     } catch (error) {
-      console.error('Health check failed:', error);
+// Console statement removed for production
       throw error;
     }
   }
@@ -415,7 +415,7 @@ class ICPUserService {
     try {
       return await icpCanisterService.whoami();
     } catch (error) {
-      console.error('Whoami failed:', error);
+// Console statement removed for production
       throw error;
     }
   }

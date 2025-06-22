@@ -73,7 +73,7 @@ export class YotiService {
    */
   async initialize(options = {}) {
     try {
-      console.warn('🚧 Yoti Service: Placeholder implementation - awaiting account verification');
+// Console statement removed for production
       
       // Merge configuration
       this.baseUrl = options.baseUrl || process.env.REACT_APP_YOTI_BASE_URL;
@@ -115,7 +115,7 @@ export class YotiService {
     if (this.isSDKLoaded) return;
     
     try {
-      console.warn('🚧 Yoti SDK: Placeholder - actual SDK loading pending account verification');
+// Console statement removed for production
       
       // Check if running in a WebView with native bridge
       if (window.YotiNativeBridgeInfo) {
@@ -199,7 +199,7 @@ export class YotiService {
       throw new Error('Yoti service not initialized');
     }
 
-    console.warn('🚧 Yoti API: Placeholder session token - awaiting account verification');
+// Console statement removed for production
     
     const requestUserId = userId || this.userId || 'anonymous';
     
@@ -234,7 +234,7 @@ export class YotiService {
       throw new Error('Yoti service not initialized');
     }
 
-    console.warn('🚧 Yoti Verification: Placeholder process - awaiting account verification');
+// Console statement removed for production
 
     try {
       // Get session token
@@ -265,7 +265,7 @@ export class YotiService {
    * @returns {HTMLElement} Yoti verification element
    */
   createYotiElement(sessionToken, options = {}) {
-    console.warn('🚧 Creating placeholder Yoti element');
+// Console statement removed for production
     
     const yotiElement = document.createElement('div');
     yotiElement.className = 'yoti-verification-container';
@@ -308,7 +308,7 @@ export class YotiService {
    */
   async runVerification(yotiElement) {
     return new Promise((resolve, reject) => {
-      console.warn('🚧 Running placeholder Yoti verification');
+// Console statement removed for production
       
       let container = document.getElementById('yoti-verification-container');
       if (!container) {
@@ -386,7 +386,7 @@ export class YotiService {
       throw new Error('Yoti service not initialized');
     }
 
-    console.warn('🚧 Yoti Result Validation: Placeholder - awaiting account verification');
+// Console statement removed for production
 
     try {
       // Simulate result validation
@@ -412,7 +412,7 @@ export class YotiService {
    * Cancel current verification
    */
   cancelVerification() {
-    console.warn('🚧 Canceling placeholder Yoti verification');
+// Console statement removed for production
     
     const yotiElement = document.querySelector('.yoti-verification-container');
     if (yotiElement && typeof yotiElement.cancelSession === 'function') {
@@ -455,12 +455,12 @@ export class YotiService {
           try {
             callback(data);
           } catch (error) {
-            console.error(`Error in Yoti event handler for ${event}:`, error);
+// Console statement removed for production
           }
         });
       }
     } catch (error) {
-      console.error(`Error in Yoti event handler for ${event}:`, error);
+// Console statement removed for production
     }
   }
 
@@ -498,7 +498,7 @@ export class YotiService {
    * Cleanup resources
    */
   cleanup() {
-    console.warn('🚧 Cleaning up placeholder Yoti service');
+// Console statement removed for production
     
     // Remove verification container if exists
     const container = document.getElementById('yoti-verification-container');

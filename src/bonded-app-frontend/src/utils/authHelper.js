@@ -100,7 +100,7 @@ export const safeAuthCall = async (authenticatedFn, authService, options = {}) =
       } catch (error) {
         // If it's an authentication error, try to refresh the session
         if (isAuthenticationError(error) && authService?.createBackendActor) {
-          console.warn('Authentication error detected, attempting to refresh actor:', error.message);
+// Console statement removed for production
           await authService.createBackendActor();
           // Retry the original function
           return await authenticatedFn();
@@ -109,7 +109,7 @@ export const safeAuthCall = async (authenticatedFn, authService, options = {}) =
       }
     }, maxRetries);
   } catch (error) {
-    console.error('Safe auth call failed after retries:', error);
+// Console statement removed for production
     
     // Return fallback result if provided
     if (fallbackResult !== null) {
@@ -147,9 +147,9 @@ export const clearAuthStorage = async () => {
     
     await Promise.all(sessionKeys.map(key => canisterSessionStorage.removeItem(key)));
     
-    console.log('Authentication storage cleared successfully');
+// Console statement removed for production
   } catch (error) {
-    console.warn('Failed to clear some authentication storage:', error);
+// Console statement removed for production
   }
 };
 
@@ -174,9 +174,9 @@ export const gracefulLogout = async (authService, navigate, redirectPath = '/') 
       navigate(redirectPath);
     }
     
-    console.log('Graceful logout completed');
+// Console statement removed for production
   } catch (error) {
-    console.warn('Error during graceful logout:', error);
+// Console statement removed for production
     
     // Even if logout fails, clear storage and navigate
     if (navigate) {

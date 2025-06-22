@@ -101,7 +101,7 @@ export const AcceptInvite = () => {
                            inviteError.message?.includes('Invalid signature from replica');
         
         if (!isCertError) {
-          console.error('❌ Failed to get invite:', inviteError);
+// Console statement removed for production
         }
 
         setInviteState({

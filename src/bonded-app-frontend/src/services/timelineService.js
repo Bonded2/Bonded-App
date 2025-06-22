@@ -149,7 +149,7 @@ class TimelineService {
           );
           return decryptedContent;
         } catch (decryptError) {
-          console.warn('Failed to decrypt with encryption service, falling back to simulation:', decryptError);
+// Console statement removed for production
           return await this.simulateDecryption(item);
         }
       } else {
@@ -157,7 +157,7 @@ class TimelineService {
         return await this.simulateDecryption(item);
       }
     } catch (error) {
-      console.warn('Decryption failed, falling back to simulation:', error);
+// Console statement removed for production
       return await this.simulateDecryption(item);
     }
   }

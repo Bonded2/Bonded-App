@@ -38,7 +38,7 @@ export const AISettings = () => {
           setAiSettings(JSON.parse(savedSettings));
         }
       } catch (error) {
-        console.warn('Failed to load AI settings from canister storage:', error);
+// Console statement removed for production
         // Fallback to localStorage if canister storage fails
         const savedSettings = localStorage.getItem('bonded_ai_settings');
         if (savedSettings) {
@@ -100,7 +100,7 @@ export const AISettings = () => {
       const { canisterLocalStorage } = await import('../../utils/storageAdapter.js');
       await canisterLocalStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
     } catch (error) {
-      console.warn('Failed to save AI settings to canister storage, using localStorage fallback:', error);
+// Console statement removed for production
       localStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
     }
   };

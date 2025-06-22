@@ -428,7 +428,7 @@ class TextClassificationService {
           });
         } else {
           // Log blocked message (without content for privacy)
-          // console.log('Blocked message due to explicit content:', classification.reasoning);
+// Console statement removed for production
         }
       }
       

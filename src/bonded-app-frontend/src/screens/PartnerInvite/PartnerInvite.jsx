@@ -440,8 +440,6 @@ export const PartnerInvite = () => {
     }
   };
 
-
-
   const handleInviteSend = async (e) => {
     e.preventDefault();
     if (isValidEmail(partnerEmail)) {

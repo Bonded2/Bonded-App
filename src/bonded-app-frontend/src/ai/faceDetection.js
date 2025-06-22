@@ -776,7 +776,7 @@ export class FaceDetectionService {
         const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
         await canisterLocalStorage.setItem(`bonded_face_${partnerId}`, JSON.stringify(data));
       } catch (error) {
-        console.error('Failed to save face data to canister:', error);
+// Console statement removed for production
       }
     } catch (error) {
     }
@@ -805,7 +805,7 @@ export class FaceDetectionService {
           }
         }
       } catch (error) {
-        console.error('Failed to load face embeddings from canister:', error);
+// Console statement removed for production
       }
     } catch (error) {
     }
@@ -829,7 +829,7 @@ export class FaceDetectionService {
         }
       }
     } catch (error) {
-      console.error('Failed to clear face embeddings from canister:', error);
+// Console statement removed for production
     }
   }
 

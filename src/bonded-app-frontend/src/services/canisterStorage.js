@@ -64,13 +64,13 @@ class CanisterStorageService {
                     if ('Ok' in result) {
                         return true;
                     } else {
-                        console.warn('Failed to save to canister:', result.Err);
+// Console statement removed for production
                         // Cache locally as fallback
                         this.pendingWrites.set(dataType, jsonData);
                         return true;
                     }
                 } catch (canisterError) {
-                    console.warn('Canister storage failed, queuing for retry:', canisterError);
+// Console statement removed for production
                     this.pendingWrites.set(dataType, jsonData);
                     return true;
                 }
@@ -81,7 +81,7 @@ class CanisterStorageService {
             }
             
         } catch (error) {
-            console.error('Failed to save user data:', error);
+// Console statement removed for production
             // Emergency fallback: cache locally
             this.cache.set(dataType, data);
             return true;
@@ -111,7 +111,7 @@ class CanisterStorageService {
                 return defaultValue;
             }
                 } catch (canisterError) {
-                    console.warn('Failed to get data from canister, using default:', canisterError);
+// Console statement removed for production
                     return defaultValue;
                 }
             } else {
@@ -119,7 +119,7 @@ class CanisterStorageService {
             }
             
         } catch (error) {
-            console.error('Failed to get user data:', error);
+// Console statement removed for production
             return defaultValue;
         }
     }

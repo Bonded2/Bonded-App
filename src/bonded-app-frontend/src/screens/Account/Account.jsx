@@ -122,13 +122,12 @@ export const Account = () => {
         // Navigate to home
         navigate('/');
       } catch (error) {
-        console.error('Failed to delete account:', error);
-        // Even if deletion fails, log out and navigate (for UX)
+        // Failed to delete account - even if deletion fails, log out and navigate (for UX)
         try {
           await icpUserService.logout();
           navigate('/');
         } catch (logoutError) {
-          console.error('Failed to logout after delete error:', logoutError);
+          // Failed to logout after delete error - continue with navigation
           navigate('/');
         }
       }

@@ -102,8 +102,7 @@ export const MenuFrame = ({ onClose }) => {
       onClose();
       navigate('/');
     } catch (error) {
-      console.error('Logout failed:', error);
-      // Still navigate away even if logout fails
+      // Logout failed - still navigate away even if logout fails
       onClose();
       navigate('/');
     }

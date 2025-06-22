@@ -35,14 +35,14 @@
         const tesseractReady = typeof window.Tesseract !== 'undefined';
         
         if (tfReady && nsfwReady && ortReady && tesseractReady) {
-          console.log('✅ All AI libraries loaded from CDN');
+          // All AI libraries loaded from CDN
           
           // Initialize TensorFlow first
           window.tf.ready().then(() => {
-            console.log('✅ TensorFlow ready');
-            console.log('✅ NSFWJS confirmed available globally');
-            console.log('✅ ONNX Runtime confirmed available globally');
-            console.log('✅ Tesseract confirmed available globally');
+            // TensorFlow ready
+            // NSFWJS confirmed available globally
+            // ONNX Runtime confirmed available globally
+            // Tesseract confirmed available globally
             
             resolve({ 
               tf: window.tf, 
@@ -55,7 +55,7 @@
         } else if (checkCount < maxChecks) {
           setTimeout(checkAILibraries, 100);
         } else {
-          console.error('❌ AI libraries failed to load after timeout');
+          // AI libraries failed to load after timeout
           reject(new Error('AI libraries failed to load'));
         }
       }
@@ -66,14 +66,9 @@
     
     // Log initialization status
     window.aiInitPromise.then((modules) => {
-      console.log('🎉 AI modules initialized:', { 
-        tensorflow: !!modules.tf, 
-        nsfwjs: !!modules.nsfwjs,
-        onnxruntime: !!modules.ort,
-        tesseract: !!modules.tesseract
-      });
+      // AI modules initialized successfully
     }).catch((error) => {
-      console.error('❌ AI module initialization failed:', error);
+      // AI module initialization failed
     });
     
     // Legacy support - keep tfInitPromise for backward compatibility
@@ -192,7 +187,7 @@
     // Polyfill require for basic compatibility
     if (typeof globalThis.require === 'undefined') {
       globalThis.require = function(module) {
-        console.warn('require() called for:', module, '- this is a polyfill');
+        // require() polyfill called
         return {};
       };
     }

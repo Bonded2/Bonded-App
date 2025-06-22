@@ -17,8 +17,6 @@ const path = require('path');
 
 const execAsync = promisify(exec);
 
-console.log('🧪 Bonded MVP Comprehensive Validation Test\n');
-console.log('Validating all MVP features after optimization changes...\n');
 
 // Test Results Storage
 const testResults = {
@@ -40,7 +38,6 @@ async function runTest(testName, testFunction, category = 'general') {
     try {
         const result = await testFunction();
         if (result) {
-            console.log(`✅ ${testName}`);
             testResults.passed++;
             if (testResults.categories[category]) {
                 testResults.categories[category].passed++;
@@ -49,7 +46,6 @@ async function runTest(testName, testFunction, category = 'general') {
             throw new Error('Test returned false');
         }
     } catch (error) {
-        console.log(`❌ ${testName}: ${error.message}`);
         testResults.failed++;
         testResults.errors.push(`${testName}: ${error.message}`);
         if (testResults.categories[category]) {
@@ -62,7 +58,6 @@ async function runTest(testName, testFunction, category = 'general') {
  * Backend Functionality Tests
  */
 async function testBackendFunctionality() {
-    console.log('🔧 Testing Backend Functionality...\n');
 
     await runTest('Backend Health Check', async () => {
         const result = await execAsync('dfx canister call bonded-app-backend health_check');
@@ -118,7 +113,6 @@ async function testBackendFunctionality() {
  * AI Optimization Tests
  */
 async function testAIOptimization() {
-    console.log('\n🤖 Testing AI Optimization Features...\n');
 
     await runTest('Model Optimization Service Implementation', async () => {
         const optimizationFile = path.join(__dirname, 'src/bonded-app-frontend/src/ai/modelOptimization.js');
@@ -178,7 +172,6 @@ async function testAIOptimization() {
  * Frontend Core Features Tests
  */
 async function testFrontendFeatures() {
-    console.log('\n🖥️ Testing Frontend Core Features...\n');
 
     await runTest('Face Detection Service Implementation', async () => {
         const faceFile = path.join(__dirname, 'src/bonded-app-frontend/src/ai/faceDetection.js');
@@ -245,7 +238,6 @@ async function testFrontendFeatures() {
  * Integration Tests
  */
 async function testIntegration() {
-    console.log('\n🔗 Testing Integration & Dependencies...\n');
 
     await runTest('Frontend Dependencies Installed', async () => {
         const packageFile = path.join(__dirname, 'src/bonded-app-frontend/package.json');
@@ -298,7 +290,6 @@ async function testIntegration() {
  * Performance & Resource Tests
  */
 async function testPerformance() {
-    console.log('\n⚡ Testing Performance Optimizations...\n');
 
     await runTest('Bundle Splitting Configuration', async () => {
         const viteConfig = path.join(__dirname, 'src/bonded-app-frontend/vite.config.js');
@@ -353,50 +344,31 @@ async function runAllTests() {
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
         
         // Print summary
-        console.log('\n' + '='.repeat(60));
-        console.log('🎯 MVP VALIDATION SUMMARY');
-        console.log('='.repeat(60));
-        console.log(`\n📊 Overall Results:`);
-        console.log(`   ✅ Passed: ${testResults.passed}`);
-        console.log(`   ❌ Failed: ${testResults.failed}`);
-        console.log(`   📈 Success Rate: ${successRate}%`);
-        console.log(`   ⏱️  Duration: ${duration}s`);
         
-        console.log(`\n📋 Results by Category:`);
         for (const [category, results] of Object.entries(testResults.categories)) {
             const categoryTotal = results.passed + results.failed;
             if (categoryTotal > 0) {
                 const categoryRate = ((results.passed / categoryTotal) * 100).toFixed(1);
-                console.log(`   ${category}: ${results.passed}/${categoryTotal} (${categoryRate}%)`);
             }
         }
         
         if (testResults.errors.length > 0) {
-            console.log(`\n❌ Failed Tests:`);
             testResults.errors.forEach(error => {
-                console.log(`   • ${error}`);
             });
         }
         
         // Overall assessment
-        console.log(`\n🎯 MVP Assessment:`);
         if (successRate >= 90) {
-            console.log(`   🟢 EXCELLENT: MVP is highly accurate and ready for production`);
         } else if (successRate >= 80) {
-            console.log(`   🟡 GOOD: MVP is mostly accurate with minor issues to address`);
         } else if (successRate >= 70) {
-            console.log(`   🟠 NEEDS WORK: MVP has some accuracy issues requiring attention`);
         } else {
-            console.log(`   🔴 CRITICAL: MVP accuracy needs significant improvement`);
         }
         
-        console.log('\n' + '='.repeat(60));
         
         // Return success if 80% or better
         process.exit(successRate >= 80 ? 0 : 1);
         
     } catch (error) {
-        console.error('\n❌ Test execution failed:', error.message);
         process.exit(1);
     }
 }
