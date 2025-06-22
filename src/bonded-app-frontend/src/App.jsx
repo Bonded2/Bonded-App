@@ -21,6 +21,8 @@ import { AISettings } from "./screens/AISettings/AISettings";
 import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
 import { AcceptInvite } from "./screens/AcceptInvite/AcceptInvite";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
+import { EnhancedPWAInstaller } from "./components/EnhancedPWAInstaller/EnhancedPWAInstaller";
+import { OfflineStatusBar } from "./components/OfflineStatusBar/OfflineStatusBar";
 import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
 import GeoMetadataProvider from "./features/geolocation/GeoMetadataProvider";
 export class ErrorBoundary extends React.Component {
@@ -285,8 +287,10 @@ export const App = () => {
   return (
     <ErrorBoundary>
       <GeoMetadataProvider>
+        <OfflineStatusBar />
         <OfflineIndicator />
         <RouterProvider router={router} />
+        <EnhancedPWAInstaller />
         <PWAInstallPrompt />
       </GeoMetadataProvider>
     </ErrorBoundary>

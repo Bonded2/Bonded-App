@@ -4,7 +4,7 @@
   "description": "AI and blockchain-based relationship verification app for visa, residency and citizenship applications",
   "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#FF704D",
+  "background_color": "#FEFEFE",
   "theme_color": "#2C4CDF",
   "orientation": "portrait",
   "id": "/",
@@ -46,7 +46,29 @@
       "purpose": "any"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "/images/screenshots/timeline-screenshot.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Relationship Timeline"
+    },
+    {
+      "src": "/images/screenshots/upload-screenshot.png", 
+      "sizes": "390x844",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Evidence Upload"
+    },
+    {
+      "src": "/images/screenshots/dashboard-wide.png",
+      "sizes": "1024x768", 
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Dashboard Overview"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Add Evidence",

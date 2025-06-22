@@ -1,0 +1,456 @@
+/**
+ * OFFLINE STATUS BAR STYLES
+ * 
+ * Visual feedback for connectivity and sync status
+ */
+
+.offline-status-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9997;
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+  background: #F59E0B;
+  color: #FFFFFF;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.offline-status-bar.offline {
+  background: #F59E0B;
+  transform: translateY(0);
+}
+
+.offline-status-bar.error {
+  background: #EF4444;
+  transform: translateY(0);
+}
+
+.offline-status-bar.syncing {
+  background: #2C4CDF;
+  transform: translateY(0);
+}
+
+.offline-status-bar.pending {
+  background: #F59E0B;
+  transform: translateY(0);
+}
+
+.offline-status-bar.success {
+  background: #10B981;
+  transform: translateY(0);
+  /* Auto-hide success status after delay */
+  animation: hideAfterDelay 3s ease-in-out 2s forwards;
+}
+
+@keyframes hideAfterDelay {
+  to { transform: translateY(-100%); }
+}
+
+.status-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.status-content:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.status-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.status-message {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sync-progress {
+  margin: 0;
+}
+
+.status-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.retry-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #FFFFFF;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.queue-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Status Details Panel */
+.status-details {
+  background: #FFFFFF;
+  color: #1F2937;
+  border-top: 1px solid #E5E7EB;
+  max-height: 300px;
+  overflow-y: auto;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 300px;
+  }
+}
+
+.details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid #F3F4F6;
+}
+
+.details-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.close-details {
+  background: none;
+  border: none;
+  color: #6B7280;
+  font-size: 18px;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.close-details:hover {
+  background: #F3F4F6;
+}
+
+.details-content {
+  padding: 8px 16px 16px;
+}
+
+/* Connection Status */
+.connection-status {
+  margin-bottom: 16px;
+}
+
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10B981;
+}
+
+.connection-dot.offline {
+  background: #EF4444;
+  animation: pulse 2s infinite;
+}
+
+.connection-indicator span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.offline-message {
+  margin: 0;
+  font-size: 12px;
+  color: #6B7280;
+  font-style: italic;
+}
+
+/* Queue Breakdown */
+.queue-breakdown {
+  margin-bottom: 16px;
+}
+
+.queue-breakdown h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.queue-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 6px;
+  background: #F9FAFB;
+}
+
+.stat-item.pending {
+  background: rgba(245, 158, 11, 0.1);
+  color: #92400E;
+}
+
+.stat-item.processing {
+  background: rgba(44, 76, 223, 0.1);
+  color: #1E40AF;
+}
+
+.stat-item.completed {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+}
+
+.stat-item.failed {
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
+}
+
+.stat-count {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Actions */
+.details-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.action-btn.retry {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+.action-btn.retry:hover {
+  background: #DC2626;
+}
+
+.action-btn.clear {
+  background: #F3F4F6;
+  color: #374151;
+  border: 1px solid #E5E7EB;
+}
+
+.action-btn.clear:hover {
+  background: #E5E7EB;
+}
+
+/* Last Sync */
+.last-sync {
+  text-align: center;
+  padding-top: 8px;
+  border-top: 1px solid #F3F4F6;
+}
+
+.last-sync small {
+  color: #9CA3AF;
+  font-size: 11px;
+}
+
+/* Mobile optimizations */
+@media (max-width: 480px) {
+  .status-content {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+  
+  .status-message {
+    font-size: 13px;
+  }
+  
+  .details-content {
+    padding: 8px 12px 12px;
+  }
+  
+  .queue-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  
+  .details-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    width: 100%;
+  }
+}
+
+/* PWA adjustments */
+@media (display-mode: standalone) {
+  .offline-status-bar {
+    /* Adjust for PWA status bar */
+    top: env(safe-area-inset-top, 0);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .status-details {
+    background: #1F2937;
+    color: #F9FAFB;
+  }
+  
+  .details-header {
+    border-bottom-color: #374151;
+  }
+  
+  .details-header h4 {
+    color: #F9FAFB;
+  }
+  
+  .close-details {
+    color: #D1D5DB;
+  }
+  
+  .close-details:hover {
+    background: #374151;
+  }
+  
+  .connection-indicator span {
+    color: #E5E7EB;
+  }
+  
+  .offline-message {
+    color: #9CA3AF;
+  }
+  
+  .queue-breakdown h5 {
+    color: #E5E7EB;
+  }
+  
+  .stat-item {
+    background: #374151;
+  }
+  
+  .action-btn.clear {
+    background: #374151;
+    color: #E5E7EB;
+    border-color: #4B5563;
+  }
+  
+  .action-btn.clear:hover {
+    background: #4B5563;
+  }
+  
+  .last-sync {
+    border-top-color: #374151;
+  }
+  
+  .last-sync small {
+    color: #6B7280;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .offline-status-bar {
+    border-bottom: 2px solid #000000;
+  }
+  
+  .status-details {
+    border-top: 2px solid #000000;
+  }
+  
+  .retry-btn,
+  .action-btn {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .offline-status-bar,
+  .status-details,
+  .connection-dot.offline {
+    animation: none;
+    transition: none;
+  }
+  
+  .offline-status-bar.success {
+    /* Still hide success but without animation */
+    display: none;
+  }
+}
