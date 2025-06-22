@@ -298,76 +298,45 @@ class CanisterIntegrationService {
   async createPartnerInvite(inviteData) {
     await this.ensureAuthenticated();
     
+    if (!this.backendActor) {
+      throw new Error('Backend canister not available');
+    }
+    
     // Get the current frontend URL for this deployment
     const frontendUrl = this.getCurrentFrontendUrl();
     
-    // Try canister method first with resilient error handling
     try {
-      // Check if backend actor exists and has the method
-      if (this.backendActor && typeof this.backendActor.create_partner_invite === 'function') {
-        const canisterResponse = await this.backendActor.create_partner_invite({
-          partner_email: inviteData.partnerEmail,
-          inviter_name: inviteData.inviterName,
-          expires_at: BigInt(inviteData.createdAt + (7 * 24 * 60 * 60 * 1000)), // 7 days
-          metadata: [JSON.stringify({
-            created_at: inviteData.createdAt,
-            deployment_environment: window.location.hostname
-          })],
-          frontend_url: [frontendUrl] // Pass dynamic frontend URL to backend
-        });
+      // REAL IMPLEMENTATION: Create invite directly in canister
+      const result = await this.backendActor.create_partner_invite({
+        partner_email: inviteData.partnerEmail,
+        inviter_name: inviteData.inviterName,
+        expires_at: BigInt(inviteData.createdAt + (7 * 24 * 60 * 60 * 1000)), // 7 days
+        metadata: [JSON.stringify({
+          created_at: inviteData.createdAt,
+          deployment_environment: window.location.hostname
+        })],
+        frontend_url: [frontendUrl]
+      });
       
-      if (canisterResponse && canisterResponse.Ok) {
-        return {
-          success: true,
-          invite_id: canisterResponse.Ok.invite_id,
-          invite_link: canisterResponse.Ok.invite_link,
-          method: 'canister',
-          environment: window.location.hostname
-        };
-      } else {
-        throw new Error('Canister method not available');
+      if ('Err' in result) {
+        throw new Error(result.Err);
       }
-      } else {
-        throw new Error('Backend actor not available');
+      
+      if (!result.Ok) {
+        throw new Error('Failed to create invite');
       }
+      
+      return {
+        success: true,
+        invite_id: result.Ok.invite_id,
+        invite_link: result.Ok.invite_link,
+        method: 'canister',
+        environment: window.location.hostname
+      };
+      
     } catch (error) {
-      // Fall through to fallback storage method
+      throw new Error(`Failed to create partner invite: ${error.message}`);
     }
-    
-    // Reliable fallback: store securely in canister storage
-    const fallbackInviteData = {
-      ...inviteData,
-      inviteLink: this.generateDynamicInviteLink(inviteData.id),
-      environment: window.location.hostname
-    };
-    
-    // Store invites in publicly accessible localStorage since invite recipients
-    // won't be authenticated when they click the link
-    localStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
-    localStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
-    
-    // Also store with a global key for cross-domain access
-    const globalInviteKey = `bonded_global_invite_${inviteData.id}`;
-    localStorage.setItem(globalInviteKey, JSON.stringify(fallbackInviteData));
-    
-    // Also try to store in canister storage for the authenticated user
-    try {
-      const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
-      await canisterLocalStorage.setItem(`invite_${inviteData.id}`, JSON.stringify(fallbackInviteData));
-      await canisterLocalStorage.setItem('pendingInvite', JSON.stringify(fallbackInviteData));
-    } catch (storageError) {
-      // Continue with fallback - storage error won't prevent invite creation
-    }
-    
-    // Return success for UI continuity
-    return {
-      success: true,
-      stored_locally: true,
-      invite_id: inviteData.id,
-      invite_link: fallbackInviteData.inviteLink,
-      message: 'Invite stored locally and ready to use',
-      environment: window.location.hostname
-    };
   }
 
   /**
@@ -430,128 +399,34 @@ class CanisterIntegrationService {
    * @returns {Promise<Object|null>} Invite data or null if not found
    */
   async getPartnerInvite(inviteId) {
-    
-    try {
-      // Check if the method exists on the backend actor
-      if (this.backendActor && typeof this.backendActor.get_partner_invite === 'function') {
-        const result = await resilientCanisterCall(
-          () => this.backendActor.get_partner_invite(inviteId),
-          'get_partner_invite'
-        );
-        
-        if (result && result.Ok) {
-          const invite = result.Ok;
-          // Ensure the invite link is current for this environment
-          invite.invite_link = this.generateDynamicInviteLink(invite.id || inviteId);
-          invite.current_environment = window.location.hostname;
-          return invite;
-        }
-        return result;
-      } else {
-        throw new Error('Canister method not implemented');
-      }
-    } catch (error) {
-      // Production fallback: check localStorage first (publicly accessible), then canister storage
-      
-      // Debug: List all localStorage keys that start with 'invite_'
-      const allKeys = Object.keys(localStorage);
-      const inviteKeys = allKeys.filter(key => key.startsWith('invite_'));
-      
-      // Check both normal and global keys
-      let localInvite = localStorage.getItem(`invite_${inviteId}`);
-      if (!localInvite) {
-        localInvite = localStorage.getItem(`bonded_global_invite_${inviteId}`);
-      }
-      
-      if (localInvite) {
-        const inviteData = JSON.parse(localInvite);
-        
-        // Always update the invite link to match current environment
-        inviteData.inviteLink = this.generateDynamicInviteLink(inviteId);
-        inviteData.current_environment = window.location.hostname;
-        
-        // Ensure compatibility with AcceptInvite component expectations
-        const normalizedInvite = {
-          id: inviteData.id || inviteId,
-          inviterName: inviteData.inviterName,
-          inviterPrincipal: inviteData.inviterPrincipal,
-          partnerEmail: inviteData.partnerEmail,
-          createdAt: inviteData.createdAt,
-          status: inviteData.status || 'pending',
-          inviteLink: inviteData.inviteLink,
-          current_environment: inviteData.current_environment,
-          source: 'local_storage_public'
-        };
-        
-        return normalizedInvite;
-      } else {
-        
-        // Fallback: Check if there's a recent pendingInvite that might match
-        const pendingInvite = localStorage.getItem('pendingInvite');
-        if (pendingInvite) {
-          const pendingData = JSON.parse(pendingInvite);
-          
-          // Check if this pending invite matches or is recent enough
-          const timeDiff = Date.now() - pendingData.createdAt;
-          const hoursDiff = timeDiff / (1000 * 60 * 60);
-          
-          if (hoursDiff < 24) { // If invite is less than 24 hours old, use it
-            pendingData.inviteLink = this.generateDynamicInviteLink(pendingData.id);
-            pendingData.current_environment = window.location.hostname;
-            
-            const normalizedInvite = {
-              id: pendingData.id || inviteId,
-              inviterName: pendingData.inviterName,
-              inviterPrincipal: pendingData.inviterPrincipal,
-              partnerEmail: pendingData.partnerEmail,
-              createdAt: pendingData.createdAt,
-              status: pendingData.status || 'pending',
-              inviteLink: pendingData.inviteLink,
-              current_environment: pendingData.current_environment,
-              source: 'pending_invite_fallback'
-            };
-            
-            return normalizedInvite;
-          }
-        }
-      }
-      
-      // Secondary fallback: check canister storage (requires authentication)
-      try {
-        const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
-        const inviteDataStr = await canisterLocalStorage.getItem(`invite_${inviteId}`);
-        if (inviteDataStr) {
-          const inviteData = JSON.parse(inviteDataStr);
-          
-          // Always update the invite link to match current environment
-          inviteData.inviteLink = this.generateDynamicInviteLink(inviteId);
-          inviteData.current_environment = window.location.hostname;
-          
-          // Ensure compatibility with AcceptInvite component expectations
-          const normalizedInvite = {
-            id: inviteData.id || inviteId,
-            inviterName: inviteData.inviterName,
-            inviterPrincipal: inviteData.inviterPrincipal,
-            partnerEmail: inviteData.partnerEmail,
-            createdAt: inviteData.createdAt,
-            status: inviteData.status || 'pending',
-            inviteLink: inviteData.inviteLink,
-            current_environment: inviteData.current_environment,
-            source: 'canister_storage'
-          };
-          
-          return normalizedInvite;
-        } else {
-          // No invite found in canister storage
-        }
-      } catch (storageError) {
-        // Continue to return null if storage access fails
-      }
-      
+    if (!this.backendActor) {
       return null;
     }
+    
+    try {
+      // REAL IMPLEMENTATION: Get invite directly from canister
+      const result = await resilientCanisterCall(
+        () => this.backendActor.get_partner_invite(inviteId),
+        null
+      );
+      
+      if ('Err' in result || !result.Ok) {
+        return null;
+      }
+      
+      const invite = result.Ok;
+      
+      // Ensure the invite link is current for this environment
+      invite.invite_link = this.generateDynamicInviteLink(invite.id || inviteId);
+      invite.current_environment = window.location.hostname;
+      invite.source = 'canister';
+      
+      return invite;
+      
+    } catch (error) {
+      return null; // Pure canister implementation - no localStorage fallback
+    }
   }
-
   /**
    * Accept partner invite - PRODUCTION METHOD with graceful fallback
    * @param {string} inviteId - Invite ID to accept
@@ -560,57 +435,29 @@ class CanisterIntegrationService {
   async acceptPartnerInvite(inviteId) {
     await this.ensureAuthenticated();
     
+    if (!this.backendActor) {
+      throw new Error('Backend canister not available');
+    }
+    
     try {
-      // Check if the method exists on the backend actor
-      if (this.backendActor && typeof this.backendActor.accept_partner_invite === 'function') {
-        const result = await resilientCanisterCall(
-          () => this.backendActor.accept_partner_invite(inviteId),
-          'accept_partner_invite'
-        );
-        
-        return result;
-      } else {
-        throw new Error('Canister method not implemented');
-      }
-    } catch (error) {
-      // Production fallback: simulate relationship creation locally
+      // REAL IMPLEMENTATION: Accept invite directly in canister
+      const result = await resilientCanisterCall(
+        () => this.backendActor.accept_partner_invite(inviteId),
+        null
+      );
       
-      const invite = await this.getPartnerInvite(inviteId);
-      if (!invite) {
-        throw new Error(`Invite ${inviteId} not found`);
-      }
-      
-      // Create a fallback relationship
-      const relationshipId = crypto.randomUUID();
-      const relationship = {
-        id: relationshipId,
-        partner_a: invite.inviterPrincipal || 'unknown',
-        partner_b: this.getPrincipal()?.toString(),
-        status: 'active',
-        created_at: Date.now(),
-        evidence_count: 0,
-        source: 'fallback'
-      };
-      
-      try {
-        const { canisterLocalStorage } = await import('../utils/storageAdapter.js');
-        await canisterLocalStorage.setItem(`relationship_${relationshipId}`, JSON.stringify(relationship));
-        await canisterLocalStorage.setItem('currentRelationship', JSON.stringify(relationship));
-        
-        // Remove the processed invite
-        await canisterLocalStorage.removeItem(`invite_${inviteId}`);
-      } catch (storageError) {
-        localStorage.setItem(`relationship_${relationshipId}`, JSON.stringify(relationship));
-        localStorage.setItem('currentRelationship', JSON.stringify(relationship));
-        localStorage.removeItem(`invite_${inviteId}`);
+      if ('Err' in result) {
+        throw new Error(result.Err);
       }
       
       return {
         success: true,
-        relationship,
-        method: 'fallback',
-        message: 'Relationship created locally, will sync when canister available'
+        relationship: result.Ok,
+        method: 'canister'
       };
+      
+    } catch (error) {
+      throw new Error(`Failed to accept partner invite: ${error.message}`);
     }
   }
 

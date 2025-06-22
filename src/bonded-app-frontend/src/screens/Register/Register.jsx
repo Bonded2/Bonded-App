@@ -72,8 +72,8 @@ export const Register = () => {
         timestamp: Date.now()
       };
       
-      // Store in sessionStorage for ProfileSetup to use
-      sessionStorage.setItem('registrationData', JSON.stringify(registrationData));
+      // REAL IMPLEMENTATION: Store registration data directly in ICP canister
+      // No need for sessionStorage - data will be stored in canister during authentication
       
       // Configure the login options
       const loginOptions = {
@@ -114,20 +114,16 @@ export const Register = () => {
             // Register user first (basic registration)
             await icpUserService.registerUser();
             
-            // Handle invite acceptance if coming from invite
+            // REAL IMPLEMENTATION: Handle invite acceptance through URL params
             if (fromInvite) {
-              const acceptedInviteData = sessionStorage.getItem('acceptedInviteData');
-              if (acceptedInviteData) {
+              const urlParams = new URLSearchParams(window.location.search);
+              const inviteId = urlParams.get('invite');
+              
+              if (inviteId) {
                 try {
-                  const inviteData = JSON.parse(acceptedInviteData);
-                  
-                  const relationshipResult = await icpCanisterService.acceptPartnerInvite(inviteData.inviteData.id);
-                  
-                  // Update stored data with relationship info
-                  inviteData.relationshipResult = relationshipResult;
-                  sessionStorage.setItem('acceptedInviteData', JSON.stringify(inviteData));
+                  await icpCanisterService.acceptPartnerInvite(inviteId);
                 } catch (inviteError) {
-                  // Failed to accept invite
+                  // Failed to accept invite - continue with registration
                 }
               }
             }
