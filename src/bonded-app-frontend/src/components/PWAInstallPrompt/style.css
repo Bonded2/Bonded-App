@@ -167,6 +167,12 @@
   background-color: #ff8566;
 }
 
+.pwa-install-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* iOS specific styles */
 .ios-prompt {
   bottom: 25px;
@@ -251,5 +257,234 @@
   
   .ios-prompt {
     bottom: calc(25px + env(safe-area-inset-bottom));
+  }
+}
+
+/* iOS Installation Guide Modal */
+.ios-install-guide-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ios-install-guide {
+  background-color: white;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 20px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.guide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.guide-header h2 {
+  margin: 0;
+  font-family: "Trocchi", serif;
+  font-size: 20px;
+  color: #2C4CDF;
+}
+
+.close-guide {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.close-guide:hover {
+  background-color: #f8f9fa;
+}
+
+.guide-steps {
+  margin-bottom: 24px;
+}
+
+.guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+}
+
+.guide-step.active {
+  background-color: #e3f2fd;
+  border-color: #2C4CDF;
+}
+
+.guide-step.completed {
+  background-color: #e8f5e8;
+  border-color: #4caf50;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #2C4CDF;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.guide-step.completed .step-number {
+  background-color: #4caf50;
+}
+
+.step-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-content h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #333;
+}
+
+.step-content p {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: #666;
+}
+
+.step-content small {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+}
+
+.guide-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.guide-prev-btn, .guide-next-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.guide-prev-btn {
+  background-color: #f8f9fa;
+  color: #666;
+  border: 1px solid #dee2e6;
+}
+
+.guide-prev-btn:hover:not(:disabled) {
+  background-color: #e9ecef;
+}
+
+.guide-prev-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.guide-next-btn {
+  background-color: #2C4CDF;
+  color: white;
+}
+
+.guide-next-btn:hover {
+  background-color: #1e3a8a;
+}
+
+/* Mobile adjustments for guide modal */
+@media (max-width: 480px) {
+  .ios-install-guide {
+    margin: 10px;
+    padding: 20px;
+  }
+  
+  .guide-header h2 {
+    font-size: 18px;
+  }
+  
+  .guide-step {
+    gap: 12px;
+    padding: 12px;
+  }
+  
+  .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .step-icon {
+    font-size: 20px;
+  }
+  
+  .step-content h3 {
+    font-size: 14px;
+  }
+  
+  .step-content p {
+    font-size: 13px;
+  }
+  
+  .guide-actions {
+    flex-direction: column;
+  }
+  
+  .guide-prev-btn, .guide-next-btn {
+    width: 100%;
   }
 } 

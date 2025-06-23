@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './style.css';
 export const PWAInstallPrompt = () => {
   const [installPromptEvent, setInstallPromptEvent] = useState(null);
@@ -8,6 +8,38 @@ export const PWAInstallPrompt = () => {
   const [isAndroid, setIsAndroid] = useState(false);
   const [browserInfo, setBrowserInfo] = useState('');
   const [isDismissedRecently, setIsDismissedRecently] = useState(null); // null = checking, true/false = result
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [guidedInstallStep, setGuidedInstallStep] = useState(0);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [userInteraction, setUserInteraction] = useState({
+    hasInteracted: false,
+    dismissCount: 0,
+    lastDismissed: null,
+    installAttempts: 0
+  });
+
+  // iOS guided installation steps
+  const iosInstallSteps = [
+    {
+      title: "Tap the Share Button",
+      description: "Look for the share icon at the bottom of Safari",
+      icon: "↗",
+      detail: "It's usually in the center of the bottom toolbar"
+    },
+    {
+      title: "Scroll and Find 'Add to Home Screen'",
+      description: "Scroll through the options until you see this",
+      icon: "📲",
+      detail: "It has a small plus icon next to it"
+    },
+    {
+      title: "Tap 'Add'",
+      description: "Confirm by tapping 'Add' in the top right",
+      icon: "✓",
+      detail: "The app will appear on your home screen"
+    }
+  ];
+
   useEffect(() => {
     // Detect iOS devices
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -96,22 +128,40 @@ export const PWAInstallPrompt = () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
-  const handleInstallClick = () => {
+  const handleInstallClick = async () => {
+    setUserInteraction(prev => ({ ...prev, hasInteracted: true }));
+    
     if (installPromptEvent) {
-      // Show the install prompt for browsers that support it
-    installPromptEvent.prompt();
-    // Wait for the user to respond to the prompt
-    installPromptEvent.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-      } else {
+      setIsInstalling(true);
+      
+      try {
+        // Show the install prompt for browsers that support it
+        installPromptEvent.prompt();
+        
+        // Wait for the user to respond to the prompt
+        const choiceResult = await installPromptEvent.userChoice;
+        
+        if (choiceResult.outcome === 'accepted') {
+          // Track successful installation
+          const attempts = JSON.parse(localStorage.getItem('bonded_pwa_attempts') || '{"count": 0}');
+          localStorage.setItem('bonded_pwa_attempts', JSON.stringify({
+            count: attempts.count + 1,
+            lastSuccess: Date.now()
+          }));
+        }
+        
+        // Clear the saved prompt since it can't be used again
+        setInstallPromptEvent(null);
+        setShowPrompt(false);
+      } catch (error) {
+        console.warn('PWA installation failed:', error);
+      } finally {
+        setIsInstalling(false);
       }
-      // Clear the saved prompt since it can't be used again
-      setInstallPromptEvent(null);
-      setShowPrompt(false);
-    });
     } else if (isIOS) {
-      // Show iOS specific instructions
-      alert('To install this app on your iPhone: tap the Share button below, then "Add to Home Screen"');
+      // Show iOS guided installation modal
+      setShowIOSGuide(true);
+      setGuidedInstallStep(0);
     } else if (isAndroid) {
       // For non-Chrome Android browsers
       alert('To install this app, tap the menu button and select "Add to Home screen" or "Install App"');
@@ -119,17 +169,30 @@ export const PWAInstallPrompt = () => {
   };
   const handleDismissClick = async () => {
     setShowPrompt(false);
-    // Save user preference to not show for a while - use localStorage primarily
-    const timestamp = Date.now().toString();
+    
+    // Track dismissal count
+    const currentDismissals = JSON.parse(localStorage.getItem('bonded_pwa_dismissals') || '{"count": 0}');
+    const newDismissalData = {
+      count: currentDismissals.count + 1,
+      timestamp: Date.now()
+    };
     
     try {
-      // Save to localStorage first
-      localStorage.setItem('pwaPromptDismissed', timestamp);
+      // Save dismissal data to localStorage
+      localStorage.setItem('pwaPromptDismissed', Date.now().toString());
+      localStorage.setItem('bonded_pwa_dismissals', JSON.stringify(newDismissalData));
+      
+      setUserInteraction(prev => ({
+        ...prev,
+        dismissCount: newDismissalData.count,
+        lastDismissed: newDismissalData.timestamp
+      }));
       
       // Optionally save to canister storage if available and user is authenticated
-    try {
-      const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
-        await canisterLocalStorage.setItem('pwaPromptDismissed', timestamp);
+      try {
+        const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
+        await canisterLocalStorage.setItem('pwaPromptDismissed', Date.now().toString());
+        await canisterLocalStorage.setItem('bonded_pwa_dismissals', JSON.stringify(newDismissalData));
       } catch (canisterError) {
         // Ignore canister errors for PWA prompt - localStorage is sufficient
       }
@@ -161,18 +224,75 @@ export const PWAInstallPrompt = () => {
         </div>
         {isIOS && (
           <div className="pwa-ios-instructions">
-            <p>Tap <span className="ios-share-icon">⎙</span> then "Add to Home Screen"</p>
+            <p>Tap <span className="ios-share-icon">↗</span> then "Add to Home Screen"</p>
           </div>
         )}
         <div className="pwa-prompt-actions">
           <button className="pwa-dismiss-btn" onClick={handleDismissClick}>
             Not Now
           </button>
-          <button className="pwa-install-btn" onClick={handleInstallClick}>
-            {isIOS ? 'Show Me How' : 'Install'}
+          <button 
+            className="pwa-install-btn" 
+            onClick={handleInstallClick}
+            disabled={isInstalling}
+          >
+            {isInstalling ? 'Installing...' : isIOS ? 'Show Me How' : 'Install'}
           </button>
         </div>
       </div>
+
+      {/* iOS Guided Installation Modal */}
+      {showIOSGuide && (
+        <div className="ios-install-guide-overlay" onClick={() => setShowIOSGuide(false)}>
+          <div className="ios-install-guide" onClick={(e) => e.stopPropagation()}>
+            <div className="guide-header">
+              <h2>Install Bonded on iOS</h2>
+              <button className="close-guide" onClick={() => setShowIOSGuide(false)}>
+                ×
+              </button>
+            </div>
+
+            <div className="guide-steps">
+              {iosInstallSteps.map((step, index) => (
+                <div 
+                  key={index}
+                  className={`guide-step ${index === guidedInstallStep ? 'active' : ''} ${index < guidedInstallStep ? 'completed' : ''}`}
+                >
+                  <div className="step-number">{index + 1}</div>
+                  <div className="step-icon">{step.icon}</div>
+                  <div className="step-content">
+                    <h3>{step.title}</h3>
+                    <p>{step.description}</p>
+                    <small>{step.detail}</small>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="guide-actions">
+              <button 
+                className="guide-prev-btn"
+                onClick={() => setGuidedInstallStep(Math.max(0, guidedInstallStep - 1))}
+                disabled={guidedInstallStep === 0}
+              >
+                Previous
+              </button>
+              <button 
+                className="guide-next-btn"
+                onClick={() => {
+                  if (guidedInstallStep < iosInstallSteps.length - 1) {
+                    setGuidedInstallStep(guidedInstallStep + 1);
+                  } else {
+                    setShowIOSGuide(false);
+                  }
+                }}
+              >
+                {guidedInstallStep < iosInstallSteps.length - 1 ? 'Next' : 'Done'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }; 
