@@ -3,7 +3,7 @@
   width: 100%;
   padding: 0;
   overflow-y: auto;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   position: relative;
 }
 
@@ -15,9 +15,9 @@
   right: 0;
   bottom: 0;
   background: 
-    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);
+    radial-gradient(circle at 40% 40%, rgba(37, 99, 235, 0.15) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -67,14 +67,14 @@
 }
 
 .network-status-info {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
-  padding: 16px 20px;
-  margin-bottom: 32px;
+  background: var(--glass-background);
+  backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-8);
   max-width: 420px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
 }
 
 .network-info-text {
@@ -90,13 +90,13 @@
 .invite-form {
   width: 100%;
   max-width: 420px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 24px;
-  padding: 32px;
-  margin-bottom: 32px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  background: var(--glass-background);
+  backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  margin-bottom: var(--space-8);
+  box-shadow: var(--shadow-2xl);
   animation: fadeInUp 0.8s ease-out 0.2s both;
 }
 
@@ -227,21 +227,21 @@
 .send-invite-button {
   width: 100%;
   height: 56px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: var(--gradient-accent);
   border: none;
-  border-radius: 16px;
-  color: #ffffff;
-  font-family: "Rethink Sans", sans-serif;
+  border-radius: var(--radius-xl);
+  color: white;
+  font-family: var(--font-primary);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transition: all var(--transition-normal);
+  box-shadow: var(--shadow-lg);
   position: relative;
   overflow: hidden;
   text-transform: none;
   letter-spacing: 0.025em;
-  margin-top: 8px;
+  margin-top: var(--space-2);
 }
 
 .send-invite-button::before {
@@ -260,9 +260,10 @@
 }
 
 .send-invite-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  background: var(--gradient-accent);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+  box-shadow: var(--shadow-xl);
+  filter: brightness(1.1);
 }
 
 .send-invite-button:active:not(:disabled) {

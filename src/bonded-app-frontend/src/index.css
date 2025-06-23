@@ -1,3 +1,6 @@
+/* Import design system */
+@import './styles/design-system.css';
+
 /* Import improved contrast styles */
 @import './styles/improved-contrast.css';
 
@@ -6,19 +9,18 @@
 
 body {
   margin: 0;
-  font-family: 'Rethink Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: var(--font-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-y: auto; /* Ensure the body is scrollable */
+  overflow-y: auto;
   overflow-x: hidden;
-  height: 100%; /* Full height */
+  height: 100%;
   width: 100%;
   position: relative;
-  /* Improved background with better contrast */
-  background: linear-gradient(135deg, #FFF4F0 0%, #FEFEFE 100%);
-  color: #1A1A1A; /* High contrast dark text */
+  /* Unified blue gradient background */
+  background: var(--gradient-primary);
+  color: white;
+  transition: background var(--transition-slow);
 }
 
 html {

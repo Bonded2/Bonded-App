@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MainAppTopBar } from "../../components/ConsistentTopBar/ConsistentTopBar";
 import icpUserService from "../../services/icpUserService";
 import yotiService from "../../services/yotiService";
 import "./style.css";
@@ -344,10 +343,6 @@ export const Verify = () => {
 
   return (
     <div className="verify improved-contrast" data-model-id="632:1329">
-      <MainAppTopBar 
-        title="Identity Verification"
-        showUploadButton={false}
-      />
       <div className="verify-container">
         <div className="icon">
           <div className="people">
