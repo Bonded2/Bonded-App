@@ -1,0 +1,196 @@
+.automated-telegram-setup {
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--surface-color, #ffffff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.automated-telegram-setup h3 {
+  margin: 0 0 16px 0;
+  color: var(--primary-color, #1f2937);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.automated-telegram-setup p {
+  margin: 0 0 16px 0;
+  color: var(--text-color, #4b5563);
+  line-height: 1.5;
+}
+
+.automated-telegram-setup.loading {
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border-color, #e5e7eb);
+  border-top: 3px solid var(--primary-color, #3b82f6);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.automated-telegram-setup.error {
+  border-color: var(--error-color, #ef4444);
+  background: var(--error-bg, #fef2f2);
+}
+
+.automated-telegram-setup.error h3 {
+  color: var(--error-color, #ef4444);
+}
+
+.automated-telegram-setup.completed {
+  border-color: var(--success-color, #10b981);
+  background: var(--success-bg, #f0fdf4);
+}
+
+.automated-telegram-setup.completed h3 {
+  color: var(--success-color, #10b981);
+}
+
+.features {
+  margin: 16px 0;
+}
+
+.features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.features li {
+  padding: 8px 0;
+  color: var(--text-color, #4b5563);
+}
+
+.bot-info {
+  background: var(--neutral-bg, #f9fafb);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.bot-info p {
+  margin: 4px 0;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.9rem;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.setup-button,
+.extract-button,
+.retry-button,
+.copy-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.setup-button.primary,
+.extract-button.primary {
+  background: var(--primary-color, #3b82f6);
+  color: white;
+}
+
+.setup-button.primary:hover,
+.extract-button.primary:hover {
+  background: var(--primary-hover, #2563eb);
+  transform: translateY(-1px);
+}
+
+.setup-button:disabled,
+.extract-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.retry-button {
+  background: var(--error-color, #ef4444);
+  color: white;
+}
+
+.retry-button:hover {
+  background: var(--error-hover, #dc2626);
+}
+
+.copy-button {
+  background: var(--secondary-color, #6b7280);
+  color: white;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.copy-button:hover {
+  background: var(--secondary-hover, #4b5563);
+}
+
+.invite-section {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--neutral-bg, #f9fafb);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e5e7eb);
+}
+
+.invite-section p {
+  margin: 0 0 8px 0;
+  font-weight: 500;
+  color: var(--primary-color, #1f2937);
+}
+
+.invite-link {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 6px;
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+  font-size: 0.9rem;
+  background: white;
+  margin-bottom: 8px;
+}
+
+.invite-link:focus {
+  outline: none;
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+@media (max-width: 768px) {
+  .automated-telegram-setup {
+    padding: 16px;
+    margin: 0 16px;
+  }
+  
+  .action-buttons {
+    gap: 12px;
+  }
+  
+  .setup-button,
+  .extract-button,
+  .retry-button {
+    padding: 14px 20px;
+    font-size: 1rem;
+  }
+}

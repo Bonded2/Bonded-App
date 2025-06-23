@@ -72,7 +72,7 @@ export const clearUserProfileData = async () => {
     
     // Clear user-specific canister storage data
     try {
-      const { canisterLocalStorage, canisterSessionStorage } = await import('./realCanisterStorage.js');
+      const { canisterLocalStorage, canisterSessionStorage } = await import('../services/realCanisterStorage.js');
       
       // List of user-specific keys that should be cleared
       const userKeys = [

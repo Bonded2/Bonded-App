@@ -466,15 +466,18 @@ export const PartnerInvite = () => {
         showUploadButton={false}
       />
       <div className="partner-invite-container">
-        <img
-          className="bonded-logo-blue"
-          alt="Bonded logo blue"
-          src="/images/bonded-logo-blue.svg"
-        />
-        <h1 className="invite-title">Invite Your Partner</h1>
-        <p className="invite-subtitle">
-          Let's connect with your partner to build your shared timeline together.
-        </p>
+        <div className="hero-section">
+          <img
+            className="bonded-logo-blue"
+            alt="Bonded logo blue"
+            src="/images/bonded-logo-blue.svg"
+          />
+          <h1 className="invite-title">Invite Your Partner</h1>
+          <p className="invite-subtitle">
+            Connect with your partner to build your shared relationship timeline together. 
+            Create beautiful, verified evidence for your future.
+          </p>
+        </div>
         
         {/* Network Status Info */}
         <div className="network-status-info">

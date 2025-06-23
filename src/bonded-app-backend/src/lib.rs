@@ -81,7 +81,7 @@ fn get_user_dashboard_data() -> Result<UserDashboardData, String> {
             .collect()
     });
     
-    BondedResult::ok(UserDashboardData {
+    Ok(UserDashboardData {
         profile,
         settings,
         relationships,

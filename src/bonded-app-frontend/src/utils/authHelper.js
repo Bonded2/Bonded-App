@@ -127,7 +127,7 @@ export const safeAuthCall = async (authenticatedFn, authService, options = {}) =
 export const clearAuthStorage = async () => {
   try {
     // Import canister storage adapters dynamically to avoid circular dependencies
-    const { canisterLocalStorage, canisterSessionStorage } = await import('./realCanisterStorage.js');
+          const { canisterLocalStorage, canisterSessionStorage } = await import('../services/realCanisterStorage.js');
     
     // Clear localStorage items related to auth
     const authKeys = [

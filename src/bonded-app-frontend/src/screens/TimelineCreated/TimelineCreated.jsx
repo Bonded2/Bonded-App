@@ -168,7 +168,7 @@ export const TimelineCreated = () => {
               // Fallback to local data if available
         try {
           // Replace localStorage with canister storage
-          const { canisterLocalStorage } = await import('../../utils/realCanisterStorage.js');
+          const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
           const localData = await canisterLocalStorage.getItem(TIMELINE_DATA_KEY);
         if (localData) {
           const parsedData = JSON.parse(localData);
@@ -186,7 +186,7 @@ export const TimelineCreated = () => {
     const loadAITimelineData = useCallback(async () => {
     try {
       // Replace localStorage with canister storage for AI data
-      const { canisterLocalStorage } = await import('../../utils/realCanisterStorage.js');
+      const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
       const savedAIData = await canisterLocalStorage.getItem(AI_TIMELINE_DATA_KEY);
       if (savedAIData) {
         const parsedAIData = JSON.parse(savedAIData);

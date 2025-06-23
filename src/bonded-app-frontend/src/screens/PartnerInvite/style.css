@@ -1,74 +1,103 @@
 .partner-invite-screen {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
   width: 100%;
-  /* background-color: #FF704D; */ /* Consistent background - covered by global body */
-  padding: 20px;
-  box-sizing: border-box;
+  padding: 0;
   overflow-y: auto;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+}
+
+.partner-invite-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);
+  pointer-events: none;
 }
 
 .partner-invite-container {
-  /* background-color: #FF704D; */ /* Covered by global body */
+  position: relative;
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 40px 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 30px 20px;
-  border-radius: 12px;
   text-align: center;
-  margin: auto;
+  min-height: calc(100vh - 80px);
+  justify-content: center;
+}
+
+.hero-section {
+  margin-bottom: 48px;
+  animation: fadeInUp 0.8s ease-out;
 }
 
 .bonded-logo-blue {
-  height: 60px;
-  margin-bottom: 20px;
+  height: 80px;
+  margin-bottom: 32px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
 }
 
 .invite-title {
-  font-family: "Trocchi", serif; /* Already Trocchi, aligns with global h1-h6 */
-  font-size: 22px;
+  font-family: "Trocchi", serif;
+  font-size: 36px;
   font-weight: 400;
-  /* color: #2C4CDF; */ /* Covered by global h1-h6 */
-  margin-bottom: 10px;
+  color: #ffffff;
+  margin-bottom: 16px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: -0.5px;
 }
 
 .invite-subtitle {
-  font-family: "Rethink Sans", sans-serif; /* Changed from Roboto */
-  font-size: 14px;
-  /* color: #FFFFFF; */ /* Covered by global body text color */
-  margin-bottom: 16px;
-  max-width: 320px;
-  line-height: 1.4;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 24px;
+  max-width: 400px;
+  line-height: 1.6;
+  font-weight: 300;
 }
 
 .network-status-info {
-  background-color: rgba(76, 175, 80, 0.1);
-  border: 1px solid rgba(76, 175, 80, 0.3);
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin-bottom: 24px;
-  max-width: 380px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 32px;
+  max-width: 420px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .network-info-text {
   font-family: "Rethink Sans", sans-serif;
-  font-size: 12px;
-  color: #FFFFFF;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.95);
   margin: 0;
-  line-height: 1.4;
-  text-align: left;
+  line-height: 1.5;
+  text-align: center;
+  font-weight: 400;
 }
 
 .invite-form {
   width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 24px;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  animation: fadeInUp 0.8s ease-out 0.2s both;
 }
 
 .email-field-container {
@@ -197,62 +226,88 @@
 /* Button Styling */
 .send-invite-button {
   width: 100%;
-  max-width: 320px;
-  height: 48px;
-  background: linear-gradient(135deg, #2C4CDF 0%, #3a5bef 100%);
+  height: 56px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   border: none;
-  border-radius: 24px;
+  border-radius: 16px;
   color: #ffffff;
-  font-family: "Trocchi", serif;
+  font-family: "Rethink Sans", sans-serif;
   font-size: 16px;
-  font-weight: 400;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(44, 76, 223, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
   position: relative;
   overflow: hidden;
+  text-transform: none;
+  letter-spacing: 0.025em;
+  margin-top: 8px;
+}
+
+.send-invite-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s;
+}
+
+.send-invite-button:hover::before {
+  left: 100%;
 }
 
 .send-invite-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #3a5bef 0%, #2C4CDF 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(44, 76, 223, 0.4);
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.5);
+}
+
+.send-invite-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
 }
 
 .send-invite-button:disabled {
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: not-allowed;
   transform: none;
-  box-shadow: 0 2px 6px rgba(44, 76, 223, 0.2);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
 }
 
 .send-invite-button.sent {
-  background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
 }
 
 .send-invite-button.manual_required {
-  background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
-  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
 }
 
 /* Success Actions Styling */
 .invite-success-actions {
   width: 100%;
-  max-width: 380px;
-  animation: slideIn 0.4s ease-out;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.6s ease-out;
 }
 
 .success-description {
   font-family: "Rethink Sans", sans-serif;
-  font-size: 14px;
-  color: #ffffff;
-  line-height: 1.5;
-  margin-bottom: 24px;
-  background-color: rgba(255, 255, 255, 0.1);
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.6;
+  margin-bottom: 32px;
+  text-align: center;
+  font-weight: 400;
 }
 
 .next-steps {
@@ -459,7 +514,7 @@
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
@@ -476,39 +531,112 @@
   }
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 /* Responsive Design */
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .partner-invite-container {
-    padding: 20px 16px;
-    max-width: 100%;
+    padding: 24px 20px;
+    min-height: calc(100vh - 60px);
+  }
+
+  .hero-section {
+    margin-bottom: 32px;
+  }
+
+  .bonded-logo-blue {
+    height: 70px;
+    margin-bottom: 24px;
   }
 
   .invite-title {
-    font-size: 20px;
+    font-size: 28px;
+    margin-bottom: 12px;
   }
 
   .invite-subtitle {
-    font-size: 13px;
+    font-size: 16px;
     max-width: 100%;
   }
 
+  .invite-form {
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .send-invite-button {
+    height: 52px;
+    font-size: 15px;
+  }
+
+  .invite-success-actions {
+    padding: 24px;
+  }
+
   .success-description {
-    font-size: 13px;
-    padding: 12px;
+    font-size: 15px;
+    margin-bottom: 24px;
   }
 
   .next-steps {
-    padding: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
   }
 
   .next-steps li {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .primary-button,
-  .secondary-button,
-  .send-invite-button {
-    height: 44px;
+  .secondary-button {
+    height: 48px;
     font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .partner-invite-container {
+    padding: 20px 16px;
+  }
+
+  .invite-title {
+    font-size: 24px;
+  }
+
+  .invite-subtitle {
+    font-size: 15px;
+  }
+
+  .invite-form,
+  .invite-success-actions {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .network-status-info {
+    padding: 14px 18px;
+    border-radius: 14px;
+  }
+
+  .network-info-text {
+    font-size: 13px;
   }
 } 

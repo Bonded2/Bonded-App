@@ -1,8 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowBack } from "../../icons/ArrowBack";
-import { Upload } from "../../icons/Upload";
-import { MoreHoriz } from "../../icons/MoreHoriz";
+import { Upload1 } from "../../icons/Upload1";
+import { Settings } from "../../icons/Settings";
 import "./style.css";
 
 /**
@@ -95,7 +95,7 @@ export const ConsistentTopBar = ({
                   aria-label="Upload evidence"
                   title="Upload evidence"
                 >
-                  <Upload className="icon" />
+                  <Upload1 className="icon" />
                 </button>
               )}
               
@@ -106,7 +106,7 @@ export const ConsistentTopBar = ({
                   aria-label="Open menu"
                   title="Open menu"
                 >
-                  <MoreHoriz className="icon" />
+                  <Settings className="icon" />
                 </button>
               )}
             </>
