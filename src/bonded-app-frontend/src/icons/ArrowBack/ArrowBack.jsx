@@ -18,7 +18,7 @@ export const ArrowBack = ({ className }) => {
       <path
         className="path"
         d="M7.825 13L13.425 18.6L12 20L4 12L12 4L13.425 5.4L7.825 11H20V13H7.825Z"
-        fill="#1D1B20"
+        fill="currentColor"
       />
     </svg>
   );

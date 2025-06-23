@@ -75,8 +75,6 @@ class ICPCanisterService {
       const isLocal = process.env.DFX_NETWORK === 'local';
       const isPlayground = this.isPlaygroundEnvironment();
       
-      console.log('createActor - host:', host, 'isLocal:', isLocal, 'isPlayground:', isPlayground);
-      
       // Use the generated createActor function from declarations
       // Create or reuse agent with proper configuration
       if (!this.agent) {
@@ -87,39 +85,30 @@ class ICPCanisterService {
           verifyQuerySignatures: (isLocal || isPlayground) ? false : true
         });
         
-        console.log('createActor - Created HttpAgent with verifyQuerySignatures:', (isLocal || isPlayground) ? false : true);
-        
         if (this.identity) {
           this.agent.replaceIdentity(this.identity);
-          console.log('createActor - Replaced agent identity');
         }
         
         // Fetch root key for all non-IC-mainnet environments
         if (isLocal || isPlayground) {
           try {
-            console.log('createActor - Fetching root key for playground/local environment...');
             await this.agent.fetchRootKey();
-            console.log('createActor - Root key fetched successfully');
           } catch (rootKeyError) {
-            console.log('createActor - Root key fetch failed (might be expected):', rootKeyError);
+            // Root key fetch might fail, continue anyway
           }
         }
       } else if (this.identity) {
         // Update agent identity if changed
         this.agent.replaceIdentity(this.identity);
-        console.log('createActor - Updated existing agent identity');
       }
       
       // Create actor with the prepared agent
-      console.log('createActor - Creating actor with canisterId:', canisterId);
       this.actor = createActor(canisterId, {
         agent: this.agent
       });
       
-      console.log('createActor - Actor created successfully');
       return this.actor;
     } catch (error) {
-      console.error('createActor - Error:', error);
       throw error;
     }
   }
@@ -196,35 +185,29 @@ class ICPCanisterService {
    * Check if we're in a development environment where certificate errors are expected
    */
   isPlaygroundEnvironment() {
-    const isPlayground = (
+    return (
       window.location.hostname.includes('icp0.io') ||
       window.location.hostname.includes('playground') ||
       window.location.hostname.includes('localhost') ||
       process.env.DFX_NETWORK !== 'ic' ||
       process.env.DFX_NETWORK === 'playground'
     );
-    console.log('Environment check - hostname:', window.location.hostname, 'isPlayground:', isPlayground);
-    return isPlayground;
   }
 
   /**
    * Get the correct host for the current environment
    */
   getCanisterHost() {
-    console.log('Getting canister host - DFX_NETWORK:', process.env.DFX_NETWORK, 'hostname:', window.location.hostname);
-    
     if (process.env.DFX_NETWORK === 'local') {
       return 'http://127.0.0.1:4943';
     }
     
     // For playground deployments (--playground flag)
     if (process.env.DFX_NETWORK === 'playground' || window.location.hostname.includes('icp0.io')) {
-      console.log('Using playground host: https://icp0.io');
       return 'https://icp0.io';
     }
     
     // Default to IC mainnet
-    console.log('Using mainnet host: https://icp-api.io');
     return 'https://icp-api.io';
   }
 
@@ -244,7 +227,6 @@ class ICPCanisterService {
         return await callFunction();
       } catch (error) {
         lastError = error;
-        console.log(`makeResilientCall - Attempt ${attempt + 1}/${actualMaxRetries} failed:`, error.message);
         
         // Check if it's a certificate validation error
         const isCertError = error.message && (
@@ -253,8 +235,6 @@ class ICPCanisterService {
         );
         
         if (isCertError) {
-          console.log(`makeResilientCall - Certificate error on attempt ${attempt + 1}, retrying...`);
-          
           try {
             // Force fresh agent creation by clearing it first
             this.agent = null;
@@ -262,29 +242,24 @@ class ICPCanisterService {
             
             // If this was the last attempt, don't retry
             if (attempt === actualMaxRetries - 1) {
-              console.log('makeResilientCall - Final attempt, giving up');
               break;
             }
             
             // Wait with exponential backoff before retry
             const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
-            console.log(`makeResilientCall - Waiting ${delay}ms before retry...`);
             await new Promise(resolve => setTimeout(resolve, delay));
             continue;
           } catch (recreateError) {
-            console.log('makeResilientCall - Failed to recreate actor:', recreateError);
             break;
           }
         } else {
           // Not a certificate error, don't retry
-          console.log('makeResilientCall - Non-certificate error, not retrying');
           break;
         }
       }
     }
     
     // If we get here, all retries failed
-    console.log('makeResilientCall - All retries failed, throwing last error');
     throw lastError;
   }
 
@@ -297,8 +272,6 @@ class ICPCanisterService {
       const actualRetries = this.isPlaygroundEnvironment() ? Math.max(maxRetries, 8) : maxRetries;
       return await this.makeResilientCall(callFunction, actualRetries);
     } catch (error) {
-      console.log('makeGracefulQueryCall - Caught error after retries:', error);
-      
       const isCertError = error.message && (
         error.message.includes('Invalid certificate') ||
         error.message.includes('Invalid signature from replica')
@@ -306,7 +279,6 @@ class ICPCanisterService {
       
       // In playground environment, certificate errors are expected for new users
       if (isCertError && this.isPlaygroundEnvironment()) {
-        console.log('makeGracefulQueryCall - Certificate error in playground after retries, returning null');
         return null;
       }
       
@@ -318,11 +290,9 @@ class ICPCanisterService {
       );
       
       if (isNotFoundError) {
-        console.log('makeGracefulQueryCall - Not found error, returning null:', error.message);
         return null;
       }
       
-      console.log('makeGracefulQueryCall - Re-throwing error:', error);
       // Re-throw other errors or certificate errors in production
       throw error;
     }
@@ -630,36 +600,17 @@ The Bonded Team`
   async getUserSettings() {
     this.ensureAuthenticated();
     
-    console.log('icpCanisterService.getUserSettings - Starting query...');
-    
     const result = await this.makeGracefulQueryCall(async () => {
-      console.log('icpCanisterService.getUserSettings - Making actor call...');
       return await this.actor.get_user_settings();
     });
     
     if (!result) {
       // Graceful failure - return null for new users or certificate errors
-      console.log('icpCanisterService.getUserSettings - No result (graceful failure)');
-      
-      // In playground mode, also try a whoami call to verify connectivity
-      if (this.isPlaygroundEnvironment()) {
-        try {
-          console.log('icpCanisterService.getUserSettings - Testing connectivity with whoami...');
-          const principal = await this.makeResilientCall(async () => {
-            return await this.actor.whoami();
-          });
-          console.log('icpCanisterService.getUserSettings - Connectivity test successful, principal:', principal.toString());
-        } catch (connectError) {
-          console.log('icpCanisterService.getUserSettings - Connectivity test failed:', connectError);
-        }
-      }
-      
       return null;
     }
     
     if ('Ok' in result) {
       const settings = result.Ok;
-      console.log('icpCanisterService.getUserSettings - Raw backend result:', settings);
       
       const processedSettings = {
         aiFiltersEnabled: settings.ai_filters_enabled,
@@ -672,10 +623,8 @@ The Bonded Team`
         updatedAt: Number(settings.updated_at)
       };
       
-      console.log('icpCanisterService.getUserSettings - Processed settings:', processedSettings);
       return processedSettings;
     } else {
-      console.error('icpCanisterService.getUserSettings - Error result:', result.Err);
       throw new Error(result.Err);
     }
   }
@@ -781,8 +730,6 @@ The Bonded Team`
     this.ensureAuthenticated();
     
     try {
-      console.log('icpCanisterService.updateUserSettings - Input settings:', settings);
-      
       // Convert settings to canister format
       const canisterSettings = {
         ai_filters_enabled: [settings.ai?.enabled || true],
@@ -794,12 +741,8 @@ The Bonded Team`
         profile_metadata: settings.profile_metadata ? [settings.profile_metadata] : 
                          settings.profile ? [settings.profile] : []
       };
-
-      console.log('icpCanisterService.updateUserSettings - Sending to canister:', canisterSettings);
       
       const result = await this.actor.update_user_settings(canisterSettings);
-      
-      console.log('icpCanisterService.updateUserSettings - Canister response:', result);
       
       if ('Ok' in result) {
         return { success: true };
@@ -807,7 +750,6 @@ The Bonded Team`
         throw new Error(result.Err);
       }
     } catch (error) {
-      console.error('icpCanisterService.updateUserSettings - Error:', error);
       throw error;
     }
   }

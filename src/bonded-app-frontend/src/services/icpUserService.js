@@ -153,9 +153,7 @@ class ICPUserService {
       const profile = profileResult.success ? profileResult.data : null;
       const settings = settingsResult.success ? settingsResult.data : null;
       
-      console.log('icpUserService.loadCurrentUser - Profile result:', profileResult);
-      console.log('icpUserService.loadCurrentUser - Settings result:', settingsResult);
-      console.log('icpUserService.loadCurrentUser - Final settings:', settings);
+          // Profile and settings loaded successfully
 
       this.currentUser = {
         principal: icpCanisterService.getPrincipal()?.toString(),
@@ -253,9 +251,7 @@ class ICPUserService {
    */
   async updateUserSettings(settings) {
     try {
-      console.log('icpUserService.updateUserSettings - Updating with:', settings);
       const result = await icpCanisterService.updateUserSettings(settings);
-      console.log('icpUserService.updateUserSettings - Update result:', result);
       
       // Wait a moment for the canister to process the update
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -267,19 +263,13 @@ class ICPUserService {
       while (attempts < 5) {
         try {
           reloadedUser = await this.loadCurrentUser();
-          console.log(`icpUserService.updateUserSettings - Reload attempt ${attempts + 1}:`, reloadedUser);
           
           // If we successfully got settings back, break
           if (reloadedUser && reloadedUser.settings && reloadedUser.settings.profileMetadata) {
-            console.log('icpUserService.updateUserSettings - Found profileMetadata, breaking');
             break;
-          } else if (reloadedUser && reloadedUser.settings) {
-            console.log('icpUserService.updateUserSettings - Got settings but no profileMetadata yet');
-          } else {
-            console.log('icpUserService.updateUserSettings - No settings yet');
           }
         } catch (reloadError) {
-          console.warn(`icpUserService.updateUserSettings - Reload attempt ${attempts + 1} failed:`, reloadError);
+          // Retry on error
         }
         
         attempts++;
@@ -290,7 +280,6 @@ class ICPUserService {
       
       return result;
     } catch (error) {
-      console.error('icpUserService.updateUserSettings - Error:', error);
       throw error;
     }
   }
