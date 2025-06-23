@@ -144,10 +144,17 @@ export const Register = () => {
                 registeredAt: Date.now()
               };
               
-              // Save profile data using proper settings update
-              await icpUserService.updateUserSettings({
-                profile_metadata: JSON.stringify(profileData)
-              });
+              // Save profile data to ICP canister
+              try {
+                console.log('Saving profile data to ICP canister:', profileData);
+                await icpUserService.updateUserSettings({
+                  profile_metadata: JSON.stringify(profileData)
+                });
+                console.log('Profile data saved successfully to ICP canister');
+              } catch (saveError) {
+                console.error('Failed to save profile data to ICP canister:', saveError);
+                throw new Error('Failed to save registration data to canister');
+              }
             }
             
             // Handle different flows based on how user arrived

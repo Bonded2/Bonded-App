@@ -57,92 +57,114 @@ export const ProfileSetup = () => {
       try {
         await icpUserService.initialize();
         
-        // For users coming from registration, check sessionStorage for basic info
-        const registrationData = sessionStorage.getItem('registrationData');
-        if (registrationData) {
+        // Get current user data from ICP canister with retry logic
+        let getUserAttempts = 0;
+        let currentUser = null;
+        
+        while (getUserAttempts < 8) {
           try {
-            const data = JSON.parse(registrationData);
-            setFormData({
-              fullName: data.fullName || "",
-              email: data.email || "",
-              dateOfBirth: "",
-              nationality: null,
-              currentCity: null,
-              currentCountry: null,
-              profilePhoto: null
-            });
-            setHasExistingBasicInfo(true);
-            console.log('Found registration data in sessionStorage:', data);
-            sessionStorage.removeItem('registrationData'); // Clean up
-            return; // Exit early since we found registration data
-          } catch (parseError) {
-            console.warn('Failed to parse registration data from sessionStorage:', parseError);
+            currentUser = await icpUserService.getCurrentUser(true);
+            if (currentUser && currentUser.isAuthenticated) {
+              console.log(`ProfileSetup: Retrieved user on attempt ${getUserAttempts + 1}:`, currentUser);
+              
+              // If we have profile metadata, great! If not, keep trying a bit more
+              if (currentUser.settings && 
+                  (currentUser.settings.profile_metadata || currentUser.settings.profileMetadata)) {
+                console.log('ProfileSetup: Found profile metadata, proceeding');
+                break;
+              } else if (getUserAttempts < 6) {
+                // Give the canister more time to process the save from registration
+                console.log(`ProfileSetup: No profile metadata yet, retrying... (attempt ${getUserAttempts + 1})`);
+                await new Promise(resolve => setTimeout(resolve, 1000 * (getUserAttempts + 1)));
+                getUserAttempts++;
+                continue;
+              } else {
+                // After 6 attempts, proceed anyway with authenticated user
+                console.log('ProfileSetup: Proceeding with authenticated user even without profile metadata');
+                break;
+              }
+            }
+          } catch (error) {
+            getUserAttempts++;
+            console.warn(`ProfileSetup: Get user attempt ${getUserAttempts} failed:`, error);
+            if (getUserAttempts < 8) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            }
           }
+          getUserAttempts++;
         }
         
-        // Always try to get current user data from ICP canister
-        const currentUser = await icpUserService.getCurrentUser(true);
         console.log('Current user from ICP:', currentUser);
         
-        if (currentUser && currentUser.settings) {
+        if (currentUser) {
           console.log('User settings:', currentUser.settings);
           
-          // Check multiple possible field names for profile metadata
-          const profileMetadata = currentUser.settings.profileMetadata || 
-                                  currentUser.settings.profile_metadata || 
-                                  currentUser.settings.profile;
-          
-          console.log('Profile metadata found:', profileMetadata);
-          
-          if (profileMetadata) {
-            try {
-              const profileData = typeof profileMetadata === 'string' ? 
-                                  JSON.parse(profileMetadata) : profileMetadata;
+          // For authenticated users, assume they've completed registration and have basic info
+          if (currentUser.isAuthenticated && currentUser.principal) {
+            console.log('User is authenticated, should have basic info from registration');
+            
+            // Check if we have settings with profile metadata
+            if (currentUser.settings) {
+              // Check multiple possible field names for profile metadata
+              const profileMetadata = currentUser.settings.profileMetadata || 
+                                      currentUser.settings.profile_metadata || 
+                                      currentUser.settings.profile;
               
-              console.log('Parsed profile data:', profileData);
+              console.log('Profile metadata found:', profileMetadata);
               
-              // If profile is already complete, redirect to timeline
-              if (profileData.profileComplete) {
-                console.log('Profile already complete, redirecting to timeline');
-                navigate("/timeline");
-                return;
-              }
-              
-              // Pre-populate form with any existing data
-              setFormData({
-                fullName: profileData.fullName || "",
-                email: profileData.email || "",
-                dateOfBirth: profileData.dateOfBirth || "",
-                nationality: profileData.nationality || null,
-                currentCity: profileData.currentCity || null,
-                currentCountry: profileData.currentCountry || null,
-                profilePhoto: null
-              });
-              
-              // Check if user already has basic info (name + email)
-              if (profileData.hasBasicInfo || 
-                  (profileData.fullName && profileData.email)) {
-                console.log('User has basic info, setting hasExistingBasicInfo to true');
+              if (profileMetadata) {
+                try {
+                  const profileData = typeof profileMetadata === 'string' ? 
+                                      JSON.parse(profileMetadata) : profileMetadata;
+                  
+                  console.log('Parsed profile data:', profileData);
+                  
+                  // If profile is already complete, redirect to timeline
+                  if (profileData.profileComplete) {
+                    console.log('Profile already complete, redirecting to timeline');
+                    navigate("/timeline");
+                    return;
+                  }
+                  
+                  // Pre-populate form with any existing data
+                  setFormData({
+                    fullName: profileData.fullName || "",
+                    email: profileData.email || "",
+                    dateOfBirth: profileData.dateOfBirth || "",
+                    nationality: profileData.nationality || null,
+                    currentCity: profileData.currentCity || null,
+                    currentCountry: profileData.currentCountry || null,
+                    profilePhoto: null
+                  });
+                  
+                  // Check if user already has basic info (name + email)
+                  if (profileData.hasBasicInfo || 
+                      (profileData.fullName && profileData.email)) {
+                    console.log('User has basic info from profile data, setting hasExistingBasicInfo to true');
+                    setHasExistingBasicInfo(true);
+                  }
+                } catch (parseError) {
+                  console.warn('Failed to parse profile metadata:', parseError);
+                  // Even if parsing fails, assume authenticated user has basic info
+                  console.log('Parse failed but user is authenticated, assuming basic info exists');
+                  setHasExistingBasicInfo(true);
+                }
+              } else {
+                // No profile metadata yet, but user is authenticated so they went through registration
+                console.log('No profile metadata but user is authenticated - assuming registration completed');
                 setHasExistingBasicInfo(true);
               }
-            } catch (parseError) {
-              console.warn('Failed to parse profile metadata:', parseError);
-            }
-          } else {
-            console.log('No profile metadata found, checking if user has basic info from authentication');
-            // No profile metadata yet, but check if user has basic info from authentication
-            if (currentUser.name || currentUser.email) {
-              console.log('Found user name/email from auth, using it:', {name: currentUser.name, email: currentUser.email});
-              setFormData(prev => ({
-                ...prev,
-                fullName: currentUser.name || "",
-                email: currentUser.email || ""
-              }));
+            } else {
+              // No settings yet, but user is authenticated so they went through registration
+              console.log('No settings yet but user is authenticated - assuming registration completed');
+              // For authenticated users without settings yet, assume they just completed registration
               setHasExistingBasicInfo(true);
             }
+          } else {
+            console.log('User not authenticated, starting fresh');
           }
         } else {
-          console.log('No current user or settings found');
+          console.log('No current user found');
         }
       } catch (error) {
         // If ICP data fails, start with empty form

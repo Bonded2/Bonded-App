@@ -33,58 +33,62 @@ export const MenuFrame = ({ onClose }) => {
         let attempts = 0;
         let currentUser = null;
         
-        while (attempts < 3) {
+        while (attempts < 5) {
           currentUser = await icpUserService.getCurrentUser(true);
           
-          // If we have settings, break out of the retry loop
-          if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
+          // If we have an authenticated user (with or without settings), break out
+          if (currentUser && currentUser.isAuthenticated) {
+            console.log(`MenuFrame: Got user on attempt ${attempts + 1}:`, currentUser);
             break;
           }
           
           // Wait a bit before retrying to allow for potential network delays
-          if (attempts < 2) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+          if (attempts < 4) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempts + 1)));
           }
           attempts++;
         }
         
-        if (currentUser && currentUser.settings) {
-          // Check both profileMetadata and profile_metadata for compatibility
-          const profileMetadata = currentUser.settings.profileMetadata || 
-                                  currentUser.settings.profile_metadata || 
-                                  currentUser.settings.profile;
+        if (currentUser && currentUser.isAuthenticated) {
+          let userData = {
+            fullName: "User",
+            email: "No email provided",
+            avatar: "U",
+          };
           
-          if (profileMetadata) {
-            try {
-              const profileData = typeof profileMetadata === 'string' ? 
-                                  JSON.parse(profileMetadata) : profileMetadata;
-              
-              setUserData({
-                fullName: profileData.fullName || currentUser.name || "User",
-                email: profileData.email || currentUser.email || "No email provided",
-                avatar: profileData.avatar || (profileData.fullName ? 
-                        profileData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 
-                        "U"),
-              });
-            } catch (parseError) {
-              console.warn('Failed to parse profile metadata:', parseError);
-              // Use basic user data if profile parsing fails
-              setUserData({
-                fullName: currentUser.name || "User",
-                email: currentUser.email || "No email provided", 
-                avatar: "U",
-              });
+          // Check if we have settings with profile metadata
+          if (currentUser.settings) {
+            const profileMetadata = currentUser.settings.profileMetadata || 
+                                    currentUser.settings.profile_metadata || 
+                                    currentUser.settings.profile;
+            
+            if (profileMetadata) {
+              try {
+                const profileData = typeof profileMetadata === 'string' ? 
+                                    JSON.parse(profileMetadata) : profileMetadata;
+                
+                console.log('MenuFrame: Found profile data:', profileData);
+                
+                userData = {
+                  fullName: profileData.fullName || "User",
+                  email: profileData.email || "No email provided",
+                  avatar: profileData.avatar || (profileData.fullName ? 
+                          profileData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 
+                          "U"),
+                };
+              } catch (parseError) {
+                console.warn('MenuFrame: Failed to parse profile metadata:', parseError);
+              }
+            } else {
+              console.log('MenuFrame: No profile metadata found, user may need to complete profile');
             }
           } else {
-            // Use basic user data from currentUser if no profile metadata
-            setUserData({
-              fullName: currentUser.name || "User",
-              email: currentUser.email || "No email provided",
-              avatar: "U",
-            });
+            console.log('MenuFrame: No settings found, user may need to complete registration');
           }
+          
+          setUserData(userData);
         } else {
-          // Keep default values if no profile data
+          console.log('MenuFrame: User not authenticated or not found');
           setUserData({
             fullName: "User",
             email: "user@example.com",

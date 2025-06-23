@@ -14,7 +14,7 @@ const LOCATION_APIS = {
   GOOGLE_GEOCODING: `https://maps.googleapis.com/maps/api/geocode/json?key=${GOOGLE_API_KEY}`,
   GOOGLE_PLACES: `https://maps.googleapis.com/maps/api/place/autocomplete/json?key=${GOOGLE_API_KEY}`,
   IP_INFO: 'https://ipinfo.io/json', // Removed token for graceful fallback
-  COUNTRIES: 'https://restcountries.com/v3.1/all',
+  COUNTRIES: 'https://restcountries.com/v3.1/all?fields=name,cca2,flag,region,subregion,latlng',
 };
 // Country flags base URL
 const FLAG_BASE_URL = 'https://flagcdn.com/16x12';
@@ -29,11 +29,20 @@ export const getAllCountries = async () => {
     if (cachedCountries) {
       return JSON.parse(cachedCountries);
     }
-    // Fetch countries from API
-    const response = await fetch(LOCATION_APIS.COUNTRIES);
+    // Fetch countries from API with error handling
+    const response = await fetch(LOCATION_APIS.COUNTRIES, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'BondedApp/1.0'
+      }
+    });
+    
     if (!response.ok) {
-      throw new Error('Failed to fetch countries');
+      console.warn(`Countries API returned ${response.status}: ${response.statusText}`);
+      throw new Error(`Failed to fetch countries: ${response.status}`);
     }
+    
     const data = await response.json();
     // Format country data
     const countries = data

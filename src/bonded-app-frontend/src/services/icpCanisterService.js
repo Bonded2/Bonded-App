@@ -73,6 +73,9 @@ class ICPCanisterService {
     try {
       const host = this.getCanisterHost();
       const isLocal = process.env.DFX_NETWORK === 'local';
+      const isPlayground = this.isPlaygroundEnvironment();
+      
+      console.log('createActor - host:', host, 'isLocal:', isLocal, 'isPlayground:', isPlayground);
       
       // Use the generated createActor function from declarations
       // Create or reuse agent with proper configuration
@@ -80,34 +83,43 @@ class ICPCanisterService {
         const { HttpAgent } = await import('@dfinity/agent');
         this.agent = new HttpAgent({ 
           host,
-          // For playground environments, we need to disable certificate verification
-          verifyQuerySignatures: isLocal ? false : true
+          // For playground and local environments, disable query signature verification
+          verifyQuerySignatures: (isLocal || isPlayground) ? false : true
         });
+        
+        console.log('createActor - Created HttpAgent with verifyQuerySignatures:', (isLocal || isPlayground) ? false : true);
         
         if (this.identity) {
           this.agent.replaceIdentity(this.identity);
+          console.log('createActor - Replaced agent identity');
         }
         
         // Fetch root key for all non-IC-mainnet environments
-        if (isLocal || this.isPlaygroundEnvironment()) {
+        if (isLocal || isPlayground) {
           try {
+            console.log('createActor - Fetching root key for playground/local environment...');
             await this.agent.fetchRootKey();
+            console.log('createActor - Root key fetched successfully');
           } catch (rootKeyError) {
-            // For playground, this might be expected
+            console.log('createActor - Root key fetch failed (might be expected):', rootKeyError);
           }
         }
       } else if (this.identity) {
         // Update agent identity if changed
         this.agent.replaceIdentity(this.identity);
+        console.log('createActor - Updated existing agent identity');
       }
       
       // Create actor with the prepared agent
+      console.log('createActor - Creating actor with canisterId:', canisterId);
       this.actor = createActor(canisterId, {
         agent: this.agent
       });
       
+      console.log('createActor - Actor created successfully');
       return this.actor;
     } catch (error) {
+      console.error('createActor - Error:', error);
       throw error;
     }
   }
@@ -184,28 +196,35 @@ class ICPCanisterService {
    * Check if we're in a development environment where certificate errors are expected
    */
   isPlaygroundEnvironment() {
-    return (
+    const isPlayground = (
       window.location.hostname.includes('icp0.io') ||
       window.location.hostname.includes('playground') ||
       window.location.hostname.includes('localhost') ||
-      process.env.DFX_NETWORK !== 'ic'
+      process.env.DFX_NETWORK !== 'ic' ||
+      process.env.DFX_NETWORK === 'playground'
     );
+    console.log('Environment check - hostname:', window.location.hostname, 'isPlayground:', isPlayground);
+    return isPlayground;
   }
 
   /**
    * Get the correct host for the current environment
    */
   getCanisterHost() {
+    console.log('Getting canister host - DFX_NETWORK:', process.env.DFX_NETWORK, 'hostname:', window.location.hostname);
+    
     if (process.env.DFX_NETWORK === 'local') {
       return 'http://127.0.0.1:4943';
     }
     
-    // For playground and production deployments
-    if (window.location.hostname.includes('icp0.io')) {
+    // For playground deployments (--playground flag)
+    if (process.env.DFX_NETWORK === 'playground' || window.location.hostname.includes('icp0.io')) {
+      console.log('Using playground host: https://icp0.io');
       return 'https://icp0.io';
     }
     
     // Default to IC mainnet
+    console.log('Using mainnet host: https://icp-api.io');
     return 'https://icp-api.io';
   }
 
@@ -213,15 +232,19 @@ class ICPCanisterService {
    * Make a resilient canister call with automatic retry and root key refresh
    * Suppresses expected certificate validation errors in playground environments
    */
-  async makeResilientCall(callFunction, maxRetries = 2) {
+  async makeResilientCall(callFunction, maxRetries = 5) {
     let lastError;
     const isPlayground = this.isPlaygroundEnvironment();
     
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    // In playground mode, be more aggressive with retries
+    const actualMaxRetries = isPlayground ? Math.max(maxRetries, 5) : maxRetries;
+    
+    for (let attempt = 0; attempt < actualMaxRetries; attempt++) {
       try {
         return await callFunction();
       } catch (error) {
         lastError = error;
+        console.log(`makeResilientCall - Attempt ${attempt + 1}/${actualMaxRetries} failed:`, error.message);
         
         // Check if it's a certificate validation error
         const isCertError = error.message && (
@@ -230,10 +253,7 @@ class ICPCanisterService {
         );
         
         if (isCertError) {
-          // Only log certificate errors in non-playground environments or on final attempt
-          if (!isPlayground || attempt === maxRetries - 1) {
-            // Certificate validation issue - expected in playground
-          }
+          console.log(`makeResilientCall - Certificate error on attempt ${attempt + 1}, retrying...`);
           
           try {
             // Force fresh agent creation by clearing it first
@@ -241,36 +261,44 @@ class ICPCanisterService {
             await this.createActor();
             
             // If this was the last attempt, don't retry
-            if (attempt === maxRetries - 1) {
+            if (attempt === actualMaxRetries - 1) {
+              console.log('makeResilientCall - Final attempt, giving up');
               break;
             }
             
-            // Wait a bit before retry
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Wait with exponential backoff before retry
+            const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
+            console.log(`makeResilientCall - Waiting ${delay}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
             continue;
           } catch (recreateError) {
-            if (!isPlayground) {
-            }
+            console.log('makeResilientCall - Failed to recreate actor:', recreateError);
             break;
           }
         } else {
           // Not a certificate error, don't retry
+          console.log('makeResilientCall - Non-certificate error, not retrying');
           break;
         }
       }
     }
     
     // If we get here, all retries failed
+    console.log('makeResilientCall - All retries failed, throwing last error');
     throw lastError;
   }
 
   /**
    * Make a graceful query call that returns null instead of throwing on certificate errors in playground
    */
-  async makeGracefulQueryCall(callFunction, maxRetries = 2) {
+  async makeGracefulQueryCall(callFunction, maxRetries = 5) {
     try {
-      return await this.makeResilientCall(callFunction, maxRetries);
+      // In playground mode, be even more aggressive with retries for queries
+      const actualRetries = this.isPlaygroundEnvironment() ? Math.max(maxRetries, 8) : maxRetries;
+      return await this.makeResilientCall(callFunction, actualRetries);
     } catch (error) {
+      console.log('makeGracefulQueryCall - Caught error after retries:', error);
+      
       const isCertError = error.message && (
         error.message.includes('Invalid certificate') ||
         error.message.includes('Invalid signature from replica')
@@ -278,9 +306,23 @@ class ICPCanisterService {
       
       // In playground environment, certificate errors are expected for new users
       if (isCertError && this.isPlaygroundEnvironment()) {
+        console.log('makeGracefulQueryCall - Certificate error in playground after retries, returning null');
         return null;
       }
       
+      // Also check for "Settings not found" or other common errors that should return null
+      const isNotFoundError = error.message && (
+        error.message.includes('Settings not found') ||
+        error.message.includes('Profile not found') ||
+        error.message.includes('not found')
+      );
+      
+      if (isNotFoundError) {
+        console.log('makeGracefulQueryCall - Not found error, returning null:', error.message);
+        return null;
+      }
+      
+      console.log('makeGracefulQueryCall - Re-throwing error:', error);
       // Re-throw other errors or certificate errors in production
       throw error;
     }
@@ -588,18 +630,38 @@ The Bonded Team`
   async getUserSettings() {
     this.ensureAuthenticated();
     
+    console.log('icpCanisterService.getUserSettings - Starting query...');
+    
     const result = await this.makeGracefulQueryCall(async () => {
+      console.log('icpCanisterService.getUserSettings - Making actor call...');
       return await this.actor.get_user_settings();
     });
     
     if (!result) {
       // Graceful failure - return null for new users or certificate errors
+      console.log('icpCanisterService.getUserSettings - No result (graceful failure)');
+      
+      // In playground mode, also try a whoami call to verify connectivity
+      if (this.isPlaygroundEnvironment()) {
+        try {
+          console.log('icpCanisterService.getUserSettings - Testing connectivity with whoami...');
+          const principal = await this.makeResilientCall(async () => {
+            return await this.actor.whoami();
+          });
+          console.log('icpCanisterService.getUserSettings - Connectivity test successful, principal:', principal.toString());
+        } catch (connectError) {
+          console.log('icpCanisterService.getUserSettings - Connectivity test failed:', connectError);
+        }
+      }
+      
       return null;
     }
     
     if ('Ok' in result) {
       const settings = result.Ok;
-      return {
+      console.log('icpCanisterService.getUserSettings - Raw backend result:', settings);
+      
+      const processedSettings = {
         aiFiltersEnabled: settings.ai_filters_enabled,
         nsfwFilter: settings.nsfw_filter,
         explicitTextFilter: settings.explicit_text_filter,
@@ -609,7 +671,11 @@ The Bonded Team`
         profileMetadata: settings.profile_metadata && settings.profile_metadata.length > 0 ? settings.profile_metadata[0] : null,
         updatedAt: Number(settings.updated_at)
       };
+      
+      console.log('icpCanisterService.getUserSettings - Processed settings:', processedSettings);
+      return processedSettings;
     } else {
+      console.error('icpCanisterService.getUserSettings - Error result:', result.Err);
       throw new Error(result.Err);
     }
   }
@@ -715,6 +781,7 @@ The Bonded Team`
     this.ensureAuthenticated();
     
     try {
+      console.log('icpCanisterService.updateUserSettings - Input settings:', settings);
       
       // Convert settings to canister format
       const canisterSettings = {
@@ -724,10 +791,15 @@ The Bonded Team`
         upload_schedule: [settings.scheduler?.interval || 'daily'],
         geolocation_enabled: [settings.geolocation?.enabled || true],
         notification_preferences: [], // Empty array for now since the format is unclear
-        profile_metadata: settings.profile ? [settings.profile] : []
+        profile_metadata: settings.profile_metadata ? [settings.profile_metadata] : 
+                         settings.profile ? [settings.profile] : []
       };
 
+      console.log('icpCanisterService.updateUserSettings - Sending to canister:', canisterSettings);
+      
       const result = await this.actor.update_user_settings(canisterSettings);
+      
+      console.log('icpCanisterService.updateUserSettings - Canister response:', result);
       
       if ('Ok' in result) {
         return { success: true };
@@ -735,6 +807,7 @@ The Bonded Team`
         throw new Error(result.Err);
       }
     } catch (error) {
+      console.error('icpCanisterService.updateUserSettings - Error:', error);
       throw error;
     }
   }
