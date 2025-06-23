@@ -44,3 +44,5 @@ src/bonded-app-frontend/service-worker.js
 
 # emailjs
 emailjs-bonded-template.html
+
+.mcp-cache

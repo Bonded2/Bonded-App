@@ -48,14 +48,41 @@ export const MenuFrame = ({ onClose }) => {
           attempts++;
         }
         
-        if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
-          const profileData = JSON.parse(currentUser.settings.profileMetadata);
+        if (currentUser && currentUser.settings) {
+          // Check both profileMetadata and profile_metadata for compatibility
+          const profileMetadata = currentUser.settings.profileMetadata || 
+                                  currentUser.settings.profile_metadata || 
+                                  currentUser.settings.profile;
           
-          setUserData({
-            fullName: profileData.fullName || "User",
-            email: profileData.email || "No email provided",
-            avatar: profileData.avatar || "U",
-          });
+          if (profileMetadata) {
+            try {
+              const profileData = typeof profileMetadata === 'string' ? 
+                                  JSON.parse(profileMetadata) : profileMetadata;
+              
+              setUserData({
+                fullName: profileData.fullName || currentUser.name || "User",
+                email: profileData.email || currentUser.email || "No email provided",
+                avatar: profileData.avatar || (profileData.fullName ? 
+                        profileData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 
+                        "U"),
+              });
+            } catch (parseError) {
+              console.warn('Failed to parse profile metadata:', parseError);
+              // Use basic user data if profile parsing fails
+              setUserData({
+                fullName: currentUser.name || "User",
+                email: currentUser.email || "No email provided", 
+                avatar: "U",
+              });
+            }
+          } else {
+            // Use basic user data from currentUser if no profile metadata
+            setUserData({
+              fullName: currentUser.name || "User",
+              email: currentUser.email || "No email provided",
+              avatar: "U",
+            });
+          }
         } else {
           // Keep default values if no profile data
           setUserData({
@@ -120,13 +147,32 @@ export const MenuFrame = ({ onClose }) => {
     // Refresh user data after edit
     try {
       const currentUser = await icpUserService.getCurrentUser(true);
-      if (currentUser && currentUser.settings && currentUser.settings.profileMetadata) {
-        const profileData = JSON.parse(currentUser.settings.profileMetadata);
-        setUserData({
-          fullName: profileData.fullName || "User",
-          email: profileData.email || "user@example.com",
-          avatar: profileData.avatar || "U",
-        });
+      if (currentUser && currentUser.settings) {
+        const profileMetadata = currentUser.settings.profileMetadata || 
+                                currentUser.settings.profile_metadata || 
+                                currentUser.settings.profile;
+        
+        if (profileMetadata) {
+          try {
+            const profileData = typeof profileMetadata === 'string' ? 
+                                JSON.parse(profileMetadata) : profileMetadata;
+            
+            setUserData({
+              fullName: profileData.fullName || currentUser.name || "User",
+              email: profileData.email || currentUser.email || "No email provided",
+              avatar: profileData.avatar || (profileData.fullName ? 
+                      profileData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 
+                      "U"),
+            });
+          } catch (parseError) {
+            // Use basic user data if profile parsing fails
+            setUserData({
+              fullName: currentUser.name || "User",
+              email: currentUser.email || "No email provided",
+              avatar: "U",
+            });
+          }
+        }
       }
     } catch (error) {
       // Keep existing data if refresh fails
@@ -188,7 +234,7 @@ export const MenuFrame = ({ onClose }) => {
             <div className="ai-section-header">
               <h3>AI Data Capture</h3>
               <div className={`ai-status-indicator ${aiStatus.isInitialized ? 'ready' : 'not-ready'}`}>
-                {aiStatus.isInitialized ? '🤖 Ready' : '⚠️ Not Ready'}
+                {aiStatus.isInitialized ? 'Ready' : 'Not Ready'}
               </div>
             </div>
             {/* AI Status Summary */}
@@ -216,11 +262,11 @@ export const MenuFrame = ({ onClose }) => {
                   onClick={handleToggleAutoScan}
                   disabled={!aiStatus.isInitialized}
                 >
-                  {aiStatus.autoScanEnabled ? '🟢 Auto Scan ON' : '🔴 Auto Scan OFF'}
+                  {aiStatus.autoScanEnabled ? 'Auto Scan ON' : 'Auto Scan OFF'}
                 </button>
                 {aiStatus.isScanning ? (
                   <button className="ai-action stop" onClick={handleStopAIScan}>
-                    ⏹️ Stop Scan
+                    Stop Scan
                   </button>
                 ) : (
                   <button 
@@ -228,7 +274,7 @@ export const MenuFrame = ({ onClose }) => {
                     onClick={handleStartAIScan}
                     disabled={!aiStatus.isInitialized || !aiStatus.autoScanEnabled}
                   >
-                    ▶️ Start Scan
+                    Start Scan
                   </button>
                 )}
               </div>
@@ -241,7 +287,7 @@ export const MenuFrame = ({ onClose }) => {
             onClick={onClose}
             aria-current={isActive("/ai-settings") ? "page" : undefined}
           >
-            <div className="menu-icon ai-icon">🤖</div>
+            <div className="menu-icon ai-icon">AI</div>
             <span className="menu-text">AI Settings & Demo</span>
             <div className="menu-badge">
               {aiStatus.isScanning ? 'Scanning...' : 'Configure'}

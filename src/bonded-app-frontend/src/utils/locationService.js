@@ -184,52 +184,117 @@ export const getCurrentLocation = () => {
 export const reverseGeocode = async (coordinates) => {
   try {
     const { lat, lng } = coordinates;
-    // In a production app, this would be a real call to Google's Geocoding API via a backend proxy
-    // For now, we'll simulate the response based on rough coordinates
-    // Simulate a delay for a realistic API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-    // Very basic simulation based on lat/lng ranges
+    
+    // Try using OpenStreetMap's Nominatim API (free and no API key required)
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&accept-language=en`,
+        {
+          headers: {
+            'User-Agent': 'BondedApp/1.0 (relationship-verification-app)'
+          }
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data && data.address) {
+          const address = data.address;
+          
+          // Extract precise location data
+          const locationData = {
+            country: address.country_code?.toUpperCase() || 'US',
+            city: address.city || address.town || address.village || address.municipality || 'Unknown City',
+            region: address.state || address.region || address.province || address.county || 'Unknown Region',
+            fullAddress: data.display_name || 'Address not available',
+            postcode: address.postcode || '',
+            precise: true,
+            coordinates: { lat, lng }
+          };
+          
+          return locationData;
+        }
+      }
+    } catch (apiError) {
+      console.warn('Nominatim API failed, falling back to coordinate-based detection:', apiError);
+    }
+    
+    // Fallback: Enhanced coordinate-based detection with more precise regions
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     let locationData = {
       country: 'US',
       city: 'New York',
-      region: 'New York State',
-      fullAddress: '123 Main St, New York, NY, USA',
-      postcode: '10001'
+      region: 'New York',
+      fullAddress: 'Location detected by coordinates',
+      postcode: '',
+      precise: false,
+      coordinates: { lat, lng }
     };
-    // Extremely simple location simulation based on coordinates
-    if (lat > 49 && lat < 60 && lng > -130 && lng < -60) {
+    
+    // More precise coordinate-based detection
+    if (lat >= 49 && lat <= 83 && lng >= -141 && lng <= -52) {
+      // Canada
       locationData = {
         country: 'CA',
-        city: 'Toronto',
-        region: 'Ontario',
-        fullAddress: '123 Queen St, Toronto, ON, Canada',
-        postcode: 'M5V 2A8'
+        city: lat > 55 ? 'Edmonton' : lat > 49.2 && lng > -123.2 ? 'Vancouver' : 'Toronto',
+        region: lat > 55 ? 'Alberta' : lat > 49.2 && lng > -123.2 ? 'British Columbia' : 'Ontario',
+        fullAddress: 'Canada',
+        postcode: '',
+        precise: false,
+        coordinates: { lat, lng }
       };
-    } else if (lat > 50 && lat < 59 && lng > -4 && lng < 2) {
+    } else if (lat >= 50 && lat <= 61 && lng >= -8 && lng <= 2) {
+      // United Kingdom
       locationData = {
         country: 'GB',
-        city: 'London',
-        region: 'England',
-        fullAddress: '123 Baker St, London, UK',
-        postcode: 'W1U 6BZ'
+        city: lat > 55 ? 'Edinburgh' : 'London',
+        region: lat > 55 ? 'Scotland' : 'England',
+        fullAddress: 'United Kingdom',
+        postcode: '',
+        precise: false,
+        coordinates: { lat, lng }
       };
-    } else if (lat > 8 && lat < 37 && lng > 68 && lng < 97) {
+    } else if (lat >= 8 && lat <= 37 && lng >= 68 && lng <= 97) {
+      // India
       locationData = {
         country: 'IN',
-        city: 'Mumbai',
-        region: 'Maharashtra',
-        fullAddress: '123 Marine Drive, Mumbai, India',
-        postcode: '400001'
+        city: lat > 28 ? 'Delhi' : lng > 80 ? 'Kolkata' : lng > 75 ? 'Mumbai' : 'Chennai',
+        region: lat > 28 ? 'Delhi' : lng > 80 ? 'West Bengal' : lng > 75 ? 'Maharashtra' : 'Tamil Nadu',
+        fullAddress: 'India',
+        postcode: '',
+        precise: false,
+        coordinates: { lat, lng }
       };
-    } else if (lat > 35 && lat < 42 && lng > -124 && lng < -115) {
+    } else if (lat >= 25 && lat <= 49 && lng >= -125 && lng <= -66) {
+      // United States
+      if (lng > -95) {
+        // Eastern US
+        locationData.city = lat > 40 ? 'New York' : lat > 32 ? 'Atlanta' : 'Miami';
+        locationData.region = lat > 40 ? 'New York' : lat > 32 ? 'Georgia' : 'Florida';
+      } else if (lng > -115) {
+        // Central US
+        locationData.city = lat > 40 ? 'Chicago' : lat > 32 ? 'Dallas' : 'Austin';
+        locationData.region = lat > 40 ? 'Illinois' : lat > 32 ? 'Texas' : 'Texas';
+      } else {
+        // Western US
+        locationData.city = lat > 40 ? 'Seattle' : lat > 34 ? 'San Francisco' : 'Los Angeles';
+        locationData.region = lat > 40 ? 'Washington' : 'California';
+      }
+    } else if (lat >= -55 && lat <= -10 && lng >= 112 && lng <= 154) {
+      // Australia
       locationData = {
-        country: 'US',
-        city: 'San Francisco',
-        region: 'California',
-        fullAddress: '123 Market St, San Francisco, CA, USA',
-        postcode: '94103'
+        country: 'AU',
+        city: lng > 140 ? 'Sydney' : lat < -35 ? 'Melbourne' : lat < -25 ? 'Brisbane' : 'Perth',
+        region: lng > 140 ? 'New South Wales' : lat < -35 ? 'Victoria' : lat < -25 ? 'Queensland' : 'Western Australia',
+        fullAddress: 'Australia',
+        postcode: '',
+        precise: false,
+        coordinates: { lat, lng }
       };
     }
+    
     return locationData;
   } catch (error) {
     throw new Error('Could not determine location from coordinates');

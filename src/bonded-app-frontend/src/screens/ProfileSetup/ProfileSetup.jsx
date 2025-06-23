@@ -72,32 +72,43 @@ export const ProfileSetup = () => {
               profilePhoto: null
             });
             setHasExistingBasicInfo(true);
+            console.log('Found registration data in sessionStorage:', data);
             sessionStorage.removeItem('registrationData'); // Clean up
+            return; // Exit early since we found registration data
           } catch (parseError) {
-            // Failed to parse registration data
+            console.warn('Failed to parse registration data from sessionStorage:', parseError);
           }
         }
         
-        // Fallback: try the old method
+        // Always try to get current user data from ICP canister
         const currentUser = await icpUserService.getCurrentUser(true);
-        
-        // Check current user
+        console.log('Current user from ICP:', currentUser);
         
         if (currentUser && currentUser.settings) {
+          console.log('User settings:', currentUser.settings);
           
-          // Check both profileMetadata and profile_metadata
-          const profileMetadata = currentUser.settings.profileMetadata || currentUser.settings.profile_metadata;
+          // Check multiple possible field names for profile metadata
+          const profileMetadata = currentUser.settings.profileMetadata || 
+                                  currentUser.settings.profile_metadata || 
+                                  currentUser.settings.profile;
+          
+          console.log('Profile metadata found:', profileMetadata);
           
           if (profileMetadata) {
-            const profileData = JSON.parse(profileMetadata);
-            
-            // If profile is already complete, redirect to timeline
-            if (profileData.profileComplete) {
-              navigate("/timeline");
-              return;
-            }
-            
-            if (profileData.fullName || profileData.email || profileData.dateOfBirth || profileData.nationality) {
+            try {
+              const profileData = typeof profileMetadata === 'string' ? 
+                                  JSON.parse(profileMetadata) : profileMetadata;
+              
+              console.log('Parsed profile data:', profileData);
+              
+              // If profile is already complete, redirect to timeline
+              if (profileData.profileComplete) {
+                console.log('Profile already complete, redirecting to timeline');
+                navigate("/timeline");
+                return;
+              }
+              
+              // Pre-populate form with any existing data
               setFormData({
                 fullName: profileData.fullName || "",
                 email: profileData.email || "",
@@ -108,12 +119,30 @@ export const ProfileSetup = () => {
                 profilePhoto: null
               });
               
-              // Check if user already has basic info from registration
-              if (profileData.hasBasicInfo || (profileData.fullName && profileData.email)) {
+              // Check if user already has basic info (name + email)
+              if (profileData.hasBasicInfo || 
+                  (profileData.fullName && profileData.email)) {
+                console.log('User has basic info, setting hasExistingBasicInfo to true');
                 setHasExistingBasicInfo(true);
               }
+            } catch (parseError) {
+              console.warn('Failed to parse profile metadata:', parseError);
+            }
+          } else {
+            console.log('No profile metadata found, checking if user has basic info from authentication');
+            // No profile metadata yet, but check if user has basic info from authentication
+            if (currentUser.name || currentUser.email) {
+              console.log('Found user name/email from auth, using it:', {name: currentUser.name, email: currentUser.email});
+              setFormData(prev => ({
+                ...prev,
+                fullName: currentUser.name || "",
+                email: currentUser.email || ""
+              }));
+              setHasExistingBasicInfo(true);
             }
           }
+        } else {
+          console.log('No current user or settings found');
         }
       } catch (error) {
         // If ICP data fails, start with empty form
@@ -221,15 +250,14 @@ export const ProfileSetup = () => {
         setIsLoadingLocation(false);
         return;
       }
-      // Reverse geocode to get location details
+      // Reverse geocode to get location details  
       const locationData = await reverseGeocode({
-        lat: coordinates.latitude,
-        lng: coordinates.longitude
+        lat: coordinates.lat,
+        lng: coordinates.lng
       });
-      if (locationData && locationData.country && locationData.countryName) {
+      if (locationData && locationData.country) {
         // Find matching country in our list
         const matchingCountry = countries.find(country => 
-          country.label.toLowerCase().includes(locationData.countryName.toLowerCase()) ||
           country.value.toLowerCase() === locationData.country.toLowerCase()
         );
         if (matchingCountry) {
@@ -389,9 +417,9 @@ export const ProfileSetup = () => {
       // Create profile metadata JSON for ICP canister
       const profileMetadata = JSON.stringify(userData);
       
-      // Update user settings with profile metadata on ICP canister
+      // Update user settings with profile metadata on ICP canister  
       await icpUserService.updateUserSettings({
-        profile: profileMetadata
+        profile_metadata: profileMetadata
       });
 
       // Check if user came from an invite and establish relationship
@@ -455,10 +483,10 @@ export const ProfileSetup = () => {
         {/* Security Status Indicator */}
         <div className={`security-status ${securityStatus.status}`}>
           <div className="security-icon">
-            {securityStatus.status === 'checking' && '🔄'}
-            {securityStatus.status === 'verified' && '✅'}
-            {securityStatus.status === 'error' && '⚠️'}
-            {securityStatus.status === 'pending' && '⏳'}
+            {securityStatus.status === 'checking' && <div className="spinner"></div>}
+            {securityStatus.status === 'verified' && <div className="check-icon"></div>}
+            {securityStatus.status === 'error' && <div className="warning-icon"></div>}
+            {securityStatus.status === 'pending' && <div className="clock-icon"></div>}
           </div>
           <div className="security-message">{securityStatus.message}</div>
         </div>
@@ -537,7 +565,7 @@ export const ProfileSetup = () => {
             <h2 className="section-title">Current Location</h2>
             {locationError && (
               <div className="location-error">
-                <span className="error-icon">⚠️</span>
+                <span className="error-icon">!</span>
                 {locationError}
               </div>
             )}
@@ -581,7 +609,7 @@ export const ProfileSetup = () => {
               onClick={handleUseCurrentLocation}
               disabled={isLoadingLocation || vpnDetected}
             >
-              {isLoadingLocation ? 'Detecting location...' : '📍 Use Current Location'}
+              {isLoadingLocation ? 'Detecting location...' : 'Use Current Location'}
             </button>
             {vpnDetected && (
               <div className="vpn-warning">
@@ -599,7 +627,7 @@ export const ProfileSetup = () => {
           </div>
           {formErrors.submit && (
             <div className="error-banner">
-              <span className="error-icon">⚠️</span>
+              <span className="error-icon">!</span>
               {formErrors.submit}
             </div>
           )}

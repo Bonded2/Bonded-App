@@ -263,7 +263,7 @@ class ICPUserService {
           reloadedUser = await this.loadCurrentUser();
           
           // If we successfully got settings back, break
-          if (reloadedUser && reloadedUser.settings && reloadedUser.settings.profileMetadata) {
+          if (reloadedUser && reloadedUser.settings && reloadedUser.settings.profile_metadata) {
             break;
           }
         } catch (reloadError) {

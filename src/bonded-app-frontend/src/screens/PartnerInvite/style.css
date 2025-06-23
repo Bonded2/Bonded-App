@@ -7,6 +7,36 @@
   position: relative;
 }
 
+.modern-back-button {
+  position: fixed;
+  top: var(--space-6);
+  left: var(--space-6);
+  width: 48px;
+  height: 48px;
+  background: var(--glass-background);
+  backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  z-index: 100;
+  color: white;
+  box-shadow: var(--shadow-lg);
+}
+
+.modern-back-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.modern-back-button:active {
+  transform: translateY(0);
+}
+
 .partner-invite-screen::before {
   content: '';
   position: absolute;
@@ -391,26 +421,6 @@
   transform: translateY(-1px);
 }
 
-/* Back Button */
-.back-button {
-  margin-top: 24px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 20px;
-  color: #ffffff;
-  font-family: "Rethink Sans", sans-serif;
-  font-size: 14px;
-  padding: 10px 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  opacity: 0.8;
-}
-
-.back-button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.5);
-  opacity: 1;
-}
 
 /* Manual Sharing Styles */
 .manual-sharing-container {

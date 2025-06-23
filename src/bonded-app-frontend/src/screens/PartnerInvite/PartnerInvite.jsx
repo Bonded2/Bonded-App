@@ -460,6 +460,13 @@ export const PartnerInvite = () => {
 
   return (
     <div className="partner-invite-screen improved-contrast">
+      {/* Modern back button */}
+      <button onClick={() => navigate(-1)} className="modern-back-button">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </button>
+      
       <div className="partner-invite-container">
         <div className="hero-section">
           <img
@@ -469,16 +476,7 @@ export const PartnerInvite = () => {
           />
           <h1 className="invite-title">Invite Your Partner</h1>
           <p className="invite-subtitle">
-            Connect with your partner to build your shared relationship timeline together. 
-            Create beautiful, verified evidence for your future.
-          </p>
-        </div>
-        
-        {/* Network Status Info */}
-        <div className="network-status-info">
-          <p className="network-info-text">
-            📡 <strong>App Status:</strong> Working in resilient mode - even if you see network errors in console, 
-            the app continues working using local storage and fallbacks. Your data is safe! 🛡️
+            Connect with your partner to build your relationship timeline together.
           </p>
         </div>
 
@@ -495,7 +493,11 @@ export const PartnerInvite = () => {
               disabled={isLoading || inviteStatus.status === 'sent'}
               supportingText=" " // Reserve space for status messages
             />
-            {isEmailAccepted && <span className="email-accepted-icon">✅</span>}
+            {isEmailAccepted && <span className="email-accepted-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 6L9 17L4 12" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>}
             {!isEmailAccepted && partnerEmail && !isValidEmail(partnerEmail) && (
               <p className="error-text email-error-text">Please enter a valid email address.</p>
             )}
@@ -505,10 +507,31 @@ export const PartnerInvite = () => {
           {inviteStatus.status !== 'pending' && (
             <div className={`invite-status-message ${inviteStatus.status}`}>
               <div className="status-icon">
-                {inviteStatus.status === 'sending' && '⏳'}
-                {inviteStatus.status === 'sent' && '✅'}
-                {inviteStatus.status === 'manual_required' && '📋'}
-                {inviteStatus.status === 'error' && '❌'}
+                {inviteStatus.status === 'sending' && (
+                  <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="32">
+                      <animate attributeName="stroke-dasharray" dur="2s" values="0 32;16 16;0 32;0 32" repeatCount="indefinite"/>
+                      <animate attributeName="stroke-dashoffset" dur="2s" values="0;-16;-32;-32" repeatCount="indefinite"/>
+                    </circle>
+                  </svg>
+                )}
+                {inviteStatus.status === 'sent' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+                {inviteStatus.status === 'manual_required' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                )}
+                {inviteStatus.status === 'error' && (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
+                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
+                  </svg>
+                )}
               </div>
               <p className="status-text">{inviteStatus.message}</p>
               
@@ -554,7 +577,7 @@ export const PartnerInvite = () => {
                         }}
                         className="copy-button primary"
                       >
-                        📋 Copy Message
+                        Copy Message
                       </button>
                       
                       <button 
@@ -564,7 +587,7 @@ export const PartnerInvite = () => {
                         }}
                         className="copy-button secondary"
                       >
-                        ✉️ Open Email Client (Optional)
+                        Open Email Client
                       </button>
                     </div>
                   </div>
@@ -573,18 +596,6 @@ export const PartnerInvite = () => {
             </div>
           )}
 
-          <div 
-            className="tooltip-container"
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
-          >
-            <span className="tooltip-icon">ℹ️</span>
-            {showTooltip && (
-              <div className="tooltip-text">
-                Your partner will receive a beautifully styled email invitation with a secure link to join your relationship bond.
-              </div>
-            )}
-          </div>
 
           <button 
             type="submit" 
@@ -610,10 +621,10 @@ export const PartnerInvite = () => {
             <div className="next-steps">
               <h3>What's next?</h3>
               <ul>
-                <li>✅ Your partner will receive the invitation email</li>
-                <li>🔗 They'll click the secure link to accept</li>
-                <li>🤝 Your relationship bond will be automatically created</li>
-                <li>📱 You can both start building your timeline</li>
+                <li>Your partner will receive the invitation email</li>
+                <li>They'll click the secure link to accept</li>
+                <li>Your relationship bond will be automatically created</li>
+                <li>You can both start building your timeline</li>
               </ul>
             </div>
 
@@ -628,9 +639,6 @@ export const PartnerInvite = () => {
           </div>
         )}
 
-        <button onClick={() => navigate(-1)} className="back-button">
-          Back
-        </button>
       </div>
     </div>
   );

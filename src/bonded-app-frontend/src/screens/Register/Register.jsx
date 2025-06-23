@@ -146,7 +146,7 @@ export const Register = () => {
               
               // Save profile data using proper settings update
               await icpUserService.updateUserSettings({
-                profile: JSON.stringify(profileData)
+                profile_metadata: JSON.stringify(profileData)
               });
             }
             
