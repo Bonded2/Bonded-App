@@ -14,6 +14,23 @@ import { encryptionService } from '../crypto/encryption.js';
 import canisterIntegration from './canisterIntegration.js';
 import { mediaAccessService } from './mediaAccess.js';
 import { openDB } from 'idb';
+
+// Conditional imports based on environment
+let jsPDF, JSZip;
+
+// ESM CDN URLs for production
+const JSPDF_ESM_URLS = [
+  'https://cdn.jsdelivr.net/npm/jspdf@3.0.1/+esm',
+  'https://cdn.skypack.dev/jspdf@3.0.1',
+  'https://unpkg.com/jspdf@3.0.1/dist/jspdf.es.min.js'
+];
+
+const JSZIP_ESM_URLS = [
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
+  'https://cdn.skypack.dev/jszip@3.10.1',
+  'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+];
+
 class EvidenceProcessor {
   constructor() {
     this.db = null;
@@ -35,6 +52,11 @@ class EvidenceProcessor {
       totalPhotosProcessed: 0,
       totalMessagesProcessed: 0
     };
+    // Detect production by hostname instead of env vars
+    this.isProduction = typeof window !== 'undefined' && 
+      (window.location.hostname.includes('icp0.io') || window.location.hostname.includes('ic0.app'));
+    this.loadedLibraries = new Set();
+    console.log(`📄 EvidenceProcessor initialized - Production mode: ${this.isProduction}`);
     this.initDB();
   }
   /**
@@ -514,7 +536,255 @@ class EvidenceProcessor {
     } catch (error) {
     }
   }
+  /**
+   * Dynamically load jsPDF using ESM imports
+   */
+  async loadJsPDF() {
+    if (jsPDF) return jsPDF;
+
+    try {
+      if (this.isProduction) {
+        // Use ESM CDN in production
+        console.log('🌐 Loading jsPDF from ESM CDN for production...');
+        
+        for (const url of JSPDF_ESM_URLS) {
+          try {
+            console.log(`🔄 Trying jsPDF ESM URL: ${url}`);
+            const module = await import(url);
+            jsPDF = module.default || module.jsPDF || module;
+            console.log(`✅ jsPDF loaded successfully from ${url}`);
+            break;
+          } catch (urlError) {
+            console.warn(`❌ Failed to load jsPDF from ${url}:`, urlError.message);
+            if (url === JSPDF_ESM_URLS[JSPDF_ESM_URLS.length - 1]) {
+              throw urlError;
+            }
+          }
+        }
+      } else {
+        // Use bundled version in development
+        console.log('📦 Loading bundled jsPDF for development...');
+        const module = await import('jspdf');
+        jsPDF = module.default || module.jsPDF;
+        console.log('✅ jsPDF loaded from bundle');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load jsPDF:', error.message);
+      jsPDF = null;
+    }
+
+    return jsPDF;
+  }
+  /**
+   * Dynamically load JSZip using ESM imports
+   */
+  async loadJSZip() {
+    if (JSZip) return JSZip;
+
+    try {
+      if (this.isProduction) {
+        // Use ESM CDN in production
+        console.log('🌐 Loading JSZip from ESM CDN for production...');
+        
+        for (const url of JSZIP_ESM_URLS) {
+          try {
+            console.log(`🔄 Trying JSZip ESM URL: ${url}`);
+            const module = await import(url);
+            JSZip = module.default || module.JSZip || module;
+            console.log(`✅ JSZip loaded successfully from ${url}`);
+            break;
+          } catch (urlError) {
+            console.warn(`❌ Failed to load JSZip from ${url}:`, urlError.message);
+            if (url === JSZIP_ESM_URLS[JSZIP_ESM_URLS.length - 1]) {
+              throw urlError;
+            }
+          }
+        }
+      } else {
+        // Use bundled version in development
+        console.log('📦 Loading bundled JSZip for development...');
+        const module = await import('jszip');
+        JSZip = module.default || module;
+        console.log('✅ JSZip loaded from bundle');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load JSZip:', error.message);
+      JSZip = null;
+    }
+
+    return JSZip;
+  }
+  /**
+   * Generate PDF from evidence items
+   */
+  async generateEvidencePDF(evidenceItems, options = {}) {
+    try {
+      const jsPDFLib = await this.loadJsPDF();
+      
+      if (!jsPDFLib) {
+        throw new Error('jsPDF library not available');
+      }
+
+      const pdf = new jsPDFLib({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true
+      });
+
+      // Add title page
+      pdf.setFontSize(20);
+      pdf.text('Relationship Evidence Package', 20, 30);
+      pdf.setFontSize(12);
+      pdf.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 45);
+      pdf.text(`Total Items: ${evidenceItems.length}`, 20, 55);
+
+      let pageCount = 1;
+
+      for (let i = 0; i < evidenceItems.length; i++) {
+        const item = evidenceItems[i];
+        
+        // Add new page for each evidence item
+        if (i > 0 || pageCount > 1) {
+          pdf.addPage();
+          pageCount++;
+        }
+
+        // Add item header
+        pdf.setFontSize(14);
+        pdf.text(`Evidence Item ${i + 1}`, 20, 30);
+        pdf.setFontSize(10);
+        pdf.text(`Date: ${item.date || 'Unknown'}`, 20, 40);
+        pdf.text(`Type: ${item.type || 'Unknown'}`, 20, 45);
+
+        // Add image if present
+        if (item.image) {
+          try {
+            pdf.addImage(item.image, 'JPEG', 20, 55, 170, 120);
+          } catch (imageError) {
+            console.warn('Failed to add image to PDF:', imageError);
+            pdf.text('Image could not be embedded', 20, 60);
+          }
+        }
+
+        // Add text content if present
+        if (item.text) {
+          const startY = item.image ? 180 : 55;
+          const splitText = pdf.splitTextToSize(item.text, 170);
+          pdf.text(splitText, 20, startY);
+        }
+      }
+
+      // Generate and return PDF blob
+      const pdfBlob = pdf.output('blob');
+      
+      const source = this.isProduction ? 'ESM CDN' : 'Bundled';
+      console.log(`✅ PDF generated successfully using jsPDF from ${source}`);
+      
+      return {
+        blob: pdfBlob,
+        filename: `bonded-evidence-${Date.now()}.pdf`,
+        size: pdfBlob.size
+      };
+
+    } catch (error) {
+      console.error('❌ PDF generation failed:', error);
+      throw new Error(`PDF generation failed: ${error.message}`);
+    }
+  }
+  /**
+   * Create ZIP archive of evidence
+   */
+  async createEvidenceZip(evidenceItems, options = {}) {
+    try {
+      const JSZipLib = await this.loadJSZip();
+      
+      if (!JSZipLib) {
+        throw new Error('JSZip library not available');
+      }
+
+      const zip = new JSZipLib();
+
+      // Add metadata file
+      const metadata = {
+        created: new Date().toISOString(),
+        totalItems: evidenceItems.length,
+        description: 'Bonded relationship evidence package'
+      };
+      zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+
+      // Add each evidence item
+      for (let i = 0; i < evidenceItems.length; i++) {
+        const item = evidenceItems[i];
+        const itemFolder = zip.folder(`evidence_${i + 1}`);
+
+        // Add item metadata
+        itemFolder.file('info.json', JSON.stringify({
+          date: item.date,
+          type: item.type,
+          description: item.description || ''
+        }, null, 2));
+
+        // Add image if present
+        if (item.image) {
+          itemFolder.file('image.jpg', item.image, { binary: true });
+        }
+
+        // Add text if present
+        if (item.text) {
+          itemFolder.file('text.txt', item.text);
+        }
+      }
+
+      // Generate ZIP blob
+      const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+
+      const source = this.isProduction ? 'ESM CDN' : 'Bundled';
+      console.log(`✅ ZIP archive created successfully using JSZip from ${source}`);
+
+      return {
+        blob: zipBlob,
+        filename: `bonded-evidence-${Date.now()}.zip`,
+        size: zipBlob.size
+      };
+
+    } catch (error) {
+      console.error('❌ ZIP creation failed:', error);
+      throw new Error(`ZIP creation failed: ${error.message}`);
+    }
+  }
+  /**
+   * Get service status
+   */
+  getStatus() {
+    return {
+      isProduction: this.isProduction,
+      loadedLibraries: Array.from(this.loadedLibraries),
+      jsPDFAvailable: !!jsPDF,
+      JSZipAvailable: !!JSZip
+    };
+  }
 }
-// Export class and singleton instance
+
+// Create singleton instance
+const evidenceProcessor = new EvidenceProcessor();
+
+// Export class and instance for compatibility
 export { EvidenceProcessor };
-export const evidenceProcessor = new EvidenceProcessor(); 
+export const evidenceProcessorService = evidenceProcessor;
+
+// Export methods
+export const generateEvidencePDF = (evidenceItems, options) => 
+  evidenceProcessor.generateEvidencePDF(evidenceItems, options);
+
+export const createEvidenceZip = (evidenceItems, options) => 
+  evidenceProcessor.createEvidenceZip(evidenceItems, options);
+
+export const getEvidenceProcessorStatus = () => 
+  evidenceProcessor.getStatus();
+
+export default evidenceProcessor; 

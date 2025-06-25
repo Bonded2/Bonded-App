@@ -2,10 +2,19 @@
  * Text Classification Service - PRODUCTION READY
  * 
  * Client-side text classification using DistilBERT via Transformers.js
+ * Uses ESM CDN in production, bundled in development
  * Detects sexually explicit and inappropriate content in messages
  * Runs 100% in-browser for privacy and offline capability
  */
 import { openDB } from 'idb';
+
+// Conditional import based on environment
+let transformers;
+
+// ESM CDN URLs for production (optimized and smaller)
+const TRANSFORMERS_JSDELIVR_ESM_URL = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/+esm';
+const TRANSFORMERS_SKYPACK_URL = 'https://cdn.skypack.dev/@xenova/transformers@2.6.0';
+const TRANSFORMERS_UNPKG_ESM_URL = 'https://unpkg.com/@xenova/transformers@2.6.0/dist/transformers.esm.js';
 
 /**
  * Production Text Classification Service
@@ -19,6 +28,9 @@ class TextClassificationService {
     this.isInitialized = false;
     this.lastError = null;
     this.db = null;
+    // Detect production by hostname instead of env vars
+    this.isProduction = typeof window !== 'undefined' && 
+      (window.location.hostname.includes('icp0.io') || window.location.hostname.includes('ic0.app'));
     
     // Production classification thresholds
     this.thresholds = {
@@ -90,11 +102,18 @@ class TextClassificationService {
     this.stats.modelStatus = 'loading';
 
     try {
-      // Load Transformers.js from CDN
-      await this.loadTransformersJS();
+      // Load Transformers.js via ESM
+      const transformersLib = await this.loadTransformersJS();
+      
+      if (!transformersLib) {
+        throw new Error('Failed to load Transformers.js library');
+      }
+      
+      // Use the default export or named exports depending on the module format
+      const transformersAPI = transformersLib.default || transformersLib;
       
       // Load DistilBERT model for text classification
-      const { pipeline } = window.transformers;
+      const { pipeline } = transformersAPI;
       
       // Use text classification pipeline with DistilBERT
       this.model = await pipeline('text-classification', 'distilbert-base-uncased-finetuned-sst-2-english', {
@@ -129,34 +148,49 @@ class TextClassificationService {
   }
 
   /**
-   * Load Transformers.js from CDN
+   * Load Transformers.js using ESM imports
    */
   async loadTransformersJS() {
-    return new Promise((resolve, reject) => {
-      if (window.transformers) {
-        resolve(window.transformers);
-        return;
-      }
-      
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/dist/transformers.min.js';
-      script.type = 'module';
-      
-      script.onload = () => {
-        // Wait for transformers to be available
-        const checkTransformers = () => {
-          if (window.transformers) {
-            resolve(window.transformers);
-          } else {
-            setTimeout(checkTransformers, 100);
+    if (transformers) return transformers;
+
+    try {
+      if (this.isProduction) {
+        // Use ESM CDN in production for better performance
+        console.log('🌐 Loading Transformers.js from ESM CDN for production...');
+        
+        // Try multiple ESM CDN providers for redundancy
+        const esmUrls = [
+          TRANSFORMERS_JSDELIVR_ESM_URL, // jsDelivr ESM (fastest)
+          TRANSFORMERS_SKYPACK_URL,      // Skypack (optimized ESM)
+          TRANSFORMERS_UNPKG_ESM_URL     // unpkg ESM (fallback)
+        ];
+        
+        for (const url of esmUrls) {
+          try {
+            console.log(`🔄 Trying ESM URL: ${url}`);
+            transformers = await import(url);
+            console.log(`✅ Transformers.js loaded successfully from ${url}`);
+            break;
+          } catch (urlError) {
+            console.warn(`❌ Failed to load from ${url}:`, urlError.message);
+            if (url === esmUrls[esmUrls.length - 1]) {
+              throw urlError; // Last URL failed
+            }
           }
-        };
-        checkTransformers();
-      };
-      
-      script.onerror = () => reject(new Error('Failed to load Transformers.js'));
-      document.head.appendChild(script);
-    });
+        }
+        
+      } else {
+        // Use bundled version in development
+        console.log('📦 Loading bundled Transformers.js for development...');
+        transformers = await import('@xenova/transformers');
+        console.log('✅ Transformers.js loaded from bundle');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load Transformers.js:', error.message);
+      transformers = null;
+    }
+
+    return transformers;
   }
 
   /**

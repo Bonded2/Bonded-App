@@ -9,6 +9,7 @@ import { resolve } from 'path';
 dotenv.config();
 
 const isDev = process.env["DFX_NETWORK"] !== "ic" && process.env["NODE_ENV"] !== "production";
+const isProduction = process.env.NODE_ENV === "production" || process.env["DFX_NETWORK"] === "ic";
 
 // Determine the network from process.env["DFX_NETWORK"]
 // If it's not defined then we default to local and assume
@@ -29,58 +30,106 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: false,
-    // Increase chunk size warnings threshold
-    chunkSizeWarningLimit: 1000,
+    // Aggressive chunk size warnings for ultra-light production
+    chunkSizeWarningLimit: isProduction ? 200 : 1000,
     // Optimize for fastest possible loading
     target: 'es2020',
     minify: 'terser',
     cssMinify: 'esbuild',
     rollupOptions: {
-      external: () => false,
+      // AGGRESSIVE: Externalize ALL heavy libraries for production
+      external: isProduction ? [
+        // AI Libraries (already done)
+        'nsfwjs',
+        'tesseract.js',
+        '@xenova/transformers',
+        'onnxruntime-web',
+        
+        // Heavy utility libraries
+        'jspdf',
+        'jszip',
+        'crypto-js',
+        'idb',
+        
+        // React ecosystem (can be loaded from CDN)
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'react-select',
+        
+        // Polyfills and utilities
+        'buffer',
+        'crypto-browserify',
+        'stream-browserify',
+        'core-js',
+        
+        // Workbox (can be loaded separately)
+        'workbox-window'
+      ] : [],
       output: {
+        // Remove globals configuration - using import maps instead
+        // Import maps in HTML handle module resolution automatically
         manualChunks: (id) => {
-          // AI models - separate chunks for lazy loading
-          if (id.includes('tesseract.js')) {
-            return 'ai-ocr';
-          }
-          if (id.includes('nsfwjs')) {
-            return 'ai-nsfw';
-          }
-          if (id.includes('@tensorflow/tfjs')) {
-            return 'ai-tensorflow';
-          }
-          
-          // Core React libraries - minimal bundle
-          if (id.includes('react') || id.includes('react-dom')) {
-            return 'react-core';
-          }
-          if (id.includes('react-router')) {
-            return 'react-router';
-          }
-          
-          // ICP SDK
-          if (id.includes('@dfinity/')) {
-            return 'icp-sdk';
-          }
-          
-          // Crypto and polyfills
-          if (id.includes('crypto-browserify') || id.includes('stream-browserify') || id.includes('buffer')) {
-            return 'polyfills';
-          }
-          
-          // AI services
-          if (id.includes('/ai/') && id.includes('.js')) {
-            return 'ai-services';
-          }
-          
-          // Other services
-          if (id.includes('/services/') && id.includes('.js')) {
-            return 'app-services';
-          }
-          
-          // Group other node_modules
-          if (id.includes('node_modules')) {
-            return 'vendor';
+          // Ultra-aggressive chunking for production
+          if (isProduction) {
+            // ICP SDK - keep bundled as it's specific to our app
+            if (id.includes('@dfinity/')) {
+              return 'icp-sdk';
+            }
+            
+            // App-specific services - minimal chunks
+            if (id.includes('/services/') && id.includes('.js') && !id.includes('/ai/')) {
+              return 'app-services';
+            }
+            
+            // Minimal vendor chunk for non-externalized dependencies
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+          } else {
+            // Development mode - keep AI models in chunks for easier debugging
+            if (id.includes('tesseract.js')) {
+              return 'ai-ocr';
+            }
+            if (id.includes('nsfwjs')) {
+              return 'ai-nsfw';
+            }
+            if (id.includes('@tensorflow/tfjs')) {
+              return 'ai-tensorflow';
+            }
+            
+            // Core React libraries - minimal bundle
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-core';
+            }
+            if (id.includes('react-router')) {
+              return 'react-router';
+            }
+            
+            // ICP SDK
+            if (id.includes('@dfinity/')) {
+              return 'icp-sdk';
+            }
+            
+            // Crypto and polyfills
+            if (id.includes('crypto-browserify') || id.includes('stream-browserify') || id.includes('buffer')) {
+              return 'polyfills';
+            }
+            
+            // AI services
+            if (id.includes('/ai/') && id.includes('.js')) {
+              return 'ai-services';
+            }
+            
+            // Other services
+            if (id.includes('/services/') && id.includes('.js')) {
+              return 'app-services';
+            }
+            
+            // Group other node_modules
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
           }
         },
         
@@ -92,13 +141,17 @@ export default defineConfig({
     },
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: isProduction,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
-        passes: 2
+        pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug', 'console.warn'] : [],
+        passes: 3, // More aggressive compression
+        unsafe: isProduction, // Enable unsafe optimizations in production
+        unsafe_comps: isProduction,
+        unsafe_math: isProduction
       },
       mangle: {
-        safari10: true
+        safari10: true,
+        toplevel: isProduction // Mangle top-level names in production
       },
       format: {
         comments: false
@@ -107,14 +160,31 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: [
-      'react',
-      'react-dom',
-      'react-router-dom'
+      // Only include critical dependencies for optimization
+      ...(isProduction ? [] : [
+        'react',
+        'react-dom',
+        'react-router-dom'
+      ])
     ],
     exclude: [
+      // Exclude ALL heavy dependencies from pre-bundling
       'tesseract.js',
       'nsfwjs',
-      '@tensorflow/tfjs'
+      '@tensorflow/tfjs',
+      '@xenova/transformers',
+      'onnxruntime-web',
+      'jspdf',
+      'jszip',
+      'crypto-js',
+      'idb',
+      'workbox-window',
+      ...(isProduction ? [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'react-select'
+      ] : [])
     ]
   },
   server: {
@@ -150,7 +220,8 @@ export default defineConfig({
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
     'process.env.DFX_NETWORK': JSON.stringify(network),
     'process.env.VITE_DFX_NETWORK': JSON.stringify(network),
-    'process.env.CANISTER_ID_BONDED_APP_BACKEND': JSON.stringify(process.env.CANISTER_ID_BONDED_APP_BACKEND)
+    'process.env.CANISTER_ID_BONDED_APP_BACKEND': JSON.stringify(process.env.CANISTER_ID_BONDED_APP_BACKEND),
+    'process.env.VITE_PRODUCTION_BUILD': JSON.stringify(isProduction)
   },
   worker: {
     format: 'es',
@@ -163,6 +234,9 @@ export default defineConfig({
   esbuild: {
     target: 'es2020',
     legalComments: 'none',
-    treeShaking: true
+    treeShaking: true,
+    minifyIdentifiers: isProduction,
+    minifySyntax: isProduction,
+    minifyWhitespace: isProduction
   }
 });

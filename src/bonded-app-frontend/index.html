@@ -264,6 +264,160 @@
   <meta name="msapplication-TileImage" content="/images/ms-tile-144x144.png" />
   <meta name="msapplication-config" content="/browserconfig.xml" />
   
+  <!-- Import Maps for ESM Dependencies -->
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://cdn.jsdelivr.net/npm/react@18.2.0/+esm",
+        "react-dom": "https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm",
+        "react-router-dom": "https://cdn.jsdelivr.net/npm/react-router-dom@6.8.1/+esm",
+        "react-select": "https://cdn.jsdelivr.net/npm/react-select@5.10.1/+esm",
+        "nsfwjs": "https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/+esm",
+        "tesseract.js": "https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/+esm",
+        "@xenova/transformers": "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/+esm",
+        "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/+esm",
+        "jspdf": "https://cdn.jsdelivr.net/npm/jspdf@3.0.1/+esm",
+        "jszip": "https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm",
+        "idb": "https://cdn.jsdelivr.net/npm/idb@7.1.1/+esm",
+        "crypto-js": "https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/+esm",
+        "workbox-window": "https://cdn.jsdelivr.net/npm/workbox-window@7.0.0/+esm",
+        "buffer": "https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm",
+        "crypto-browserify": "https://cdn.jsdelivr.net/npm/crypto-browserify@3.12.1/+esm",
+        "stream-browserify": "https://cdn.jsdelivr.net/npm/stream-browserify@3.0.0/+esm",
+        "core-js": "https://cdn.jsdelivr.net/npm/core-js@3.42.0/+esm"
+      }
+    }
+  </script>
+  
+  <!-- Production ESM Preloads - ULTRA LIGHTWEIGHT LOADING -->
+  <script type="module">
+    // Check if production build - Now safely inside a module
+    const isProduction = window.location.hostname.includes('icp0.io') || window.location.hostname.includes('ic0.app');
+    
+    if (isProduction) {
+      console.log('🚀 Production ESM mode detected - preloading critical modules...');
+      
+      // Comprehensive ESM preloads for maximum performance
+      const esmLibraries = [
+        // Core React Ecosystem - Load first for immediate UI
+        'https://cdn.jsdelivr.net/npm/react@18.2.0/+esm',
+        'https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm',
+        'https://cdn.jsdelivr.net/npm/react-router-dom@6.8.1/+esm',
+        'https://cdn.jsdelivr.net/npm/react-select@5.10.1/+esm',
+        
+        // Essential Utilities - Load early
+        'https://cdn.jsdelivr.net/npm/idb@7.1.1/+esm',
+        'https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/+esm',
+        
+        // AI Libraries - Load on demand
+        'https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/+esm',
+        'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/+esm',
+        'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/+esm',
+        'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/+esm',
+        
+        // Document Processing - Load when needed
+        'https://cdn.jsdelivr.net/npm/jspdf@3.0.1/+esm',
+        'https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm',
+        
+        // PWA Support
+        'https://cdn.jsdelivr.net/npm/workbox-window@7.0.0/+esm',
+        
+        // Polyfills - Load last
+        'https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm',
+        'https://cdn.jsdelivr.net/npm/core-js@3.42.0/+esm'
+      ];
+      
+      // Alternative CDN URLs for fallback
+      const alternativeCDNs = [
+        // Skypack optimized ESM
+        'https://cdn.skypack.dev/react@18.2.0',
+        'https://cdn.skypack.dev/react-dom@18.2.0',
+        'https://cdn.skypack.dev/react-router-dom@6.8.1',
+        'https://cdn.skypack.dev/idb@7.1.1',
+        'https://cdn.skypack.dev/nsfwjs@4.2.1',
+        'https://cdn.skypack.dev/tesseract.js@6.0.1',
+        'https://cdn.skypack.dev/@xenova/transformers@2.6.0',
+        
+        // unpkg ESM fallbacks
+        'https://unpkg.com/react@18.2.0/index.js',
+        'https://unpkg.com/react-dom@18.2.0/index.js',
+        'https://unpkg.com/idb@7.1.1/build/index.js'
+      ];
+      
+      // Add primary ESM preloads
+      esmLibraries.forEach(url => {
+        const link = document.createElement('link');
+        link.rel = 'modulepreload';
+        link.href = url;
+        link.crossOrigin = 'anonymous';
+        link.as = 'script';
+        document.head.appendChild(link);
+      });
+      
+      // Add alternative CDN preloads for redundancy
+      alternativeCDNs.forEach(url => {
+        const link = document.createElement('link');
+        link.rel = 'dns-prefetch';
+        link.href = url;
+        document.head.appendChild(link);
+      });
+      
+      // DNS prefetch for all CDN domains
+      const cdnDomains = [
+        'https://cdn.jsdelivr.net',
+        'https://cdn.skypack.dev', 
+        'https://unpkg.com',
+        'https://esm.sh',
+        'https://cdn.pika.dev'
+      ];
+      
+      cdnDomains.forEach(domain => {
+        const link = document.createElement('link');
+        link.rel = 'dns-prefetch';
+        link.href = domain;
+        document.head.appendChild(link);
+      });
+      
+      // Critical resource preconnects
+      const preconnectDomains = [
+        'https://cdn.jsdelivr.net',
+        'https://cdn.skypack.dev'
+      ];
+      
+      preconnectDomains.forEach(domain => {
+        const link = document.createElement('link');
+        link.rel = 'preconnect';
+        link.href = domain;
+        link.crossOrigin = 'anonymous';
+        document.head.appendChild(link);
+      });
+      
+      console.log('✅ Production ESM preloading complete');
+    } else {
+      console.log('🛠️ Development mode - using bundled dependencies');
+    }
+  </script>
+  
+  <!-- Performance optimizations -->
+  <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  
+  <!-- Meta tags for SEO and social sharing -->
+  <meta name="description" content="Secure relationship verification app for immigration and visa applications. AI-powered evidence collection with privacy-first design." />
+  <meta name="keywords" content="relationship verification, immigration, visa, evidence collection, privacy, AI" />
+  
+  <!-- Open Graph tags -->
+  <meta property="og:title" content="Bonded - Relationship Evidence App" />
+  <meta property="og:description" content="Secure relationship verification app for immigration and visa applications" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/images/bonded-logo-blue.svg" />
+  
+  <!-- Twitter Card tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Bonded - Relationship Evidence App" />
+  <meta name="twitter:description" content="Secure relationship verification app for immigration and visa applications" />
+  <meta name="twitter:image" content="/images/bonded-logo-blue.svg" />
+  
   <style>
     html, body, #root {
       margin: 0;

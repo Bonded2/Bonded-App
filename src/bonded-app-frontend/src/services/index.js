@@ -26,5 +26,5 @@ export {
 export { EncryptionService, encryptionService } from '../crypto/encryption.js';
 
 // Re-export instances from their respective modules
-export { evidenceProcessor } from './evidenceProcessor.js';
+export { evidenceProcessorService as evidenceProcessor } from './evidenceProcessor.js';
 export { timelineService } from './timelineService.js'; 

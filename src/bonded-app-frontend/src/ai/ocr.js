@@ -1,12 +1,18 @@
 /**
  * OCR (Optical Character Recognition) Service
  * 
- * Extracts text from images using Tesseract.js v5/v6
- * Based on: https://github.com/naptha/tesseract.js
- * Runs entirely client-side for privacy
+ * Extracts text from images using Tesseract.js
+ * Uses ESM CDN in production, bundled in development
+ * Runs entirely in the browser for privacy
  */
 
-import { createWorker } from 'tesseract.js';
+// Conditional import based on environment
+let Tesseract;
+
+// ESM CDN URLs for production (smaller and faster than UMD)
+const TESSERACT_JSDELIVR_ESM_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/+esm';
+const TESSERACT_SKYPACK_URL = 'https://cdn.skypack.dev/tesseract.js@6.0.1';
+const TESSERACT_UNPKG_ESM_URL = 'https://unpkg.com/tesseract.js@6.0.1/dist/esm/index.js';
 
 class OCRService {
   constructor() {
@@ -14,10 +20,83 @@ class OCRService {
     this.isInitialized = false;
     this.isInitializing = false;
     this.initError = null;
+    // Detect production by hostname instead of env vars
+    this.isProduction = typeof window !== 'undefined' && 
+      (window.location.hostname.includes('icp0.io') || window.location.hostname.includes('ic0.app'));
+    this.loadError = null;
     
     // Supported languages (English by default)
     this.defaultLanguage = 'eng';
     this.supportedLanguages = ['eng', 'spa', 'fra', 'deu', 'por', 'ita', 'rus', 'chi_sim', 'chi_tra', 'jpn', 'ara'];
+  }
+
+  /**
+   * Dynamically load Tesseract.js library using ESM imports
+   */
+  async loadTesseract() {
+    if (Tesseract) return Tesseract;
+
+    try {
+      if (this.isProduction) {
+        // Use ESM CDN in production for better performance
+        console.log('🌐 Loading Tesseract.js from ESM CDN for production...');
+        
+        // Try multiple ESM CDN providers for redundancy
+        const esmUrls = [
+          TESSERACT_JSDELIVR_ESM_URL, // jsDelivr ESM (fastest)
+          TESSERACT_SKYPACK_URL,      // Skypack (optimized ESM)
+          TESSERACT_UNPKG_ESM_URL     // unpkg ESM (fallback)
+        ];
+        
+        for (const url of esmUrls) {
+          try {
+            console.log(`🔄 Trying ESM URL: ${url}`);
+            Tesseract = await import(url);
+            console.log(`✅ Tesseract.js loaded successfully from ${url}`);
+            break;
+          } catch (urlError) {
+            console.warn(`❌ Failed to load from ${url}:`, urlError.message);
+            if (url === esmUrls[esmUrls.length - 1]) {
+              throw urlError; // Last URL failed
+            }
+          }
+        }
+        
+      } else {
+        // Use bundled version in development
+        console.log('📦 Loading bundled Tesseract.js for development...');
+        Tesseract = await import('tesseract.js');
+        console.log('✅ Tesseract.js loaded from bundle');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load Tesseract.js:', error.message);
+      this.loadError = error.message;
+      Tesseract = null;
+    }
+
+    return Tesseract;
+  }
+
+  /**
+   * Initialize OCR service
+   */
+  async initialize() {
+    if (this.isInitialized) return true;
+
+    try {
+      const tesseractLib = await this.loadTesseract();
+      if (!tesseractLib) {
+        throw new Error('Tesseract.js library not available');
+      }
+      
+      this.isInitialized = true;
+      console.log('✅ OCR service initialized with ESM loading');
+      return true;
+    } catch (error) {
+      console.error('❌ OCR service initialization failed:', error);
+      this.loadError = error.message;
+      return false;
+    }
   }
 
   /**
@@ -42,14 +121,23 @@ class OCRService {
     try {
       console.log('🔤 Initializing Tesseract.js worker...');
       
+      // First ensure Tesseract.js library is loaded via ESM
+      const tesseractLib = await this.loadTesseract();
+      if (!tesseractLib) {
+        throw new Error('Tesseract.js library not available');
+      }
+      
+      // Use the default export or named exports depending on the module format
+      const tesseractAPI = tesseractLib.default || tesseractLib;
+      
       // Create worker with language (v5/v6 API)
-      // According to docs: createWorker now takes language as first parameter
-      this.worker = await createWorker(language);
+      this.worker = await tesseractAPI.createWorker(language);
       
       this.isInitialized = true;
       this.isInitializing = false;
       
-      console.log('✅ Tesseract.js worker initialized successfully');
+      const source = this.isProduction ? 'ESM CDN' : 'Bundled';
+      console.log(`✅ Tesseract.js worker initialized successfully (${source})`);
       return this.worker;
       
     } catch (error) {

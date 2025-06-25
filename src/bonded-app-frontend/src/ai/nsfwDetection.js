@@ -2,17 +2,26 @@
  * NSFW Detection Service
  * 
  * Privacy-first NSFW content detection using NSFWJS
- * Uses bundled models that come with the nsfwjs package
+ * Uses ESM CDN in production, bundled in development
  * Based on: https://github.com/infinitered/nsfwjs
  */
 
-import * as nsfwjs from 'nsfwjs';
+// Conditional import based on environment
+let nsfwjs;
+
+// ESM CDN URLs for production (much smaller and faster)
+const NSFWJS_ESM_URL = 'https://cdn.skypack.dev/nsfwjs@4.2.1';
+const NSFWJS_UNPKG_ESM_URL = 'https://unpkg.com/nsfwjs@4.2.1/dist/nsfwjs.esm.js';
+const NSFWJS_JSDELIVR_ESM_URL = 'https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/+esm';
 
 class NSFWDetectionService {
   constructor() {
     this.model = null;
     this.isLoading = false;
     this.loadError = null;
+    // Detect production by hostname instead of env vars
+    this.isProduction = typeof window !== 'undefined' && 
+      (window.location.hostname.includes('icp0.io') || window.location.hostname.includes('ic0.app'));
     
     // Fallback classification keywords for basic filtering
     this.nsfwKeywords = [
@@ -22,7 +31,53 @@ class NSFWDetectionService {
   }
 
   /**
-   * Load NSFW detection model using bundled models
+   * Dynamically load NSFWJS library using ESM imports
+   */
+  async loadNSFWJS() {
+    if (nsfwjs) return nsfwjs;
+
+    try {
+      if (this.isProduction) {
+        // Use ESM CDN in production for better performance
+        console.log('🌐 Loading NSFWJS from ESM CDN for production...');
+        
+        // Try multiple ESM CDN providers for redundancy
+        const esmUrls = [
+          NSFWJS_JSDELIVR_ESM_URL,  // jsDelivr ESM (fastest)
+          NSFWJS_ESM_URL,           // Skypack (optimized ESM)
+          NSFWJS_UNPKG_ESM_URL      // unpkg ESM (fallback)
+        ];
+        
+        for (const url of esmUrls) {
+          try {
+            console.log(`🔄 Trying ESM URL: ${url}`);
+            nsfwjs = await import(url);
+            console.log(`✅ NSFWJS loaded successfully from ${url}`);
+            break;
+          } catch (urlError) {
+            console.warn(`❌ Failed to load from ${url}:`, urlError.message);
+            if (url === esmUrls[esmUrls.length - 1]) {
+              throw urlError; // Last URL failed
+            }
+          }
+        }
+        
+      } else {
+        // Use bundled version in development
+        console.log('📦 Loading bundled NSFWJS for development...');
+        nsfwjs = await import('nsfwjs');
+        console.log('✅ NSFWJS loaded from bundle');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to load NSFWJS:', error.message);
+      nsfwjs = null;
+    }
+
+    return nsfwjs;
+  }
+
+  /**
+   * Load NSFW detection model
    */
   async loadModel() {
     if (this.model) {
@@ -43,32 +98,41 @@ class NSFWDetectionService {
     try {
       console.log('🔍 Loading NSFW detection model...');
       
-      // Use the bundled model approach as recommended in the GitHub repo
-      // This uses the models bundled with the nsfwjs package
-      try {
-        // Try loading with default bundled model (MobileNetV2)
-        this.model = await nsfwjs.load();
-        console.log('✅ NSFW model loaded successfully (bundled MobileNetV2)');
-      } catch (defaultError) {
-        console.warn('Default model failed, trying MobileNetV2Mid:', defaultError.message);
-        
-        // Fallback to MobileNetV2Mid
+      // First load the NSFWJS library via ESM
+      const nsfwjsLib = await this.loadNSFWJS();
+      
+      if (!nsfwjsLib) {
+        throw new Error('NSFWJS library not available');
+      }
+
+      // Use the default export or named exports depending on the module format
+      const nsfwjsAPI = nsfwjsLib.default || nsfwjsLib;
+
+      // Try loading models in order of preference (smallest first for ESM)
+      const loadStrategies = [
+        // Start with smallest/fastest models
+        () => nsfwjsAPI.load(), // Default (usually MobileNetV2)
+        () => nsfwjsAPI.load('MobileNetV2Mid'), // Mid-size model
+        () => nsfwjsAPI.load('InceptionV3') // Largest model (fallback)
+      ];
+
+      for (let i = 0; i < loadStrategies.length; i++) {
         try {
-          this.model = await nsfwjs.load('MobileNetV2Mid');
-          console.log('✅ NSFW model loaded successfully (MobileNetV2Mid)');
-        } catch (midError) {
-          console.warn('MobileNetV2Mid failed, trying InceptionV3:', midError.message);
-          
-          // Final fallback to InceptionV3
-          try {
-            this.model = await nsfwjs.load('InceptionV3');
-            console.log('✅ NSFW model loaded successfully (InceptionV3)');
-          } catch (inceptionError) {
-            console.error('All bundled models failed, using fallback classification');
-            this.model = 'fallback';
-            this.loadError = 'All NSFWJS models failed to load';
+          this.model = await loadStrategies[i]();
+          const modelType = ['Default MobileNetV2', 'MobileNetV2Mid', 'InceptionV3'][i];
+          const source = this.isProduction ? 'ESM CDN' : 'Bundled';
+          console.log(`✅ NSFW model loaded successfully (${modelType} from ${source})`);
+          break;
+        } catch (strategyError) {
+          console.warn(`Strategy ${i + 1} failed:`, strategyError.message);
+          if (i === loadStrategies.length - 1) {
+            throw strategyError;
           }
         }
+      }
+
+      if (!this.model) {
+        throw new Error('All model loading strategies failed');
       }
       
     } catch (error) {
@@ -145,7 +209,7 @@ class NSFWDetectionService {
           sexy: 0.8
         },
         fallback: false,
-        model: 'nsfwjs'
+        model: this.isProduction ? 'nsfwjs-esm-cdn' : 'nsfwjs-bundled'
       };
 
     } catch (error) {
@@ -244,7 +308,7 @@ class NSFWDetectionService {
       isLoading: this.isLoading,
       error: this.loadError,
       usingFallback: this.model === 'fallback',
-      modelType: this.model === 'fallback' ? 'fallback' : 'nsfwjs'
+      modelType: this.model === 'fallback' ? 'fallback' : this.isProduction ? 'nsfwjs-esm-cdn' : 'nsfwjs-bundled'
     };
   }
 
