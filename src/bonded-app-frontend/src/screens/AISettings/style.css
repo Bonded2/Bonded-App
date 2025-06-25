@@ -679,4 +679,150 @@
   .scan-status-section {
     padding: 12px;
   }
+}
+
+/* Telegram Integration Styles */
+.telegram-status {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.telegram-status .status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.telegram-status .status-label {
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.telegram-status .status-value {
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 600;
+}
+
+.telegram-status .status-value.enabled {
+  color: #4CAF50;
+}
+
+.telegram-status .status-value.disabled {
+  color: #FF5252;
+}
+
+.telegram-setup,
+.telegram-connected {
+  margin: 16px 0;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.telegram-setup {
+  background: rgba(255, 193, 7, 0.1);
+  border-color: rgba(255, 193, 7, 0.3);
+}
+
+.telegram-connected {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.telegram-setup p,
+.telegram-connected p {
+  font-family: "Rethink Sans", sans-serif;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.setup-telegram-button,
+.manage-telegram-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  background: #B9FF46;
+  color: #1a1a1a;
+  margin-top: 12px;
+}
+
+.setup-telegram-button:hover,
+.manage-telegram-button:hover {
+  background: #a3e63b;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(185, 255, 70, 0.3);
+}
+
+/* Telegram Modal Styles */
+.telegram-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.telegram-modal {
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Mobile responsiveness for telegram modal */
+@media (max-width: 768px) {
+  .telegram-modal-overlay {
+    padding: 8px;
+  }
+  
+  .telegram-modal {
+    max-height: 95vh;
+    border-radius: 8px;
+  }
+  
+  .telegram-setup,
+  .telegram-connected {
+    padding: 12px;
+  }
+  
+  .setup-telegram-button,
+  .manage-telegram-button {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 1rem;
+  }
 } 

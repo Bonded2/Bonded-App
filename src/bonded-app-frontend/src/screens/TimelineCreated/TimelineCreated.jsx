@@ -168,7 +168,7 @@ export const TimelineCreated = () => {
               // Fallback to local data if available
         try {
           // Replace localStorage with canister storage
-          const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
+          const canisterLocalStorage = (await import('../../services/realCanisterStorage.js')).default;
           const localData = await canisterLocalStorage.getItem(TIMELINE_DATA_KEY);
         if (localData) {
           const parsedData = JSON.parse(localData);
@@ -182,21 +182,53 @@ export const TimelineCreated = () => {
       setLoading(false);
     }
   }, [canisterIntegration, encryptionService]);
-  // Function to load AI timeline data from localStorage
+  // Function to load AI timeline data from timeline service and storage
     const loadAITimelineData = useCallback(async () => {
     try {
-      // Replace localStorage with canister storage for AI data
-      const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
-      const savedAIData = await canisterLocalStorage.getItem(AI_TIMELINE_DATA_KEY);
-      if (savedAIData) {
-        const parsedAIData = JSON.parse(savedAIData);
-        if (Array.isArray(parsedAIData)) {
-          setAiTimelineData(parsedAIData);
+      let allAIData = [];
+      
+      // 1. Load from timeline service (where AI scanner stores data)
+      try {
+        const { timelineService } = await import('../../services/timelineService.js');
+        const clusteredTimeline = await timelineService.getClusteredTimeline();
+        
+        // Extract all entries from clustered timeline
+        if (clusteredTimeline && typeof clusteredTimeline === 'object') {
+          Object.values(clusteredTimeline).forEach(cluster => {
+            if (cluster && cluster.entries && Array.isArray(cluster.entries)) {
+              allAIData.push(...cluster.entries);
+            }
+          });
         }
-      } else {
-        setAiTimelineData([]);
+      } catch (timelineError) {
+        console.log('Timeline service load failed:', timelineError.message);
       }
+      
+      // 2. Also load from canister storage as fallback
+      try {
+        const canisterLocalStorage = (await import('../../services/realCanisterStorage.js')).default;
+        const savedAIData = await canisterLocalStorage.getItem(AI_TIMELINE_DATA_KEY);
+        if (savedAIData) {
+          const parsedAIData = JSON.parse(savedAIData);
+          if (Array.isArray(parsedAIData)) {
+            // Merge with timeline service data, avoiding duplicates
+            parsedAIData.forEach(item => {
+              if (!allAIData.find(existing => existing.id === item.id)) {
+                allAIData.push(item);
+              }
+            });
+          }
+        }
+      } catch (storageError) {
+        console.log('Canister storage load failed:', storageError.message);
+      }
+      
+      // Sort by timestamp, newest first
+      allAIData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      
+      setAiTimelineData(allAIData);
     } catch (error) {
+      console.error('Failed to load AI timeline data:', error);
       setAiTimelineData([]);
     }
   }, []);
@@ -220,13 +252,15 @@ export const TimelineCreated = () => {
       });
     });
     // Add Bonded services timeline entries (real-time)
-    bondedTimeline.forEach(item => {
-      combined.push({
-        ...item,
-        type: 'bonded_evidence',
-        sortTimestamp: item.timestamp || Date.now()
+    if (Array.isArray(bondedTimeline)) {
+      bondedTimeline.forEach(item => {
+        combined.push({
+          ...item,
+          type: 'bonded_evidence',
+          sortTimestamp: item.timestamp || Date.now()
+        });
       });
-    });
+    }
     // Sort by timestamp, newest first
     combined.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
     setCombinedTimelineData(combined);
@@ -246,10 +280,14 @@ export const TimelineCreated = () => {
   useEffect(() => {
     const aiScannerObserver = (event, data) => {
       if (event === 'timelineUpdated') {
+        // Force refresh of all timeline data sources
         loadAITimelineData();
-        // Also refresh encrypted timeline to get latest data
         if (isInitialized) {
           loadEncryptedTimeline();
+        }
+        // Also refresh bonded services timeline
+        if (refreshTimeline) {
+          refreshTimeline();
         }
       }
     };
@@ -257,60 +295,112 @@ export const TimelineCreated = () => {
     return () => {
       autoAIScanner.removeObserver(aiScannerObserver);
     };
-  }, [loadAITimelineData, loadEncryptedTimeline, isInitialized]);
-  // Enhanced evidence processing for media selection
+  }, [loadAITimelineData, loadEncryptedTimeline, isInitialized, refreshTimeline]);
+  // Enhanced evidence processing for media selection with AI filtering
   const handleMediaSelected = async (selectedFiles, groupedByDate) => {
     try {
       setProcessingEvidence(true);
-      // Check if services are ready
-      if (!isInitialized) {
-        // Store media locally for processing when services are ready
-        for (const [date, files] of Object.entries(groupedByDate)) {
-          updateContentForDate(date, files);
+      setIsMediaScannerOpen(false);
+      
+      // Import AI filtering service and timeline service
+      const { aiEvidenceFilter } = await import('../../services/index.js');
+      const { timelineService } = await import('../../services/timelineService.js');
+      
+      let processedCount = 0;
+      let approvedCount = 0;
+      let rejectedCount = 0;
+      
+      // Process each file through AI filtering pipeline
+      for (const fileData of selectedFiles) {
+        try {
+          processedCount++;
+          
+          // Create proper image element for AI processing
+          const imageElement = await createImageFromFile(fileData.file);
+          
+          // Run through AI filtering (NSFW + OCR + Text classification)
+          const filterResult = await aiEvidenceFilter.filterImage(imageElement, fileData.metadata);
+          
+          if (filterResult.approved) {
+            approvedCount++;
+            
+            // Create timeline entry for approved content
+            const timelineEntry = {
+              id: `timeline_scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              type: filterResult.details.ocrExtraction?.text ? 'photo_with_text' : 'photo',
+              content: {
+                file: fileData.file,
+                filename: fileData.file.name,
+                fileType: fileData.file.type,
+                fileSize: fileData.file.size,
+                extractedText: filterResult.details.ocrExtraction?.text || null
+              },
+              metadata: {
+                ...fileData.metadata,
+                source: 'timeline_scan',
+                aiProcessed: true,
+                aiResult: filterResult,
+                nsfwFiltered: true,
+                processingTime: filterResult.processing_time || 0
+              },
+              timestamp: new Date(fileData.timestamp || fileData.file.lastModified).toISOString(),
+              uploadStatus: 'pending'
+            };
+            
+            // Add to timeline service
+            await timelineService.addTimelineEntry(timelineEntry);
+            
+          } else {
+            rejectedCount++;
+            console.log(`File rejected: ${fileData.file.name} - ${filterResult.reasoning}`);
+          }
+          
+        } catch (error) {
+          rejectedCount++;
+          console.error(`Error processing file ${fileData.file.name}:`, error);
         }
-        setImportedMediaInfo({
-          mediaCount: selectedFiles.length,
-          dateRange: formatDateRangeForDisplay(groupedByDate)
-        });
-        setShowImportSuccess(true);
-        setTimeout(() => setShowImportSuccess(false), 5000);
-        return;
       }
-      // Process each date group as evidence
-      for (const [date, files] of Object.entries(groupedByDate)) {
-        const evidencePackage = {
-          date: new Date(date),
-          photos: files.filter(f => f.file.type.startsWith('image/')),
-          videos: files.filter(f => f.file.type.startsWith('video/')),
-          documents: files.filter(f => f.file.type.startsWith('application/')),
-          location: getLocationFromFiles(files),
-          category: 'relationship',
-          type: 'media_collection'
-        };
-        // Process with encryption and upload to canister
-        const result = await processEvidenceWithEncryption(evidencePackage);
-        if (!result.success) {
-          // Still store locally as fallback
-          updateContentForDate(date, files);
-        }
-      }
-      // Show success message
-      const totalFiles = selectedFiles.length;
+      
+      // Show results
       setImportedMediaInfo({
-        mediaCount: totalFiles,
+        mediaCount: approvedCount,
+        processedCount,
+        rejectedCount,
         dateRange: formatDateRangeForDisplay(groupedByDate)
       });
       setShowImportSuccess(true);
-      // Refresh timeline to show new entries
+      
+      // Refresh all timeline sources to show new entries
       await loadEncryptedTimeline();
+      await loadAITimelineData();
+      if (refreshTimeline) {
+        await refreshTimeline();
+      }
+      
       // Auto-hide success message
       setTimeout(() => setShowImportSuccess(false), 5000);
+      
     } catch (error) {
       setError(`Failed to process media: ${error.message}`);
     } finally {
       setProcessingEvidence(false);
-      setIsMediaScannerOpen(false);
     }
+  };
+
+  // Helper function to create image element from file
+  const createImageFromFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src);
+        reject(new Error('Failed to load image'));
+      };
+      img.src = URL.createObjectURL(file);
+    });
   };
   // Enhanced evidence processing with AI and encryption
   const handleProcessEvidenceClick = async () => {

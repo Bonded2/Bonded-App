@@ -269,65 +269,78 @@ class TextClassificationService {
   }
 
   /**
-   * Classify text using keyword matching (fallback and enhancement)
+   * Classify text using keyword-based approach (fallback method)
    */
   async classifyWithKeywords(text) {
-    const lowerText = text.toLowerCase();
-    const words = lowerText.split(/\s+/);
+    const cleanText = text.toLowerCase();
+    const words = cleanText.split(/\s+/);
     
-    let explicitKeywordsFound = [];
-    let explicitScore = 0;
+    let explicitMatches = 0;
+    let matchedKeywords = [];
     
     // Check for explicit keywords
     for (const keyword of this.explicitKeywords) {
-      if (lowerText.includes(keyword)) {
-        explicitKeywordsFound.push(keyword);
-        explicitScore += 0.2; // Each keyword adds to the score
+      if (cleanText.includes(keyword.toLowerCase())) {
+        explicitMatches++;
+        matchedKeywords.push(keyword);
       }
     }
     
-    // Check for patterns (repeated characters, excessive caps)
-    const hasExcessiveCaps = (text.match(/[A-Z]/g) || []).length / text.length > 0.5;
-    const hasRepeatedChars = /(.)\1{3,}/.test(text);
+    // Check for patterns that suggest explicit content
+    const explicitPatterns = [
+      /\b(want|need)\s+(you|to)\s+(fuck|sex|cum)\b/i,
+      /\b(make|making)\s+love\b/i,
+      /\b(turn|turned)\s+(me|you)\s+on\b/i,
+      /\b(horny|aroused|wet)\b/i,
+      /\b(nude|naked)\s+(pic|photo|image|selfie)s?\b/i
+    ];
     
-    if (hasExcessiveCaps || hasRepeatedChars) {
-      explicitScore += 0.1;
+    for (const pattern of explicitPatterns) {
+      if (pattern.test(text)) {
+        explicitMatches += 2; // Patterns count more than individual keywords
+        matchedKeywords.push(`pattern: ${pattern.source}`);
+      }
     }
     
-    // Determine if content is explicit
-    const isExplicit = explicitScore >= 0.2; // At least one keyword or suspicious pattern
-    const confidence = Math.min(explicitScore, 1.0);
+    // Calculate confidence based on matches and text length
+    const totalWords = words.length;
+    const explicitRatio = explicitMatches / Math.max(totalWords, 1);
     
-    let reasoning;
-    if (isExplicit) {
-      reasoning = `Keywords: ${explicitKeywordsFound.join(', ')}`;
-    } else {
-      reasoning = 'No explicit keywords detected';
-    }
+    // Determine if text is explicit
+    const isExplicit = explicitMatches > 0 && (explicitRatio > 0.1 || explicitMatches >= 2);
+    const confidence = Math.min(explicitRatio * 2 + (explicitMatches * 0.3), 1);
     
     return {
       isExplicit,
       confidence: Math.round(confidence * 100) / 100,
-      reasoning,
-      method: 'Keywords',
+      reasoning: isExplicit 
+        ? `Contains explicit keywords: ${matchedKeywords.slice(0, 3).join(', ')}` 
+        : 'No explicit content detected',
       details: {
-        keywordsFound: explicitKeywordsFound,
-        totalKeywords: this.explicitKeywords.length,
-        explicitScore
-      }
+        method: 'keyword-matching',
+        explicitMatches,
+        matchedKeywords: matchedKeywords.slice(0, 5), // Limit for privacy
+        totalWords,
+        explicitRatio: Math.round(explicitRatio * 100) / 100
+      },
+      fallback: true
     };
   }
 
   /**
-   * Get safe result for non-problematic text
+   * Get safe result for non-explicit content
    */
   getSafeResult(reason, processingTime) {
     return {
       isExplicit: false,
       confidence: 0.9,
       reasoning: reason,
-      method: 'fast-safe',
-      processing_time: processingTime
+      details: {
+        method: 'validation',
+        safe: true
+      },
+      processing_time: processingTime,
+      timestamp: Date.now()
     };
   }
 
@@ -335,12 +348,17 @@ class TextClassificationService {
    * Get fallback result when classification fails
    */
   getFallbackResult(reason) {
+    // Conservative approach: when in doubt, don't block
     return {
-      isExplicit: false, // Conservative: allow when unsure
+      isExplicit: false,
       confidence: 0.3,
-      reasoning: `Fallback classification (${reason})`,
-      method: 'fallback',
-      fallback: true
+      reasoning: `Classification failed: ${reason}`,
+      details: {
+        method: 'fallback',
+        error: reason
+      },
+      fallback: true,
+      timestamp: Date.now()
     };
   }
 

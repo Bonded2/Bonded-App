@@ -527,6 +527,233 @@ class TimelineService {
     } catch (error) {
     }
   }
+  /**
+   * Add a new evidence entry to the timeline
+   * @param {Object} evidenceEntry - Evidence entry to add
+   */
+  async addTimelineEntry(evidenceEntry) {
+    try {
+      // Ensure proper timestamp and date formatting
+      const entryDate = new Date(evidenceEntry.timestamp).toISOString().split('T')[0]; // YYYY-MM-DD
+      evidenceEntry.date = entryDate;
+      evidenceEntry.uploadStatus = evidenceEntry.uploadStatus || 'pending';
+      
+      // Store in cache first
+      this.cachedTimeline.unshift(evidenceEntry);
+
+      // Store in IndexedDB cache if available
+      if (this.db) {
+        try {
+          await this.db.put('timelineCache', evidenceEntry, evidenceEntry.id);
+        } catch (dbError) {
+          // Continue even if cache storage fails
+        }
+      }
+
+      // Note: ICP canister upload will happen at scheduled time (12am daily)
+      // Mark as pending for now
+      evidenceEntry.uploadStatus = 'pending';
+
+      return evidenceEntry;
+    } catch (error) {
+      throw new Error(`Failed to add timeline entry: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get timeline entries clustered by date
+   * @returns {Promise<Object>} Timeline entries grouped by date
+   */
+  async getClusteredTimeline() {
+    try {
+      // Fetch latest timeline - ensure we get a valid array
+      let timeline = await this.fetchTimeline();
+      
+      // Ensure timeline is an array
+      if (!Array.isArray(timeline)) {
+        timeline = [];
+      }
+      
+      // If no timeline data, return empty cluster
+      if (timeline.length === 0) {
+        return [];
+      }
+      
+      // Group entries by date
+      const clusteredEntries = {};
+      
+      for (const entry of timeline) {
+        // Ensure entry is valid
+        if (!entry || typeof entry !== 'object') {
+          continue;
+        }
+        
+        // Get the date for this entry
+        let entryDate;
+        try {
+          entryDate = entry.date || new Date(entry.timestamp).toISOString().split('T')[0];
+        } catch (dateError) {
+          // Skip entries with invalid dates
+          continue;
+        }
+        
+        if (!clusteredEntries[entryDate]) {
+          clusteredEntries[entryDate] = {
+            date: entryDate,
+            entries: [],
+            totalItems: 0,
+            photoCount: 0,
+            messageCount: 0,
+            textCount: 0
+          };
+        }
+        
+        clusteredEntries[entryDate].entries.push(entry);
+        clusteredEntries[entryDate].totalItems++;
+        
+        // Count different types of content safely
+        const entryType = entry.type || 'unknown';
+        const entryContent = entry.content || {};
+        
+        if (entryType === 'photo' || entryContent.file || entryContent.photo) {
+          clusteredEntries[entryDate].photoCount++;
+        }
+        if (entryType === 'message' || entryContent.messages || 
+            (Array.isArray(entryContent.messages) && entryContent.messages.length > 0)) {
+          clusteredEntries[entryDate].messageCount++;
+        }
+        if (entryType === 'text' || entryContent.text) {
+          clusteredEntries[entryDate].textCount++;
+        }
+      }
+      
+      // Convert to array and sort by date (newest first)
+      const clusteredArray = Object.values(clusteredEntries).sort((a, b) => {
+        return new Date(b.date) - new Date(a.date);
+      });
+      
+      return clusteredArray;
+    } catch (error) {
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
+    }
+  }
+
+  /**
+   * Load timeline entries from local storage (for offline access)
+   */
+  async loadFromLocalStorage() {
+    if (!this.db) return [];
+    
+    try {
+      const tx = this.db.transaction('timelineCache', 'readonly');
+      const store = tx.objectStore('timelineCache');
+      const allEntries = await store.getAll();
+      
+      // Sort by timestamp (newest first)
+      return allEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Get pending upload entries (not yet synced to ICP canister)
+   */
+  async getPendingUploads() {
+    try {
+      const timeline = await this.loadFromLocalStorage();
+      return timeline.filter(entry => entry.uploadStatus === 'pending');
+    } catch (error) {
+      return [];
+    }
+  }
+
+  /**
+   * Mark entries as uploaded
+   */
+  async markAsUploaded(entryIds) {
+    try {
+      for (const entryId of entryIds) {
+        // Update in cache
+        const cacheIndex = this.cachedTimeline.findIndex(entry => entry.id === entryId);
+        if (cacheIndex !== -1) {
+          this.cachedTimeline[cacheIndex].uploadStatus = 'uploaded';
+          this.cachedTimeline[cacheIndex].uploadedAt = new Date().toISOString();
+        }
+        
+        // Update in IndexedDB
+        if (this.db) {
+          try {
+            const entry = await this.db.get('timelineCache', entryId);
+            if (entry) {
+              entry.uploadStatus = 'uploaded';
+              entry.uploadedAt = new Date().toISOString();
+              await this.db.put('timelineCache', entry, entryId);
+            }
+          } catch (dbError) {
+            // Continue even if DB update fails
+          }
+        }
+      }
+    } catch (error) {
+      throw new Error(`Failed to mark entries as uploaded: ${error.message}`);
+    }
+  }
+
+  /**
+   * Bulk upload pending entries to ICP canister
+   */
+  async uploadPendingEntries() {
+    try {
+      const pendingEntries = await this.getPendingUploads();
+      if (pendingEntries.length === 0) {
+        return { success: true, uploaded: 0, failed: 0 };
+      }
+
+      const uploadResults = {
+        success: 0,
+        failed: 0,
+        errors: []
+      };
+
+      const relationshipId = 'mock-relationship-id'; // Would come from user session
+
+      for (const entry of pendingEntries) {
+        try {
+          await icpCanisterService.uploadEvidence({
+            relationshipId,
+            evidenceData: entry,
+            encrypt: true
+          });
+          
+          // Mark as uploaded
+          await this.markAsUploaded([entry.id]);
+          uploadResults.success++;
+          
+        } catch (uploadError) {
+          uploadResults.failed++;
+          uploadResults.errors.push({
+            entryId: entry.id,
+            error: uploadError.message
+          });
+          
+          // Mark as failed
+          entry.uploadStatus = 'failed';
+          entry.uploadError = uploadError.message;
+        }
+      }
+
+      return {
+        success: uploadResults.success > 0,
+        uploaded: uploadResults.success,
+        failed: uploadResults.failed,
+        errors: uploadResults.errors
+      };
+    } catch (error) {
+      throw new Error(`Failed to upload pending entries: ${error.message}`);
+    }
+  }
 }
 // Export class and singleton instance
 export { TimelineService };

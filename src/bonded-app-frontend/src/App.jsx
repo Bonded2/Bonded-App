@@ -1,29 +1,75 @@
-import React, { useEffect } from "react";
-import { RouterProvider, createBrowserRouter, redirect, Navigate } from "react-router-dom";
+import React, { useEffect, Suspense, lazy } from "react";
+import { RouterProvider, createBrowserRouter, Navigate } from "react-router-dom";
+
+// CRITICAL PATH: Only load absolutely essential components immediately
 import { Splash } from "./screens/Splash/Splash";
-import { Login } from "./screens/Login/Login";
-import { Register } from "./screens/Register";
-import { GettingStarted } from "./screens/GettingStarted";
-import { Verify } from "./screens/Verify";
-import { MoreInfo } from "./screens/MoreInfo";
-import { TimelineCreated } from "./screens/TimelineCreated";
-import { Capture } from "./routes/SettingsContentRow/screens/Capture";
-import { Account } from "./screens/Account/Account";
-import { Privacy } from "./screens/Privacy/Privacy";
-import { FAQ } from "./screens/FAQ/FAQ";
-import { ExportTimeline } from "./screens/ExportTimeline";
-import { TimestampFolder } from "./screens/TimestampFolder";
-import { ImagePreview } from "./screens/ImagePreview";
-import { ExportAllData } from "./screens/ExportAllData";
-import { MediaImport } from "./screens/MediaImport";
-import { ProfileSetup } from "./screens/ProfileSetup/ProfileSetup";
-import { AISettings } from "./screens/AISettings/AISettings";
-import { PartnerInvite } from "./screens/PartnerInvite/PartnerInvite";
-import { AcceptInvite } from "./screens/AcceptInvite/AcceptInvite";
-import { PWAInstallPrompt } from "./components/PWAInstallPrompt/PWAInstallPrompt";
-import { OfflineStatusBar } from "./components/OfflineStatusBar/OfflineStatusBar";
-import { resetToFirstTimeUser } from "./utils/firstTimeUserReset";
-import GeoMetadataProvider from "./features/geolocation/GeoMetadataProvider";
+
+// LAZY LOAD: ALL other components to minimize initial bundle
+const Login = lazy(() => import("./screens/Login/Login").then(m => ({ default: m.Login })));
+const Register = lazy(() => import("./screens/Register").then(m => ({ default: m.Register })));
+const GettingStarted = lazy(() => import("./screens/GettingStarted").then(m => ({ default: m.GettingStarted })));
+const Verify = lazy(() => import("./screens/Verify").then(m => ({ default: m.Verify })));
+const MoreInfo = lazy(() => import("./screens/MoreInfo").then(m => ({ default: m.MoreInfo })));
+const TimelineCreated = lazy(() => import("./screens/TimelineCreated").then(m => ({ default: m.TimelineCreated })));
+const Account = lazy(() => import("./screens/Account/Account").then(m => ({ default: m.Account })));
+const Privacy = lazy(() => import("./screens/Privacy/Privacy").then(m => ({ default: m.Privacy })));
+const FAQ = lazy(() => import("./screens/FAQ/FAQ").then(m => ({ default: m.FAQ })));
+const ExportTimeline = lazy(() => import("./screens/ExportTimeline").then(m => ({ default: m.ExportTimeline })));
+const TimestampFolder = lazy(() => import("./screens/TimestampFolder").then(m => ({ default: m.TimestampFolder })));
+const ImagePreview = lazy(() => import("./screens/ImagePreview").then(m => ({ default: m.ImagePreview })));
+const ExportAllData = lazy(() => import("./screens/ExportAllData").then(m => ({ default: m.ExportAllData })));
+const MediaImport = lazy(() => import("./screens/MediaImport").then(m => ({ default: m.MediaImport })));
+const ProfileSetup = lazy(() => import("./screens/ProfileSetup/ProfileSetup").then(m => ({ default: m.ProfileSetup })));
+const AISettings = lazy(() => import("./screens/AISettings/AISettings").then(m => ({ default: m.AISettings })));
+const PartnerInvite = lazy(() => import("./screens/PartnerInvite/PartnerInvite").then(m => ({ default: m.PartnerInvite })));
+const AcceptInvite = lazy(() => import("./screens/AcceptInvite/AcceptInvite").then(m => ({ default: m.AcceptInvite })));
+const Capture = lazy(() => import("./routes/SettingsContentRow/screens/Capture").then(m => ({ default: m.Capture })));
+
+// LAZY LOAD: PWA components (not critical for initial load)
+const PWAInstallPrompt = lazy(() => import("./components/PWAInstallPrompt/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
+const OfflineStatusBar = lazy(() => import("./components/OfflineStatusBar/OfflineStatusBar").then(m => ({ default: m.OfflineStatusBar })));
+const GeoMetadataProvider = lazy(() => import("./features/geolocation/GeoMetadataProvider").then(m => ({ default: m.default })));
+
+// Ultra-fast loading screen for instant feedback
+const FastLoadingScreen = () => (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+    fontSize: '18px',
+    fontWeight: '300',
+    zIndex: 9999
+  }}>
+    <div style={{
+      textAlign: 'center'
+    }}>
+      <div style={{
+        width: '32px',
+        height: '32px',
+        border: '3px solid rgba(255,255,255,0.3)',
+        borderTop: '3px solid white',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+        margin: '0 auto 16px'
+      }}></div>
+      Loading...
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  </div>
+);
+
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -33,35 +79,45 @@ export class ErrorBoundary extends React.Component {
     return { hasError: true };
   }
   componentDidCatch(error, errorInfo) {
+    // Silent error logging for production
   }
   render() {
     if (this.state.hasError) {
-      return <h1>Something went wrong. Please try refreshing the page.</h1>;
+      return (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          padding: '20px',
+          textAlign: 'center',
+          flexDirection: 'column'
+        }}>
+          <h1>Something went wrong</h1>
+          <p>Please refresh the page to continue.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              padding: '10px 20px',
+              background: '#667eea',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer'
+            }}
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
     }
     return this.props.children;
   }
 }
-// OPTIMIZED Loader function - non-blocking and concurrent
-const enforceFirstTimeUserLoader = async () => {
-  try {
-    // OPTIMIZATION: Start initialization but don't block navigation
-    const icpCanisterService = (await import('./services/icpCanisterService.js')).default;
-    
-    // Non-blocking initialization with timeout
-    Promise.race([
-      icpCanisterService.initialize(),
-      new Promise(resolve => setTimeout(resolve, 2000)) // 2 second max wait
-    ]).catch(() => {
-      // Ignore errors - components will handle auth individually
-    });
-    
-    // Don't block navigation - return immediately
-    return null;
-  } catch (error) {
-    // ICP authentication check failed - allow navigation to continue
-    return null;
-  }
-};
+
+// OPTIMIZED: No blocking operations
+const quickLoader = async () => null;
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -70,61 +126,101 @@ const router = createBrowserRouter([
   },
   {
     path: "/login",
-    element: <Login />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <Login />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/register",
-    element: <Register />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <Register />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
   },
   {
     path: "/partner-invite",
-    element: <PartnerInvite />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <PartnerInvite />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/accept-invite",
-    element: <AcceptInvite />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <AcceptInvite />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
   },
   {
     path: "/profile-setup",
-    element: <ProfileSetup />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <ProfileSetup />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/getting-started",
-    element: <GettingStarted />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <GettingStarted />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/verify",
-    element: <Verify />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <Verify />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/more-info",
-    element: <MoreInfo />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <MoreInfo />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/timeline",
-    element: <TimelineCreated />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <TimelineCreated />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/timeline-created",
-    element: <TimelineCreated />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <TimelineCreated />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/settings",
@@ -133,164 +229,181 @@ const router = createBrowserRouter([
   },
   {
     path: "/account",
-    element: <Account />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <Account />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/privacy",
-    element: <Privacy />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <Privacy />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/faq",
-    element: <FAQ />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <FAQ />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/export-timeline",
-    element: <ExportTimeline onClose={() => {}} />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <ExportTimeline onClose={() => {}} />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/timestamp-folder/:date",
-    element: <TimestampFolder />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <TimestampFolder />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/image-preview/:itemId",
-    element: <ImagePreview />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <ImagePreview />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/export-all-data",
-    element: <ExportAllData />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <ExportAllData />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/media-import",
-    element: <MediaImport />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <MediaImport />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/ai-settings",
-    element: <AISettings />,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <AISettings />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
-  // Advanced AI Tools routes (placeholders for future implementation)
+  // Advanced AI Tools routes (lazy loaded)
   {
     path: "/advanced-tools",
-    element: <div>Advanced AI Tools</div>,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <div>Advanced AI Tools</div>
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
     path: "/story-maker",
-    element: <div>StoryMaker Tool</div>,
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <div>StoryMaker Tool</div>
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
   {
-    path: "/application-maker",
-    element: <div>ApplicationMaker Tool</div>,
+    path: "/capture",
+    element: (
+      <Suspense fallback={<FastLoadingScreen />}>
+        <Capture />
+      </Suspense>
+    ),
     errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
+    loader: quickLoader,
   },
-  {
-    path: "/status-assessor",
-    element: <div>Status Assessor Tool</div>,
-    errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
-  },
-  {
-    path: "/impermanent-access",
-    element: <div>Impermanent Access Tool</div>,
-    errorElement: <ErrorBoundary />,
-    loader: enforceFirstTimeUserLoader,
-  }
 ]);
-// Component for offline detection
+
 const OfflineIndicator = () => {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+  
   React.useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
+    
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-  if (!isOffline) return null;
-  return (
-    <div className="offline-indicator">
-      You are currently offline. Some features may be unavailable.
-    </div>
-  );
+  
+  return isOffline ? (
+    <Suspense fallback={null}>
+      <OfflineStatusBar />
+    </Suspense>
+  ) : null;
 };
+
 export const App = () => {
-  // Initialize ICP service on app load instead of using sessionStorage
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Initialize ICP canister service instead of relying on sessionStorage
-        const icpCanisterService = (await import('./services/icpCanisterService.js')).default;
-        await icpCanisterService.initialize();
-        
-        // Let the app flow naturally - no forced redirects based on session storage
-      } catch (error) {
-        // Failed to initialize ICP service on app load
-        // Continue - individual components will handle authentication
+    // ULTRA-OPTIMIZED: Minimal background initialization
+    const initializeApp = () => {
+      // Background service worker registration (non-blocking)
+      if ('serviceWorker' in navigator) {
+        setTimeout(() => {
+          navigator.serviceWorker.register('/service-worker.js').catch(() => {
+            // Silent failure for service worker registration
+          });
+        }, 2000); // Delay even more to not interfere with initial load
       }
     };
+
+    // Minimal initialization
     initializeApp();
-    // Listen for service worker messages
-    const handleServiceWorkerMessage = async (event) => {
-      if (event.data && event.data.type === 'TRIGGER_DAILY_PROCESSING') {
-        try {
-          // Import and trigger evidence processing
-          const { evidenceProcessor } = await import('./services/index.js');
-          const result = await evidenceProcessor.processDailyEvidence();
-          if (result.success) {
-          } else {
-          }
-        } catch (error) {
-        }
-      }
-    };
-    // Register service worker message listener
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
-      return () => {
-        navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
-      };
-    }
-  }, []);
-  // Add improved contrast class to body
-  useEffect(() => {
-    document.body.classList.add('improved-contrast');
-    return () => {
-      document.body.classList.remove('improved-contrast');
-    };
   }, []);
 
   return (
     <ErrorBoundary>
-      <GeoMetadataProvider>
-        <OfflineStatusBar />
-        <OfflineIndicator />
-        <RouterProvider router={router} />
-        <PWAInstallPrompt />
-      </GeoMetadataProvider>
+      <Suspense fallback={<FastLoadingScreen />}>
+        <GeoMetadataProvider>
+          <div className="app">
+            <RouterProvider router={router} />
+            <Suspense fallback={null}>
+              <PWAInstallPrompt />
+            </Suspense>
+            <OfflineIndicator />
+          </div>
+        </GeoMetadataProvider>
+      </Suspense>
     </ErrorBoundary>
   );
 };

@@ -12,6 +12,7 @@ export const MediaImport = () => {
   const [showGeolocationData, setShowGeolocationData] = useState(false);
   const [recentFiles, setRecentFiles] = useState([]);
   const [importSuccess, setImportSuccess] = useState(false);
+  const [processingStatus, setProcessingStatus] = useState('');
   const { metadata, refreshMetadata } = useGeoMetadata();
   // Refresh geolocation when component mounts
   useEffect(() => {
@@ -33,8 +34,108 @@ export const MediaImport = () => {
       }
     });
   };
-  // Handle files added to timeline
-  const handleFilesAdded = (filesWithMetadata) => {
+  // Handle files added to timeline with AI filtering
+  const handleFilesAdded = async (filesWithMetadata) => {
+    try {
+      setIsModalOpen(false);
+      
+      // Import AI filtering service and timeline service
+      const { aiEvidenceFilter } = await import('../../services/index.js');
+      const { timelineService } = await import('../../services/timelineService.js');
+      
+      let processedCount = 0;
+      let approvedCount = 0;
+      let rejectedCount = 0;
+      
+      // Process each file through AI filtering pipeline
+      for (const fileData of filesWithMetadata) {
+        try {
+          processedCount++;
+          
+          // Create proper image element for AI processing
+          const imageElement = await createImageFromFile(fileData.file);
+          
+          // Run through AI filtering (NSFW + OCR + Text classification)
+          const filterResult = await aiEvidenceFilter.filterImage(imageElement, fileData.metadata);
+          
+          if (filterResult.approved) {
+            approvedCount++;
+            
+            // Create timeline entry for approved content
+            const timelineEntry = {
+              id: `imported_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              type: filterResult.details.ocrExtraction?.text ? 'photo_with_text' : 'photo',
+              content: {
+                file: fileData.file,
+                filename: fileData.file.name,
+                fileType: fileData.file.type,
+                fileSize: fileData.file.size,
+                extractedText: filterResult.details.ocrExtraction?.text || null
+              },
+              metadata: {
+                ...fileData.metadata,
+                source: 'media_import',
+                aiProcessed: true,
+                aiResult: filterResult,
+                nsfwFiltered: true,
+                processingTime: filterResult.processing_time || 0
+              },
+              timestamp: new Date(fileData.timestamp || fileData.file.lastModified).toISOString(),
+              uploadStatus: 'pending'
+            };
+            
+            // Add to timeline service
+            await timelineService.addTimelineEntry(timelineEntry);
+            
+          } else {
+            rejectedCount++;
+            console.log(`File rejected: ${fileData.file.name} - ${filterResult.reasoning}`);
+          }
+          
+        } catch (error) {
+          rejectedCount++;
+          console.error(`Error processing file ${fileData.file.name}:`, error);
+        }
+      }
+      
+      // Show results
+      const message = `Processed ${processedCount} files: ${approvedCount} approved, ${rejectedCount} filtered out`;
+      setProcessingStatus(message);
+      
+      // Auto-clear status after 5 seconds
+      setTimeout(() => {
+        setProcessingStatus('');
+      }, 5000);
+      
+      if (approvedCount > 0) {
+        setRecentFiles(prev => [...prev, ...filesWithMetadata.slice(0, approvedCount)]);
+        setImportSuccess(true);
+      }
+      
+    } catch (error) {
+      console.error('Error in handleFilesAdded:', error);
+      setProcessingStatus(`Error processing files: ${error.message}`);
+    }
+  };
+
+  // Helper function to create image element from file
+  const createImageFromFile = (file) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src);
+        reject(new Error('Failed to load image'));
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Legacy function for backward compatibility
+  const handleFilesAddedLegacy = (filesWithMetadata) => {
     // Group files by date for timeline organization
     const groupedByDate = {};
     filesWithMetadata.forEach(fileData => {
@@ -411,10 +512,30 @@ export const MediaImport = () => {
           </div>
         </div>
       </div>
+      
+      {/* Processing Status */}
+      {processingStatus && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          background: '#4ade80',
+          color: 'white',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+          zIndex: 10000,
+          maxWidth: '400px',
+          fontSize: '14px'
+        }}>
+          {processingStatus}
+        </div>
+      )}
+      
       {isModalOpen && (
         <MediaScannerModal
           onClose={() => setIsModalOpen(false)}
-          onFilesAdded={handleFilesAdded}
+          onMediaSelected={handleFilesAdded}
         />
       )}
     </div>

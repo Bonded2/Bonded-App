@@ -1,10 +1,11 @@
 /**
- * Scheduler Service
+ * Scheduler Service - ENHANCED
  * 
  * Handles the daily evidence processing schedule and background sync
  * Implements the midnight upload schedule as per MVP requirements
+ * Integrates with timeline service for pending uploads
  */
-import { evidenceProcessor } from './index.js';
+import { timelineService } from './timelineService.js';
 class SchedulerService {
   constructor() {
     this.isScheduled = false;
@@ -70,19 +71,34 @@ class SchedulerService {
    */
   async performScheduledUpload() {
     try {
-      const result = await evidenceProcessor.processDailyEvidence();
+      // Upload pending timeline entries to ICP canister
+      const result = await timelineService.uploadPendingEntries();
+      
       if (result.success) {
-        // Show notification if permission granted
+        // Show success notification
         await this.showSuccessNotification(result);
+        
+        // Store last successful upload time
+        localStorage.setItem('bonded-last-upload', Date.now().toString());
       } else {
         // Queue for retry
         await this.scheduleRetry(result);
         // Show error notification
         await this.showErrorNotification(result);
       }
+      
+      return result;
     } catch (error) {
+      const errorResult = { 
+        success: false, 
+        error: error.message, 
+        uploaded: 0, 
+        failed: 0 
+      };
+      
       // Schedule retry
-      await this.scheduleRetry({ error: error.message });
+      await this.scheduleRetry(errorResult);
+      return errorResult;
     }
   }
   /**
@@ -95,15 +111,17 @@ class SchedulerService {
       const retryDelay = this.settings.retryInterval * (retryCount + 1); // Exponential backoff
       setTimeout(async () => {
         try {
-          const retryResult = await evidenceProcessor.processDailyEvidence();
+          const retryResult = await timelineService.uploadPendingEntries();
           retryResult.retryCount = retryCount + 1;
           if (!retryResult.success && retryResult.retryCount < this.settings.maxRetries) {
             await this.scheduleRetry(retryResult);
+          } else if (retryResult.success) {
+            await this.showSuccessNotification(retryResult);
           }
         } catch (error) {
+          // Continue retrying up to max retries
         }
       }, retryDelay);
-    } else {
     }
   }
   /**
@@ -135,36 +153,162 @@ class SchedulerService {
    * @param {Object} result - Upload result
    */
   async showSuccessNotification(result) {
+    const uploadedCount = result.uploaded || 0;
+    const failedCount = result.failed || 0;
+    
+    let message = `Daily upload complete! `;
+    if (uploadedCount > 0) {
+      message += `${uploadedCount} evidence item${uploadedCount === 1 ? '' : 's'} uploaded to secure storage`;
+    }
+    if (failedCount > 0) {
+      message += ` (${failedCount} failed)`;
+    }
+    if (uploadedCount === 0 && failedCount === 0) {
+      message += `No new evidence to upload`;
+    }
+
+    // Try native notification first
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        const photoCount = result.evidence.photo ? 1 : 0;
-        const messageCount = result.evidence.messages.length;
-        new Notification('Bonded - Evidence Uploaded', {
-          body: `Successfully uploaded ${photoCount} photo and ${messageCount} messages`,
+        const notification = new Notification('Bonded - Evidence Upload', {
+          body: message,
           icon: '/images/icon-192x192.png',
           badge: '/images/icon-192x192.png',
-          tag: 'evidence-upload-success'
+          tag: 'evidence-upload-success',
+          requireInteraction: false,
+          silent: false,
+          data: {
+            uploadedCount,
+            failedCount,
+            timestamp: Date.now()
+          }
         });
+        
+        // Auto-close after 8 seconds
+        setTimeout(() => {
+          notification.close();
+        }, 8000);
+        
+        // Handle notification click
+        notification.onclick = () => {
+          window.focus();
+          // Navigate to timeline if app is open
+          if (window.location.pathname !== '/timeline') {
+            window.location.href = '/timeline';
+          }
+          notification.close();
+        };
+        
+        return;
       } catch (error) {
+        // Fall through to toast notification
       }
     }
+    
+    // Fallback to toast notification
+    this.showToastNotification(message, 'success');
   }
   /**
    * Show error notification
    * @param {Object} result - Failed upload result
    */
   async showErrorNotification(result) {
+    const retryCount = result.retryCount || 0;
+    const retryText = retryCount < this.settings.maxRetries 
+      ? 'Will retry automatically.' 
+      : 'Please check your connection and try again later.';
+      
+    const message = `Upload failed. ${retryText}`;
+    
+    // Try native notification first  
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification('Bonded - Upload Failed', {
-          body: 'Evidence upload failed. Will retry automatically.',
+        const notification = new Notification('Bonded - Upload Failed', {
+          body: message,
           icon: '/images/icon-192x192.png',
           badge: '/images/icon-192x192.png',
-          tag: 'evidence-upload-error'
+          tag: 'evidence-upload-error',
+          requireInteraction: true,
+          data: {
+            error: result.error,
+            retryCount,
+            timestamp: Date.now()
+          }
         });
+        
+        // Handle notification click
+        notification.onclick = () => {
+          window.focus();
+          // Show error details or retry option
+          if (window.location.pathname !== '/timeline') {
+            window.location.href = '/timeline';
+          }
+          notification.close();
+        };
+        
+        return;
       } catch (error) {
+        // Fall through to toast notification
       }
     }
+    
+    // Fallback to toast notification
+    this.showToastNotification(message, 'error');
+  }
+
+  /**
+   * Show toast notification (fallback for when browser notifications are not available)
+   */
+  showToastNotification(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `bonded-toast bonded-toast-${type}`;
+    toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#ef4444' : '#3b82f6'};
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      z-index: 10000;
+      max-width: 400px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+      animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Add animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      toast.style.animation = 'slideOut 0.3s ease-in';
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.parentNode.removeChild(toast);
+        }
+        if (style.parentNode) {
+          style.parentNode.removeChild(style);
+        }
+      }, 300);
+    }, 5000);
   }
   /**
    * Update scheduler settings
@@ -208,19 +352,53 @@ class SchedulerService {
    * @returns {boolean} True if upload should happen now
    */
   isUploadDue() {
-    const lastUpload = evidenceProcessor.lastProcessTime;
+    const lastUpload = localStorage.getItem('bonded-last-upload');
     if (!lastUpload) return true;
     const now = Date.now();
-    const timeSinceLastUpload = now - lastUpload;
+    const timeSinceLastUpload = now - parseInt(lastUpload);
     const dayInMs = 24 * 60 * 60 * 1000;
     return timeSinceLastUpload >= dayInMs;
   }
+  
+  /**
+   * Get pending upload count
+   * @returns {Promise<number>} Number of pending uploads
+   */
+  async getPendingUploadCount() {
+    try {
+      const pendingEntries = await timelineService.getPendingUploads();
+      return pendingEntries.length;
+    } catch (error) {
+      return 0;
+    }
+  }
+  
   /**
    * Manually trigger evidence processing
    * @returns {Promise<Object>} Processing result
    */
   async triggerManualUpload() {
-    return await evidenceProcessor.processDailyEvidence();
+    try {
+      const result = await timelineService.uploadPendingEntries();
+      
+      if (result.success) {
+        await this.showSuccessNotification(result);
+        localStorage.setItem('bonded-last-upload', Date.now().toString());
+      } else {
+        await this.showErrorNotification(result);
+      }
+      
+      return result;
+    } catch (error) {
+      const errorResult = { 
+        success: false, 
+        error: error.message, 
+        uploaded: 0, 
+        failed: 0 
+      };
+      await this.showErrorNotification(errorResult);
+      return errorResult;
+    }
   }
   /**
    * Save settings to storage

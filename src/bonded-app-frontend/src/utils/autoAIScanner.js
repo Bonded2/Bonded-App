@@ -1,4 +1,6 @@
 import { aiClassificationService } from './aiClassification.js';
+import { timelineService } from '../services/timelineService.js';
+import { mediaAccessService } from '../services/mediaAccess.js';
 /**
  * Automatic AI Scanner Service
  * Scans user's device gallery automatically and updates timelines intelligently
@@ -37,28 +39,20 @@ export class AutoAIScanner {
   }
 
   /**
-   * Async method to load settings from canister storage
+   * Load settings asynchronously from canister storage
    */
   async asyncLoadSettings(defaultSettings) {
     try {
-      const { canisterLocalStorage } = await import('../services/realCanisterStorage.js');
-      const saved = await canisterLocalStorage.getItem('autoAIScannerSettings');
-      if (saved) {
-        this.settings = { ...defaultSettings, ...JSON.parse(saved) };
+      const { default: realCanisterStorage } = await import('../services/realCanisterStorage.js');
+      const savedSettings = await realCanisterStorage.getItem('bonded_ai_scanner_settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        this.settings = { ...defaultSettings, ...parsedSettings };
         this.notifyObservers('settingsLoaded', this.settings);
       }
     } catch (error) {
-// Console statement removed for production
-      // Fallback to localStorage
-      try {
-        const saved = localStorage.getItem('autoAIScannerSettings');
-        if (saved) {
-          this.settings = { ...defaultSettings, ...JSON.parse(saved) };
-          this.notifyObservers('settingsLoaded', this.settings);
-        }
-      } catch (fallbackError) {
-// Console statement removed for production
-      }
+      // Keep defaults if canister storage fails
+      this.settings = defaultSettings;
     }
   }
   /**
@@ -67,17 +61,12 @@ export class AutoAIScanner {
   async saveSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
     try {
-      const { canisterLocalStorage } = await import('../services/realCanisterStorage.js');
-      await canisterLocalStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
+      const { default: realCanisterStorage } = await import('../services/realCanisterStorage.js');
+      await realCanisterStorage.setItem('bonded_ai_scanner_settings', JSON.stringify(this.settings));
       this.notifyObservers('settingsUpdated', this.settings);
     } catch (error) {
-// Console statement removed for production
-      try {
-        localStorage.setItem('autoAIScannerSettings', JSON.stringify(this.settings));
-        this.notifyObservers('settingsUpdated', this.settings);
-      } catch (fallbackError) {
-// Console statement removed for production
-      }
+      // Fallback to localStorage if canister storage fails
+      localStorage.setItem('bonded_ai_scanner_settings', JSON.stringify(this.settings));
     }
   }
   /**
@@ -85,6 +74,7 @@ export class AutoAIScanner {
    */
   async startAutoScan() {
     if (!this.settings.autoScanEnabled) {
+      this.notifyObservers('scanError', new Error('Auto scan is disabled'));
       return;
     }
     if (this.isScanning) {
@@ -95,6 +85,10 @@ export class AutoAIScanner {
       if (!aiClassificationService.isInitialized) {
         await aiClassificationService.initialize();
       }
+
+      // Initialize media access service for gallery access
+      await mediaAccessService.initialize();
+
       await this.performScan();
       // Schedule next scan if background scanning is enabled
       if (this.settings.backgroundScanning) {
@@ -158,42 +152,61 @@ export class AutoAIScanner {
     }
   }
   /**
-   * Get files from device gallery
+   * Get actual files from device gallery using File System Access API
    */
   async getGalleryFiles() {
-    // In production, this would use File System Access API or similar
-    // For MVP, we'll simulate gallery files
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const mockFiles = [];
-        const fileCount = Math.floor(Math.random() * 20) + 5; // 5-25 files
-        for (let i = 0; i < fileCount; i++) {
-          mockFiles.push({
-            id: `gallery_${i}`,
-            name: `IMG_${String(i).padStart(4, '0')}.jpg`,
-            type: 'image/jpeg',
-            size: Math.floor(Math.random() * 5000000) + 100000, // 100KB - 5MB
-            lastModified: Date.now() - Math.floor(Math.random() * 86400000 * 30), // Last 30 days
-            path: `/gallery/IMG_${String(i).padStart(4, '0')}.jpg`,
-            // Mock file data for classification
-            mockData: this.generateMockImageData()
-          });
-        }
-        resolve(mockFiles);
-      }, 500);
-    });
+    try {
+      // Try to use media access service for real gallery access
+      const recentPhotos = await mediaAccessService.getRecentPhotos({ 
+        limit: 50, 
+        daysBack: 30 
+      });
+      
+      if (recentPhotos && recentPhotos.length > 0) {
+        return recentPhotos;
+      }
+
+      // Fallback: Prompt user to select files manually
+      return await this.promptUserForFiles();
+    } catch (error) {
+      // If gallery access fails, prompt user for manual selection
+      return await this.promptUserForFiles();
+    }
   }
   /**
-   * Generate mock image data for classification
+   * Prompt user to manually select files for scanning
    */
-  generateMockImageData() {
-    const scenarios = [
-      { hasHuman: true, hasNudity: false, appropriate: true },
-      { hasHuman: false, hasNudity: false, appropriate: false }, // No humans
-      { hasHuman: true, hasNudity: true, appropriate: false }, // Nudity
-      { hasHuman: true, hasNudity: false, appropriate: true }, // Good content
-    ];
-    return scenarios[Math.floor(Math.random() * scenarios.length)];
+  async promptUserForFiles() {
+    return new Promise((resolve, reject) => {
+      try {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.multiple = true;
+        input.accept = 'image/*';
+        
+        input.onchange = (event) => {
+          const files = Array.from(event.target.files || []);
+          resolve(files.map(file => ({
+            id: `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            file: file,
+            type: file.type,
+            size: file.size,
+            lastModified: file.lastModified,
+            source: 'user_selected'
+          })));
+        };
+
+        input.oncancel = () => {
+          resolve([]); // User cancelled, return empty array
+        };
+
+        // Trigger file picker
+        input.click();
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
   /**
    * Create batches for processing
@@ -212,59 +225,100 @@ export class AutoAIScanner {
     const batchPromises = batch.map(file => this.processFile(file));
     const results = await Promise.allSettled(batchPromises);
     results.forEach((result, index) => {
-      const file = batch[index];
+      this.processedFiles++;
       if (result.status === 'fulfilled') {
-        const classification = result.value;
-        if (classification.exclusion.exclude) {
-          this.rejectedFiles.push({
-            file,
-            reason: classification.exclusion.reason,
-            classification
+        const fileResult = result.value;
+        if (fileResult.exclusion.exclude) {
+          this.rejectedFiles.push({ 
+            file: batch[index], 
+            result: fileResult,
+            reason: fileResult.exclusion.reason 
           });
         } else {
-          this.approvedFiles.push({
-            file,
-            classification
+          this.approvedFiles.push({ 
+            file: batch[index], 
+            result: fileResult 
           });
         }
       } else {
-        this.rejectedFiles.push({
-          file,
-          reason: 'Classification failed',
-          error: result.reason
+        this.rejectedFiles.push({ 
+          file: batch[index], 
+          error: result.reason.message,
+          reason: 'Processing failed' 
         });
       }
-      this.processedFiles++;
     });
   }
   /**
-   * Process individual file
+   * Process a single file through AI filtering pipeline
    */
-  async processFile(file) {
+  async processFile(fileData) {
     try {
-      // Mock classification based on file's mock data
-      const mockResult = {
-        success: true,
-        data: {
-          has_human: file.mockData.hasHuman,
-          human_confidence: Math.random() * 0.3 + 0.7,
-          has_nudity: file.mockData.hasNudity,
-          nudity_confidence: file.mockData.hasNudity ? Math.random() * 0.3 + 0.7 : Math.random() * 0.3,
-          content_appropriate: file.mockData.appropriate,
-          processing_time: Math.random() * 1000 + 500
-        }
+      // Create image element for AI processing
+      const imageElement = await this.createImageElement(fileData.file);
+      
+      // Import AI filtering service
+      const { aiEvidenceFilter } = await import('../ai/evidenceFilter.js');
+      
+      // Run AI filtering on the image
+      const filterResult = await aiEvidenceFilter.filterImage(imageElement, {
+        filename: fileData.name,
+        timestamp: fileData.lastModified,
+        source: fileData.source
+      });
+      
+      const result = {
+        id: fileData.id,
+        name: fileData.name,
+        approved: filterResult.approved,
+        reasoning: filterResult.reasoning,
+        details: filterResult.details,
+        file: fileData.file,
+        timestamp: fileData.lastModified,
+        processingTime: filterResult.processingTime
       };
-      // Determine exclusion
-      const exclusion = aiClassificationService.shouldExcludeContent(mockResult, 'image');
-      return {
-        ...mockResult,
-        exclusion,
-        file_id: file.id,
-        timestamp: new Date().toISOString()
-      };
+      
+      if (result.approved) {
+        this.approvedFiles.push(result);
+        // Immediately add to timeline for approved files
+        await this.addToTimeline(result);
+      } else {
+        this.rejectedFiles.push(result);
+      }
+      
+      this.processedFiles++;
+      return result;
     } catch (error) {
-      throw new Error(`Failed to process ${file.name}: ${error.message}`);
+      this.processedFiles++;
+      const errorResult = {
+        id: fileData.id,
+        name: fileData.name,
+        approved: false,
+        reasoning: `Processing error: ${error.message}`,
+        file: fileData.file,
+        timestamp: fileData.lastModified,
+        error: error.message
+      };
+      this.rejectedFiles.push(errorResult);
+      return errorResult;
     }
+  }
+  /**
+   * Create an image element from a file for AI processing
+   */
+  async createImageElement(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(img.src); // Clean up blob URL
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src); // Clean up blob URL
+        reject(new Error('Failed to load image'));
+      };
+      img.src = URL.createObjectURL(file);
+    });
   }
   /**
    * Update scan progress
@@ -306,69 +360,85 @@ export class AutoAIScanner {
    */
   async updateTimelinesIntelligently() {
     if (this.approvedFiles.length === 0) return;
-    // Group approved files by date for timeline organization
-    const filesByDate = this.groupFilesByDate(this.approvedFiles);
-    // Create timeline entries for each date group
-    await Promise.all(Object.entries(filesByDate).map(([date, files]) => 
-      this.createTimelineEntry(date, files)
-    ));
-  }
-  /**
-   * Group files by date for timeline organization
-   */
-  groupFilesByDate(approvedFiles) {
-    const groups = {};
-    approvedFiles.forEach(({ file }) => {
-      const date = new Date(file.lastModified).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(file);
-    });
-    return groups;
-  }
-  /**
-   * Create timeline entry for a date group
-   */
-  async createTimelineEntry(date, files) {
-    // This would integrate with the existing timeline system
-    const timelineEntry = {
-      id: `ai_scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      date: date,
-      type: 'ai_approved_media',
-      files: files,
-      aiProcessed: true,
-      createdAt: new Date().toISOString(),
-      metadata: {
-        source: 'auto_ai_scanner',
-        fileCount: files.length,
-        scanTimestamp: new Date().toISOString()
-      }
-    };
-    // Save to timeline storage (would integrate with existing timeline system)
-    await this.saveTimelineEntry(timelineEntry);
-  }
-  /**
-   * Save timeline entry using canister storage
-   */
-  async saveTimelineEntry(entry) {
     try {
-      const { canisterLocalStorage } = await import('../services/realCanisterStorage.js');
-      const existingTimelineStr = await canisterLocalStorage.getItem('aiProcessedTimeline') || '[]';
-      const existingTimeline = JSON.parse(existingTimelineStr);
-      existingTimeline.push(entry);
-      await canisterLocalStorage.setItem('aiProcessedTimeline', JSON.stringify(existingTimeline));
-      this.notifyObservers('timelineUpdated', entry);
-    } catch (error) {
-// Console statement removed for production
-      try {
-        const existingTimeline = JSON.parse(localStorage.getItem('aiProcessedTimeline') || '[]');
-        existingTimeline.push(entry);
-        localStorage.setItem('aiProcessedTimeline', JSON.stringify(existingTimeline));
-        this.notifyObservers('timelineUpdated', entry);
-      } catch (fallbackError) {
-// Console statement removed for production
+      // Add approved files to the main timeline service
+      for (const approvedFile of this.approvedFiles) {
+        await this.addToTimeline(approvedFile);
       }
+    } catch (error) {
+      // Log error but don't fail the entire scan
+    }
+  }
+  /**
+   * Add approved file to timeline as an evidence entry
+   */
+  async addToTimeline(approvedFile) {
+    try {
+      // Create a proper evidence entry for the timeline
+      const evidenceEntry = {
+        id: `evidence_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0], // YYYY-MM-DD format
+        type: 'photo',
+        uploadStatus: 'pending',
+        
+        // File content
+        content: {
+          file: approvedFile.file,
+          filename: approvedFile.name,
+          type: approvedFile.file.type,
+          size: approvedFile.file.size
+        },
+        
+        // AI processing metadata
+        metadata: {
+          originalDate: new Date(approvedFile.timestamp).toISOString().split('T')[0],
+          originalFilename: approvedFile.name,
+          fileSize: approvedFile.file.size,
+          fileType: approvedFile.file.type,
+          
+          // AI filtering results
+          aiProcessed: true,
+          aiApproved: true,
+          aiReasoning: approvedFile.reasoning,
+          processingTime: approvedFile.processingTime,
+          
+          // NSFW filtering details
+          nsfwFiltered: approvedFile.details.nsfwDetection ? true : false,
+          nsfwResult: approvedFile.details.nsfwDetection,
+          
+          // OCR extraction if any
+          extractedText: approvedFile.details.ocrExtraction?.text || null,
+          ocrConfidence: approvedFile.details.ocrExtraction?.confidence || null,
+          
+          // Text classification if OCR found text
+          textClassification: approvedFile.details.textClassification || null,
+          
+          // Device info
+          deviceInfo: {
+            userAgent: navigator.userAgent,
+            timestamp: Date.now()
+          }
+        }
+      };
+      
+      // Add to timeline service
+      const addedEntry = await timelineService.addTimelineEntry(evidenceEntry);
+      
+      // Notify observers about successful addition
+      this.notifyObservers('evidenceAdded', {
+        entry: addedEntry,
+        aiResult: approvedFile
+      });
+      
+      return addedEntry;
+    } catch (error) {
+      // Notify observers about failure
+      this.notifyObservers('evidenceAddFailed', {
+        file: approvedFile,
+        error: error.message
+      });
+      throw error;
     }
   }
   /**
@@ -382,7 +452,6 @@ export class AutoAIScanner {
         body: message,
         icon: '/images/icon-192x192.png'
       });
-    } else {
     }
   }
   /**
@@ -405,6 +474,7 @@ export class AutoAIScanner {
       try {
         callback(event, data);
       } catch (error) {
+        // Ignore observer errors
       }
     });
   }

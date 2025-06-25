@@ -12,13 +12,13 @@ export { mediaAccessService } from './mediaAccess.js';
 export { default as icpCanisterService } from './icpCanisterService.js';
 export { webrtcService } from './webrtcService.js';
 
-// Re-export AI services for convenience
+// Re-export AI services for convenience (only NSFW filtering for MVP)
 export { 
-  FaceDetectionService,
-  faceDetectionService,
-  nsfwDetectionService, 
-  textClassificationService,
-  ocrService,
+  // FaceDetectionService,    // DISABLED: Not needed for MVP NSFW filtering
+  // faceDetectionService,    // DISABLED: Not needed for MVP NSFW filtering
+  nsfwDetectionService,       // KEEP: For nudity detection
+  textClassificationService, // KEEP: For sexual content filtering
+  ocrService,                 // RE-ENABLED: Extract text from images for filtering
   aiEvidenceFilter 
 } from '../ai/index.js';
 

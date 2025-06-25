@@ -1,426 +1,424 @@
 /**
  * Media Access Service
- * 
- * Handles access to device photo library and Telegram messages
- * Implements privacy-first data collection for evidence processing
+ * Handles device gallery access and media file management
  */
-import { openDB } from 'idb';
-class MediaAccessService {
+export class MediaAccessService {
   constructor() {
-    this.db = null;
-    this.photoLibraryAccess = false;
-    this.telegramConfig = {
-      botToken: null,
-      chatId: null,
-      enabled: false
-    };
-    this.initDB();
+    this.supportedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
+    this.supportedVideoTypes = ['video/mp4', 'video/mov', 'video/avi', 'video/webm'];
+    this.fileCache = new Map();
+    this.permissionsGranted = false;
   }
+
   /**
-   * Initialize IndexedDB for media caching
+   * Check if File System Access API is supported
    */
-  async initDB() {
+  isFileSystemAccessSupported() {
+    return 'showOpenFilePicker' in window;
+  }
+
+  /**
+   * Check if the device has gallery access capabilities
+   */
+  async checkGalleryAccess() {
     try {
-      this.db = await openDB('BondedMediaAccessDB', 1, {
-        upgrade(db) {
-          // Photo metadata cache
-          if (!db.objectStoreNames.contains('photoMetadata')) {
-            const store = db.createObjectStore('photoMetadata');
-            store.createIndex('date', 'date');
-            store.createIndex('timestamp', 'timestamp');
-          }
-          // Telegram messages cache
-          if (!db.objectStoreNames.contains('telegramMessages')) {
-            const store = db.createObjectStore('telegramMessages', { autoIncrement: true });
-            store.createIndex('date', 'date');
-            store.createIndex('timestamp', 'timestamp');
-          }
-          // Settings
-          if (!db.objectStoreNames.contains('mediaSettings')) {
-            db.createObjectStore('mediaSettings');
-          }
-        }
-      });
-      await this.loadSettings();
+      // Check for File System Access API
+      if (this.isFileSystemAccessSupported()) {
+        return { supported: true, method: 'file_system_access' };
+      }
+      
+      // Fallback to file input
+      return { supported: true, method: 'file_input' };
     } catch (error) {
+      return { supported: false, error: error.message };
     }
   }
+
   /**
-   * Request access to photo library
-   * @returns {Promise<boolean>} True if access granted
+   * Request permission to access device gallery
    */
-  async requestPhotoLibraryAccess() {
+  async requestGalleryPermission() {
     try {
-      // For PWA, we use File System Access API or file input
-      if ('showDirectoryPicker' in window) {
-        // Use File System Access API for modern browsers
-        const dirHandle = await window.showDirectoryPicker({
-          mode: 'read',
-          startIn: 'pictures'
-        });
-        // Store directory handle for future use
-        await this.storeDirectoryHandle(dirHandle);
-        this.photoLibraryAccess = true;
-        return true;
-      } else {
-        // Fallback: prompt user to select photos manually
-        this.photoLibraryAccess = 'manual';
-        return true;
+      if (this.isFileSystemAccessSupported()) {
+        // File System Access API doesn't require separate permission request
+        // Permission is granted when user selects files
+        this.permissionsGranted = true;
+        return { granted: true, method: 'file_system_access' };
       }
+      
+      // For file input method, permission is implicit
+      this.permissionsGranted = true;
+      return { granted: true, method: 'file_input' };
     } catch (error) {
-      return false;
+      return { granted: false, error: error.message };
     }
   }
+
   /**
-   * Scan for photos taken on a specific date
-   * @param {Date} targetDate - Date to scan for
-   * @returns {Promise<Array>} Array of photo objects
+   * Get gallery files using File System Access API
    */
-  async scanPhotosForDate(targetDate) {
+  async getGalleryFilesViaFSA(options = {}) {
     try {
-      const dateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD
-      // Check cache first
-      const cachedPhotos = await this.getCachedPhotos(dateStr);
-      if (cachedPhotos.length > 0) {
-        return cachedPhotos;
-      }
-      // Scan for new photos
-      const photos = await this.scanPhotoLibrary(targetDate);
-      // Cache the results
-      await this.cachePhotos(dateStr, photos);
-      return photos;
-    } catch (error) {
-      return [];
-    }
-  }
-  /**
-   * Scan the photo library for photos
-   * @param {Date} targetDate - Date to filter by
-   * @returns {Promise<Array>} Array of photo objects
-   */
-  async scanPhotoLibrary(targetDate) {
-    if (!this.photoLibraryAccess) {
-      throw new Error('Photo library access not granted');
-    }
-    try {
-      if (this.photoLibraryAccess === 'manual') {
-        // Manual selection fallback
-        return await this.requestManualPhotoSelection(targetDate);
-      }
-      // Use stored directory handle
-      const dirHandle = await this.getDirectoryHandle();
-      if (!dirHandle) {
-        throw new Error('No directory handle available');
-      }
-      const photos = [];
-      const targetDateStr = targetDate.toISOString().split('T')[0];
-      // Iterate through files in directory
-      for await (const [name, fileHandle] of dirHandle.entries()) {
-        if (fileHandle.kind === 'file') {
-          const file = await fileHandle.getFile();
-          // Check if it's an image
-          if (file.type.startsWith('image/')) {
-            const photoMetadata = await this.extractPhotoMetadata(file);
-            // Check if photo was taken on target date
-            if (photoMetadata.date === targetDateStr) {
-              photos.push({
-                file,
-                metadata: photoMetadata,
-                source: 'library'
-              });
+      const pickerOptions = {
+        types: [
+          {
+            description: 'Images and Videos',
+            accept: {
+              'image/*': ['.png', '.jpg', '.jpeg', '.webp', '.heic'],
+              'video/*': ['.mp4', '.mov', '.avi', '.webm']
             }
           }
+        ],
+        multiple: true,
+        ...options
+      };
+
+      const fileHandles = await window.showOpenFilePicker(pickerOptions);
+      const files = [];
+
+      for (const fileHandle of fileHandles) {
+        try {
+          const file = await fileHandle.getFile();
+          
+          // Add metadata
+          const fileWithMetadata = {
+            file,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            lastModified: file.lastModified,
+            lastModifiedDate: new Date(file.lastModified),
+            webkitRelativePath: '',
+            handle: fileHandle,
+            source: 'file_system_access'
+          };
+
+          files.push(fileWithMetadata);
+        } catch (fileError) {
+          // Skip files that can't be read
+          continue;
         }
       }
-      return photos;
+
+      return files;
     } catch (error) {
-      // Fallback to manual selection
-      return await this.requestManualPhotoSelection(targetDate);
+      if (error.name === 'AbortError') {
+        throw new Error('User cancelled file selection');
+      }
+      throw new Error(`Failed to access files: ${error.message}`);
     }
   }
+
   /**
-   * Request manual photo selection from user
-   * @param {Date} targetDate - Target date for context
-   * @returns {Promise<Array>} Selected photos
+   * Get gallery files using input element (fallback)
    */
-  async requestManualPhotoSelection(targetDate) {
-    return new Promise((resolve) => {
+  async getGalleryFilesViaInput(options = {}) {
+    return new Promise((resolve, reject) => {
       const input = document.createElement('input');
       input.type = 'file';
-      input.accept = 'image/*';
       input.multiple = true;
-      input.onchange = async (event) => {
-        const files = Array.from(event.target.files);
-        const photos = [];
-        for (const file of files) {
-          const metadata = await this.extractPhotoMetadata(file);
-          photos.push({
+      input.accept = 'image/*,video/*';
+      
+      input.onchange = (event) => {
+        try {
+          const files = Array.from(event.target.files).map(file => ({
             file,
-            metadata,
-            source: 'manual'
-          });
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            lastModified: file.lastModified,
+            lastModifiedDate: new Date(file.lastModified),
+            webkitRelativePath: file.webkitRelativePath || '',
+            source: 'file_input'
+          }));
+          
+          resolve(files);
+        } catch (error) {
+          reject(new Error(`Failed to process selected files: ${error.message}`));
         }
-        resolve(photos);
       };
-      input.oncancel = () => resolve([]);
-      // Trigger file picker
+      
+      input.oncancel = () => {
+        reject(new Error('User cancelled file selection'));
+      };
+      
       input.click();
     });
   }
+
   /**
-   * Extract metadata from photo file
-   * @param {File} file - Photo file
-   * @returns {Promise<Object>} Photo metadata
+   * Get recent gallery files 
    */
-  async extractPhotoMetadata(file) {
-    const metadata = {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: file.lastModified,
-      date: new Date(file.lastModified).toISOString().split('T')[0],
-      timestamp: file.lastModified,
-      location: null,
-      exif: null
+  async getRecentGalleryFiles(options = {}) {
+    const defaultOptions = {
+      maxFiles: 50,
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      types: ['image', 'video'],
+      ...options
     };
+
     try {
-      // Try to extract EXIF data for more accurate timestamp and location
-      const exifData = await this.extractEXIF(file);
-      if (exifData) {
-        metadata.exif = exifData;
-        // Use EXIF date if available
-        if (exifData.DateTime) {
-          const exifDate = new Date(exifData.DateTime);
-          metadata.timestamp = exifDate.getTime();
-          metadata.date = exifDate.toISOString().split('T')[0];
-        }
-        // Extract GPS location if available
-        if (exifData.GPSLatitude && exifData.GPSLongitude) {
-          metadata.location = {
-            latitude: exifData.GPSLatitude,
-            longitude: exifData.GPSLongitude
-          };
-        }
+      let files;
+      
+      if (this.isFileSystemAccessSupported()) {
+        files = await this.getGalleryFilesViaFSA(defaultOptions);
+      } else {
+        files = await this.getGalleryFilesViaInput(defaultOptions);
       }
-    } catch (error) {
-    }
-    return metadata;
-  }
-  /**
-   * Extract EXIF data from image file
-   * @param {File} file - Image file
-   * @returns {Promise<Object|null>} EXIF data or null
-   */
-  async extractEXIF(file) {
-    // For MVP, we'll use a simple approach
-    // In production, you might want to use a library like exif-js or piexifjs
-    try {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          // Simple EXIF extraction would go here
-          // For now, return null and rely on file metadata
-          resolve(null);
-        };
-        reader.readAsArrayBuffer(file);
+
+      // Filter by type and age
+      const now = Date.now();
+      const filtered = files.filter(fileData => {
+        const { file } = fileData;
+        
+        // Check file type
+        const isImage = this.supportedImageTypes.includes(file.type);
+        const isVideo = this.supportedVideoTypes.includes(file.type);
+        
+        if (defaultOptions.types.includes('image') && !isImage && 
+            defaultOptions.types.includes('video') && !isVideo) {
+          return false;
+        }
+        
+        if (defaultOptions.types.includes('image') && !defaultOptions.types.includes('video') && !isImage) {
+          return false;
+        }
+        
+        if (defaultOptions.types.includes('video') && !defaultOptions.types.includes('image') && !isVideo) {
+          return false;
+        }
+
+        // Check age
+        const fileAge = now - file.lastModified;
+        if (fileAge > defaultOptions.maxAge) {
+          return false;
+        }
+
+        return true;
       });
+
+      // Sort by date (newest first) and limit
+      const sorted = filtered
+        .sort((a, b) => b.file.lastModified - a.file.lastModified)
+        .slice(0, defaultOptions.maxFiles);
+
+      return sorted;
     } catch (error) {
-      return null;
+      throw new Error(`Failed to get gallery files: ${error.message}`);
     }
   }
+
   /**
-   * Configure Telegram integration
-   * @param {Object} config - Telegram configuration
+   * Extract metadata from image file (EXIF)
    */
-  async configureTelegram(config) {
-    this.telegramConfig = { ...this.telegramConfig, ...config };
-    await this.saveSettings();
-  }
-  /**
-   * Fetch Telegram messages for a specific date
-   * @param {Date} targetDate - Date to fetch messages for
-   * @returns {Promise<Array>} Array of message objects
-   */
-  async fetchTelegramMessages(targetDate) {
-    if (!this.telegramConfig.enabled || !this.telegramConfig.botToken || !this.telegramConfig.chatId) {
-      return [];
-    }
-    try {
-      // Calculate date range for the target day (UTC)
-      const startOfDay = new Date(targetDate);
-      startOfDay.setUTCHours(0, 0, 0, 0);
-      const endOfDay = new Date(targetDate);
-      endOfDay.setUTCHours(23, 59, 59, 999);
-      // Fetch updates from Telegram
-      const url = `https://api.telegram.org/bot${this.telegramConfig.botToken}/getUpdates`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Telegram API error');
-      const data = await response.json();
-      // Filter messages for the correct chat and date
-      const messages = [];
-      for (const update of data.result) {
-        if (
-          update.message &&
-          update.message.chat &&
-          update.message.chat.id == this.telegramConfig.chatId &&
-          update.message.date * 1000 >= startOfDay.getTime() &&
-          update.message.date * 1000 <= endOfDay.getTime()
-        ) {
-          messages.push({
-            id: update.message.message_id,
-            text: update.message.text,
-            timestamp: update.message.date * 1000,
-            date: targetDate.toISOString().split('T')[0],
-            from: update.message.from,
+  async extractImageMetadata(file) {
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        
+        img.onload = () => {
+          const metadata = {
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            aspectRatio: img.naturalWidth / img.naturalHeight,
+            format: file.type,
+            size: file.size,
+            lastModified: file.lastModified,
+            // EXIF data would require additional library like piexifjs
+            // For MVP, we'll use basic metadata
+            hasLocation: false, // Would be extracted from EXIF
+            orientation: 1 // Would be extracted from EXIF
+          };
+          
+          resolve(metadata);
+        };
+        
+        img.onerror = () => {
+          resolve({
+            width: 0,
+            height: 0,
+            aspectRatio: 0,
+            format: file.type,
+            size: file.size,
+            lastModified: file.lastModified,
+            hasLocation: false,
+            orientation: 1,
+            error: 'Could not load image'
           });
+        };
+        
+        img.src = URL.createObjectURL(file);
+      } catch (error) {
+        resolve({
+          width: 0,
+          height: 0,
+          aspectRatio: 0,
+          format: file.type,
+          size: file.size,
+          lastModified: file.lastModified,
+          hasLocation: false,
+          orientation: 1,
+          error: error.message
+        });
+      }
+    });
+  }
+
+  /**
+   * Create a thumbnail from image file
+   */
+  async createThumbnail(file, maxSize = 200) {
+    return new Promise((resolve, reject) => {
+      try {
+        const img = new Image();
+        
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Calculate thumbnail dimensions
+          let { width, height } = img;
+          if (width > height) {
+            if (width > maxSize) {
+              height = (height * maxSize) / width;
+              width = maxSize;
+            }
+          } else {
+            if (height > maxSize) {
+              width = (width * maxSize) / height;
+              height = maxSize;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Draw thumbnail
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Convert to blob
+          canvas.toBlob((blob) => {
+            resolve(blob);
+          }, 'image/jpeg', 0.8);
+        };
+        
+        img.onerror = () => {
+          reject(new Error('Failed to create thumbnail'));
+        };
+        
+        img.src = URL.createObjectURL(file);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Convert file to data URL for processing
+   */
+  async fileToDataURL(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        resolve(event.target.result);
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /**
+   * Convert file to array buffer
+   */
+  async fileToArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        resolve(event.target.result);
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Get file info with thumbnail and metadata
+   */
+  async getFileInfo(fileData) {
+    try {
+      const { file } = fileData;
+      const isImage = this.supportedImageTypes.includes(file.type);
+      
+      let metadata = {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+        source: fileData.source
+      };
+      
+      let thumbnail = null;
+      
+      if (isImage) {
+        // Extract image metadata
+        const imageMetadata = await this.extractImageMetadata(file);
+        metadata = { ...metadata, ...imageMetadata };
+        
+        // Create thumbnail
+        try {
+          thumbnail = await this.createThumbnail(file);
+        } catch (thumbError) {
+          // Thumbnail creation failed, continue without it
         }
       }
-      // Optionally cache messages here
-      return messages;
+      
+      return {
+        ...fileData,
+        metadata,
+        thumbnail,
+        dataURL: null // Will be loaded on demand
+      };
     } catch (error) {
-      return [];
+      return {
+        ...fileData,
+        metadata: {
+          name: fileData.file.name,
+          size: fileData.file.size,
+          type: fileData.file.type,
+          lastModified: fileData.file.lastModified,
+          source: fileData.source,
+          error: error.message
+        },
+        thumbnail: null,
+        dataURL: null
+      };
     }
   }
+
   /**
-   * Cache photos for a date
-   * @param {string} dateStr - Date string (YYYY-MM-DD)
-   * @param {Array} photos - Photos to cache
+   * Check if we have permission to access gallery
    */
-  async cachePhotos(dateStr, photos) {
-    if (!this.db) return;
-    try {
-      const tx = this.db.transaction('photoMetadata', 'readwrite');
-      await tx.store.put(photos, dateStr);
-      await tx.done;
-    } catch (error) {
-    }
+  hasGalleryPermission() {
+    return this.permissionsGranted;
   }
+
   /**
-   * Get cached photos for a date
-   * @param {string} dateStr - Date string (YYYY-MM-DD)
-   * @returns {Promise<Array>} Cached photos
+   * Clear file cache to free memory
    */
-  async getCachedPhotos(dateStr) {
-    if (!this.db) return [];
-    try {
-      const photos = await this.db.get('photoMetadata', dateStr);
-      return photos || [];
-    } catch (error) {
-      return [];
-    }
-  }
-  /**
-   * Cache messages for a date
-   * @param {string} dateStr - Date string (YYYY-MM-DD)
-   * @param {Array} messages - Messages to cache
-   */
-  async cacheMessages(dateStr, messages) {
-    if (!this.db) return;
-    try {
-      const tx = this.db.transaction('telegramMessages', 'readwrite');
-      await tx.store.put({ date: dateStr, messages, timestamp: Date.now() });
-      await tx.done;
-    } catch (error) {
-    }
-  }
-  /**
-   * Get cached messages for a date
-   * @param {string} dateStr - Date string (YYYY-MM-DD)
-   * @returns {Promise<Array>} Cached messages
-   */
-  async getCachedMessages(dateStr) {
-    if (!this.db) return [];
-    try {
-      const cached = await this.db.get('telegramMessages', dateStr);
-      return cached ? cached.messages : [];
-    } catch (error) {
-      return [];
-    }
-  }
-  /**
-   * Store directory handle for photo access
-   * @param {FileSystemDirectoryHandle} dirHandle - Directory handle
-   */
-  async storeDirectoryHandle(dirHandle) {
-    try {
-      // Store in IndexedDB (handles are serializable)
-      if (this.db) {
-        const tx = this.db.transaction('mediaSettings', 'readwrite');
-        await tx.store.put(dirHandle, 'photoDirectoryHandle');
-        await tx.done;
-      }
-    } catch (error) {
-    }
-  }
-  /**
-   * Get stored directory handle
-   * @returns {Promise<FileSystemDirectoryHandle|null>} Directory handle
-   */
-  async getDirectoryHandle() {
-    try {
-      if (this.db) {
-        return await this.db.get('mediaSettings', 'photoDirectoryHandle');
-      }
-      return null;
-    } catch (error) {
-      return null;
-    }
-  }
-  /**
-   * Save settings to storage
-   */
-  async saveSettings() {
-    try {
-      if (this.db) {
-        const tx = this.db.transaction('mediaSettings', 'readwrite');
-        await tx.store.put(this.telegramConfig, 'telegramConfig');
-        await tx.store.put(this.photoLibraryAccess, 'photoLibraryAccess');
-        await tx.done;
-      }
-    } catch (error) {
-    }
-  }
-  /**
-   * Load settings from storage
-   */
-  async loadSettings() {
-    try {
-      if (this.db) {
-        const telegramConfig = await this.db.get('mediaSettings', 'telegramConfig');
-        const photoAccess = await this.db.get('mediaSettings', 'photoLibraryAccess');
-        if (telegramConfig) {
-          this.telegramConfig = telegramConfig;
-        }
-        if (photoAccess) {
-          this.photoLibraryAccess = photoAccess;
-        }
-      }
-    } catch (error) {
-    }
-  }
-  /**
-   * Get current configuration
-   * @returns {Object} Current configuration
-   */
-  getConfiguration() {
-    return {
-      photoLibraryAccess: this.photoLibraryAccess,
-      telegramConfig: { ...this.telegramConfig }
-    };
-  }
-  /**
-   * Clear all cached data
-   */
-  async clearCache() {
-    if (!this.db) return;
-    try {
-      const tx = this.db.transaction(['photoMetadata', 'telegramMessages'], 'readwrite');
-      await tx.objectStore('photoMetadata').clear();
-      await tx.objectStore('telegramMessages').clear();
-      await tx.done;
-    } catch (error) {
-    }
+  clearCache() {
+    this.fileCache.clear();
   }
 }
+
 // Export singleton instance
 export const mediaAccessService = new MediaAccessService(); 

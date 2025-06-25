@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { TopAppBar } from "../../components/TopAppBar";
 import { AIClassificationDemo } from "../../components/AIClassificationDemo";
+import AutomatedTelegramSetup from "../../components/AutomatedTelegramSetup/AutomatedTelegramSetup";
 import { aiClassificationService } from "../../utils/aiClassification";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import "./style.css";
 export const AISettings = () => {
   const navigate = useNavigate();
   const [showDemo, setShowDemo] = useState(false);
+  const [showTelegramSetup, setShowTelegramSetup] = useState(false);
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
   const [aiSettings, setAiSettings] = useState({
     computerVision: {
       enabled: true,
@@ -37,6 +40,11 @@ export const AISettings = () => {
         if (savedSettings) {
           setAiSettings(JSON.parse(savedSettings));
         }
+
+        // Check telegram setup status
+        const userId = 'current_user'; // Would come from auth context
+        const telegramData = await realCanisterStorage.getItem(`telegram_setup_${userId}`);
+        setTelegramEnabled(!!telegramData);
       } catch (error) {
 // Console statement removed for production
         // Fallback to localStorage if canister storage fails
@@ -120,6 +128,21 @@ export const AISettings = () => {
   const handleStopAutoScan = () => {
     autoAIScanner.stopAutoScan();
   };
+
+  const handleTelegramSetupComplete = (setupData) => {
+    setTelegramEnabled(true);
+    setShowTelegramSetup(false);
+    alert('Telegram integration enabled successfully!');
+  };
+
+  const handleTelegramSetupError = (error) => {
+    alert(`Telegram setup failed: ${error.message}`);
+  };
+
+  const handleTelegramSetupSkip = () => {
+    setShowTelegramSetup(false);
+  };
+
   const handleBack = () => {
     navigate(-1);
   };
@@ -489,6 +512,44 @@ export const AISettings = () => {
             )}
           </div>
         </div>
+
+        {/* Telegram Integration Section */}
+        <div className="settings-section">
+          <h2>Telegram Integration</h2>
+          <p>Automatically collect messages from your Telegram conversations</p>
+          
+          <div className="telegram-status">
+            <div className="status-row">
+              <span className="status-label">Status:</span>
+              <span className={`status-value ${telegramEnabled ? 'enabled' : 'disabled'}`}>
+                {telegramEnabled ? '✅ Connected' : '❌ Not Connected'}
+              </span>
+            </div>
+          </div>
+
+          {!telegramEnabled ? (
+            <div className="telegram-setup">
+              <p>Connect your Telegram account to automatically collect relationship evidence from your conversations.</p>
+              <button 
+                className="setup-telegram-button"
+                onClick={() => setShowTelegramSetup(true)}
+              >
+                Set Up Telegram Integration
+              </button>
+            </div>
+          ) : (
+            <div className="telegram-connected">
+              <p>✅ Telegram integration is active and collecting evidence!</p>
+              <button 
+                className="manage-telegram-button"
+                onClick={() => setShowTelegramSetup(true)}
+              >
+                Manage Integration
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Test AI Models */}
         <div className="settings-section">
           <h2>Test AI Models</h2>
@@ -523,6 +584,21 @@ export const AISettings = () => {
       {/* AI Classification Demo Modal */}
       {showDemo && (
         <AIClassificationDemo onClose={() => setShowDemo(false)} />
+      )}
+
+      {/* Telegram Setup Modal */}
+      {showTelegramSetup && (
+        <div className="telegram-modal-overlay">
+          <div className="telegram-modal">
+            <AutomatedTelegramSetup
+              userId="current_user"
+              partnerEmail="partner@example.com"
+              onSetupComplete={handleTelegramSetupComplete}
+              onError={handleTelegramSetupError}
+              onSkip={handleTelegramSetupSkip}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

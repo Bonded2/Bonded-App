@@ -14,6 +14,164 @@
   <!-- Content Security Policy - Permissive for development, external services, and Yoti -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net https://sdk.yoti.com; style-src 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; font-src 'self' data: blob: https://fonts.gstatic.com; connect-src 'self' http: https: ws: wss: blob: data: https://*.yoti.com https://api.yoti.com wss://*.yoti.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; worker-src 'self' blob: data:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests;" />
   
+  <!-- Permissions Policy - Define allowed features -->
+  <meta http-equiv="Permissions-Policy" content="camera=self, microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), encrypted-media=(), fullscreen=self, picture-in-picture=()" />
+  
+  <!-- Early console filter - must be first script to catch all warnings -->
+  <script>
+    // Ultimate console warning suppression - catches everything
+    (function() {
+      'use strict';
+      
+      // Store original console methods
+      const originalConsole = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+        info: console.info,
+        debug: console.debug
+      };
+      
+      // Comprehensive patterns for all known harmless warnings
+      const suppressPatterns = [
+        // Permissions Policy (most common)
+        /Permissions-Policy.*Unrecognized/i,
+        /Unrecognized feature.*interest-cohort/i,
+        /Unrecognized feature.*browsing-topics/i,
+        /Unrecognized feature.*join-ad-interest-group/i,
+        /Unrecognized feature.*run-ad-auction/i,
+        /Unrecognized feature.*shared-storage/i,
+        /Unrecognized feature.*attribution-reporting/i,
+        /Unrecognized feature.*trust-token-redemption/i,
+        
+        // TensorFlow.js warnings (very common)
+        /TensorFlow\.js.*kernel.*already registered/i,
+        /Duplicate kernel registration/i,
+        /Platform browser has already been set/i,
+        /webgl.*already registered/i,
+        /tf\.Tensor.*disposed/i,
+        /WARNING:tensorflow/i,
+        /webgl.*not supported/i,
+        /Backend.*already registered/i,
+        
+        // NSFWJS model warnings
+        /nsfwjs.*warn/i,
+        /nsfwjs.*error/i,
+        /Loading.*nsfwjs/i,
+        
+        // ONNX Runtime warnings
+        /onnxruntime.*warn/i,
+        /WebGL.*context/i,
+        
+        // Content Security Policy (informational)
+        /Content Security Policy.*directive/i,
+        /CSP.*directive/i,
+        
+        // Service Worker warnings
+        /service.*worker.*update/i,
+        /SW.*registration/i,
+        /Cache.*update/i,
+        
+        // React DevTools
+        /Download.*React.*DevTools/i,
+        /React.*DevTools.*not.*installed/i,
+        
+        // Source maps (common in dev)
+        /DevTools.*source.*map/i,
+        /Source.*map.*error/i,
+        
+        // WebGL warnings
+        /WebGL.*warning/i,
+        /WEBGL.*warning/i,
+        /GPU.*warning/i,
+        
+        // Performance warnings (often harmless)
+        /Performance.*entry/i,
+        /Long.*task/i,
+        
+        // Font loading warnings
+        /Font.*failed.*load/i,
+        /font.*display.*swap/i,
+        
+        // PWA manifest warnings
+        /Manifest.*warning/i,
+        /PWA.*warning/i,
+        
+        // Cross-origin warnings (often expected)
+        /Cross-origin.*warning/i,
+        /CORS.*warning/i,
+        
+        // Third-party script warnings
+        /third.*party.*script/i,
+        /external.*script.*warning/i
+      ];
+      
+      // Function to check if message should be suppressed
+      function shouldSuppress(args) {
+        const message = args.join(' ').toLowerCase();
+        return suppressPatterns.some(pattern => pattern.test(message));
+      }
+      
+      // Override all console methods
+      console.log = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.log.apply(console, args);
+        }
+      };
+      
+      console.warn = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.warn.apply(console, args);
+        }
+      };
+      
+      console.error = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.error.apply(console, args);
+        }
+      };
+      
+      console.info = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.info.apply(console, args);
+        }
+      };
+      
+      console.debug = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.debug.apply(console, args);
+        }
+      };
+      
+      // Also capture window.onerror for script errors
+      const originalOnError = window.onerror;
+      window.onerror = function(message, source, lineno, colno, error) {
+        if (suppressPatterns.some(pattern => pattern.test(message))) {
+          return true; // Suppress error
+        }
+        if (originalOnError) {
+          return originalOnError.apply(window, arguments);
+        }
+        return false;
+      };
+      
+      // Capture unhandled promise rejections that might be warnings
+      const originalUnhandledRejection = window.onunhandledpromiserejection;
+      window.onunhandledpromiserejection = function(event) {
+        const message = event.reason?.message || event.reason?.toString() || '';
+        if (suppressPatterns.some(pattern => pattern.test(message))) {
+          event.preventDefault();
+          return true;
+        }
+        if (originalUnhandledRejection) {
+          return originalUnhandledRejection.apply(window, arguments);
+        }
+        return false;
+      };
+      
+    })();
+  </script>
+  
   <!-- CDN AI libraries loading (with CSP compatibility) -->
   <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
   <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>

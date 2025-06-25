@@ -96,19 +96,21 @@ export class ComputerVisionClassifier {
     const hasNudity = fileName.includes('nude') || fileName.includes('explicit') || 
                      fileName.includes('nsfw') || Math.random() > 0.95;
     return {
-      humans_detected: hasHumans,
-      human_count: hasHumans ? Math.floor(Math.random() * 3) + 1 : 0,
+      // COMMENTED OUT: Human detection not needed for MVP NSFW filtering
+      // humans_detected: hasHumans,
+      // human_count: hasHumans ? Math.floor(Math.random() * 3) + 1 : 0,
       nudity_detected: hasNudity,
       explicit_content: hasNudity,
-      content_appropriate: !hasNudity && hasHumans, // Must have humans and no nudity
-      face_recognition: {
-        faces_detected: hasHumans && Math.random() > 0.3,
-        known_faces: Math.floor(Math.random() * 2),
-        confidence: Math.random() * 0.4 + 0.6
-      },
+      content_appropriate: !hasNudity, // Only check for nudity, not humans
+      // COMMENTED OUT: Face recognition not needed for MVP NSFW filtering
+      // face_recognition: {
+      //   faces_detected: hasHumans && Math.random() > 0.3,
+      //   known_faces: Math.floor(Math.random() * 2),
+      //   confidence: Math.random() * 0.4 + 0.6
+      // },
       confidence_score: Math.random() * 0.3 + 0.7,
       processing_time: Math.random() * 1000 + 500,
-      exclusion_reason: hasNudity ? 'Nudity detected' : (!hasHumans ? 'No humans detected' : null)
+      exclusion_reason: hasNudity ? 'Nudity detected' : null
     };
   }
   /**
@@ -123,10 +125,10 @@ export class ComputerVisionClassifier {
     if (data.nudity_detected) {
       return { exclude: true, reason: 'Contains nudity or explicit content' };
     }
-    // Exclude if no humans detected (per MVP requirements)
-    if (!data.humans_detected) {
-      return { exclude: true, reason: 'No humans detected in image' };
-    }
+    // COMMENTED OUT: Human detection not needed for MVP NSFW filtering
+    // if (!data.humans_detected) {
+    //   return { exclude: true, reason: 'No humans detected in image' };
+    // }
     // Include if appropriate
     return { exclude: false, reason: null };
   }

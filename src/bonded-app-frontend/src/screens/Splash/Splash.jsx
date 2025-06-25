@@ -1,26 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { resetToFirstTimeUser } from "../../utils/firstTimeUserReset";
 import "./style.css";
+
 export const Splash = () => {
   const navigate = useNavigate();
   const [animationComplete, setAnimationComplete] = useState(false);
+
   useEffect(() => {
-    // Start the exit animation after 2.5 seconds
+    // ULTRA-FAST: Reduced animation time for immediate responsiveness
     const animationTimer = setTimeout(() => {
       setAnimationComplete(true);
-    }, 2500);
-    // Set session flag to indicate we're in an active session
-    sessionStorage.setItem('sessionStarted', 'true');
-    // Navigate to register after animation completes
+    }, 1500); // Reduced from 2500ms to 1500ms
+
+    // Navigate to register faster
     const navigateTimer = setTimeout(() => {
       navigate("/register");
-    }, 3000);
+    }, 2000); // Reduced from 3000ms to 2000ms
+
     return () => {
       clearTimeout(animationTimer);
       clearTimeout(navigateTimer);
     };
   }, [navigate]);
+
   return (
     <div className={`splash-screen ${animationComplete ? 'fade-out' : ''}`}>
       <div className="splash-background-circles">

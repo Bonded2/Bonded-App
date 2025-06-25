@@ -1,1 +1,15 @@
+# Serve static assets directly
+/js/*     /js/:splat     200
+/assets/* /assets/:splat 200
+/images/* /images/:splat 200
+/models/* /models/:splat 200
+/workers/* /workers/:splat 200
+
+# Serve specific files directly
+/favicon.ico /favicon.ico 200
+/manifest.json /manifest.json 200
+/robots.txt /robots.txt 200
+/service-worker.js /service-worker.js 200
+
+# SPA fallback - only for HTML routes
 /* /index.html 200
