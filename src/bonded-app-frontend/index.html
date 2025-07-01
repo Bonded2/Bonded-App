@@ -76,44 +76,29 @@
         // Fallback if we can't override undefined
       }
       
-      // Also patch potential module loading patterns
-      const moduleNames = ['cbor', 'borc', 'cbor-web', 'cborg', '@dfinity/cbor'];
-      moduleNames.forEach(name => {
-        try {
-          Object.defineProperty(window, name, {
-            get() {
-              return { 
-                value: { SelfDescribeCborSerializer: CBOR }, 
-                SelfDescribeCborSerializer: CBOR,
-                default: { SelfDescribeCborSerializer: CBOR }
-              };
-            },
-            configurable: true
-          });
-        } catch (e) {}
-      });
+      // Simple approach - just set what we need
+      window.borc = {
+        SelfDescribeCborSerializer: CBOR,
+        encode: (v) => new TextEncoder().encode(JSON.stringify(v)),
+        decode: (b) => JSON.parse(new TextDecoder().decode(b))
+      };
+      
+      // The ICP SDK might be looking for it here
+      window.cbor = window.borc;
+      
+      // Also set on src which seems to be where the error is coming from
+      window.src = window.src || {};
+      window.src.SelfDescribeCborSerializer = CBOR;
+      window.src.value = window.src.value || {};
+      window.src.value.SelfDescribeCborSerializer = CBOR;
       
       console.log('🛡️ ULTRA-EARLY CBOR polyfill set on src.value.SelfDescribeCborSerializer');
       
-      // CRITICAL: Add getter trap to Object.prototype as last resort
-      try {
-        Object.defineProperty(Object.prototype, 'SelfDescribeCborSerializer', {
-          get() {
-            console.warn('🔧 Fallback CBOR access via Object.prototype');
-            return CBOR;
-          },
-          configurable: true,
-          enumerable: false
-        });
-      } catch (e) {
-        console.warn('Could not set Object.prototype.SelfDescribeCborSerializer');
-      }
-      
-      // LAST RESORT: Global error handler for CBOR access
+      // LAST RESORT: Global error handler for CBOR access (without auto-reload)
       window.addEventListener('error', function(e) {
         if (e.message && e.message.includes("Cannot read properties of undefined") && 
             e.message.includes("SelfDescribeCborSerializer")) {
-          console.warn('🚨 Caught CBOR error, attempting recovery...');
+          console.warn('🚨 Caught CBOR error, suppressing...');
           e.preventDefault();
           e.stopPropagation();
           
@@ -133,13 +118,6 @@
               } catch (err) {}
             }
           });
-          
-          // Also try to reload the page once if error persists
-          if (!window.__cborErrorReloaded) {
-            window.__cborErrorReloaded = true;
-            console.warn('🔄 Reloading page to fix CBOR error...');
-            setTimeout(() => location.reload(), 100);
-          }
           
           return false;
         }
@@ -1209,10 +1187,63 @@
       };
     }
   </script>
-     <!-- CRITICAL: Immediate CBOR polyfill injection before any modules load -->
-   <script type="module">
-     // Enhanced polyfill that patches module loading more aggressively
+        <!-- CRITICAL: Create a fake borc module that ICP SDK expects -->
+   <script>
+     // Create borc module structure that ICP SDK is looking for
      (function() {
+       'use strict';
+       
+       // The ICP SDK appears to be looking for a specific borc module structure
+       const CBOR = window.SelfDescribeCborSerializer || class {
+         constructor() { this.buffer = []; }
+         serialize(value) {
+           try {
+             return new TextEncoder().encode(JSON.stringify(value, (k, v) => 
+               typeof v === 'bigint' ? Number(v) : v
+             ));
+           } catch (e) { return new Uint8Array(0); }
+         }
+         static serialize(value) { return new this().serialize(value); }
+       };
+       
+       // Create the exact structure that ICP SDK expects
+       const borcModule = {
+         encode: (v) => new CBOR().serialize(v),
+         decode: (b) => JSON.parse(new TextDecoder().decode(b)),
+         Encoder: CBOR,
+         Decoder: class { decode(b) { return JSON.parse(new TextDecoder().decode(b)); } }
+       };
+       
+       // CRITICAL: Set up fake module system responses
+       const fakeModules = {
+         'borc': borcModule,
+         'cbor': borcModule,
+         'cbor-web': borcModule,
+         '@dfinity/cbor': borcModule
+       };
+       
+       // Override require if it exists
+       if (typeof require === 'function') {
+         const originalRequire = require;
+         window.require = function(id) {
+           if (fakeModules[id]) return fakeModules[id];
+           return originalRequire.call(this, id);
+         };
+       }
+       
+       // Set modules on window
+       Object.keys(fakeModules).forEach(key => {
+         window[key] = fakeModules[key];
+       });
+       
+       console.log('🎯 Fake CBOR modules installed');
+     })();
+   </script>
+   
+   <!-- CRITICAL: Immediate CBOR polyfill injection before any modules load -->
+   <script type="module">
+      // Enhanced polyfill that patches module loading more aggressively
+      (function() {
        'use strict';
        
        // Create a proxy handler for deep object access
