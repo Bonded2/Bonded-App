@@ -22,8 +22,9 @@
     "test:stats": "dfx canister call bonded-app-backend get_canister_stats",
     "dev": "npm run start:local && npm run deploy:local && cd src/bonded-app-frontend && npm run start",
     "frontend:dev": "cd src/bonded-app-frontend && npm run start",
-    "frontend:build": "cd src/bonded-app-frontend && npm run build",
-    "clean": "dfx stop && rm -rf .dfx && rm -rf src/bonded-app-frontend/dist && rm -rf target"
+    "frontend:build": "cd src/bonded-app-frontend && npm run build:laptop",
+    "clean": "dfx stop && rm -rf .dfx && rm -rf src/bonded-app-frontend/dist && rm -rf target",
+    "build:emergency": "bash scripts/emergency-build.sh"
   },
   "devDependencies": {
     "@dfinity/candid": "^2.1.3",

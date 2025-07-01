@@ -79,7 +79,7 @@ export const Privacy = () => {
         </p>
         
         <p className="privacy-paragraph">
-          <strong>Blockchain Security:</strong> We use the Internet Computer Protocol (ICP) blockchain to securely timestamp your relationship evidence. This provides immutable proof of the existence of your evidence at specific points in time without exposing the actual content.
+          <strong>Secure Timestamping:</strong> We use advanced secure networks to timestamp your relationship evidence. This provides immutable proof of when your evidence existed without exposing the actual content.
         </p>
         
         <p className="privacy-paragraph">
@@ -89,7 +89,7 @@ export const Privacy = () => {
         <div className="privacy-highlight">
           <div className="privacy-highlight-icon">🔐</div>
           <div className="privacy-highlight-content">
-            <strong>Zero Knowledge Design:</strong> Bonded is designed with "zero knowledge" principles. We cannot access the actual content of your relationship evidence, even if compelled by law enforcement or court orders.
+            <strong>Privacy-First Design:</strong> Bonded is designed with privacy-first principles. We cannot access the actual content of your relationship evidence, ensuring complete privacy.
           </div>
         </div>
         

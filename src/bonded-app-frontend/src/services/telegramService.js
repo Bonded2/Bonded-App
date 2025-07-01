@@ -20,6 +20,11 @@ class TelegramService {
     this.isInitialized = false;
     this.apiBaseUrl = 'https://api.telegram.org/bot';
     this.fileBaseUrl = 'https://api.telegram.org/file/bot';
+    this.retryAttempts = 3;
+    this.retryDelay = 1000; // 1 second
+    this.rateLimitWindow = 60000; // 1 minute
+    this.rateLimitRequests = 30; // 30 requests per minute
+    this.requestHistory = [];
   }
 
   /**
@@ -279,10 +284,12 @@ class TelegramService {
         }
       } catch (error) {
         console.error('Polling error:', error);
+        errorCount = (errorCount || 0) + 1;
       }
 
-      // Continue polling
-      setTimeout(pollUpdates, 1000);
+      // Continue polling with exponential backoff on errors
+      const delay = error ? Math.min(10000, 1000 * Math.pow(2, errorCount || 0)) : 1000;
+      setTimeout(pollUpdates, delay);
     };
 
     pollUpdates();
@@ -347,24 +354,128 @@ class TelegramService {
     });
   }
 
-  async makeAPICall(method, params = {}) {
+  /**
+   * Enhanced API call with retry logic, rate limiting, and better error handling
+   */
+  async makeAPICall(method, params = {}, attempt = 1) {
+    // Rate limiting check
+    await this.checkRateLimit();
+    
     const url = `${this.apiBaseUrl}${this.botToken}/${method}`;
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(params)
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params),
+        timeout: 30000 // 30 second timeout
+      });
 
-    const data = await response.json();
-    
-    if (!data.ok) {
-      throw new Error(`Telegram API error: ${data.description}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.ok) {
+        const errorMessage = this.getReadableErrorMessage(data.error_code, data.description);
+        throw new Error(errorMessage);
+      }
+
+      // Record successful request for rate limiting
+      this.recordRequest();
+      return data;
+    } catch (error) {
+      // Retry logic for temporary failures
+      if (attempt < this.retryAttempts && this.isRetryableError(error)) {
+        await this.delay(this.retryDelay * attempt);
+        return this.makeAPICall(method, params, attempt + 1);
+      }
+      
+      throw error;
     }
+  }
 
-    return data;
+  /**
+   * Rate limiting implementation
+   */
+  async checkRateLimit() {
+    const now = Date.now();
+    // Clean old requests
+    this.requestHistory = this.requestHistory.filter(
+      time => now - time < this.rateLimitWindow
+    );
+    
+    if (this.requestHistory.length >= this.rateLimitRequests) {
+      const oldestRequest = Math.min(...this.requestHistory);
+      const waitTime = this.rateLimitWindow - (now - oldestRequest);
+      if (waitTime > 0) {
+        await this.delay(waitTime);
+      }
+    }
+  }
+
+  recordRequest() {
+    this.requestHistory.push(Date.now());
+  }
+
+  /**
+   * Convert technical API errors to user-friendly messages
+   */
+  getReadableErrorMessage(errorCode, description) {
+    switch (errorCode) {
+      case 400:
+        if (description.includes('chat not found')) {
+          return 'Cannot access this chat. Please check your chat ID and make sure the bot has been added to the conversation.';
+        }
+        if (description.includes('token')) {
+          return 'Invalid bot token. Please check your bot token and try again.';
+        }
+        return 'Invalid request. Please check your bot settings.';
+      case 401:
+        return 'Bot token is invalid. Please create a new bot token via @BotFather.';
+      case 403:
+        return 'Bot does not have permission to access this chat. Please add the bot to your conversation.';
+      case 429:
+        return 'Too many requests. Please wait a moment and try again.';
+      case 500:
+      case 502:
+      case 503:
+        return 'Telegram servers are temporarily unavailable. Please try again later.';
+      default:
+        return `Connection error. Please check your internet connection.`;
+    }
+  }
+
+  /**
+   * Check if error is worth retrying
+   */
+  isRetryableError(error) {
+    const retryableStatuses = [429, 500, 502, 503, 504];
+    const errorMessage = error.message.toLowerCase();
+    
+    // Network errors
+    if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+      return true;
+    }
+    
+    // Server errors
+    for (const status of retryableStatuses) {
+      if (errorMessage.includes(status.toString())) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Simple delay utility
+   */
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   isSupportedDocument(document) {

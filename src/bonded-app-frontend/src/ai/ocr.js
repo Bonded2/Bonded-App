@@ -39,7 +39,6 @@ class OCRService {
     try {
       if (this.isProduction) {
         // Use ESM CDN in production for better performance
-        console.log('🌐 Loading Tesseract.js from ESM CDN for production...');
         
         // Try multiple ESM CDN providers for redundancy
         const esmUrls = [
@@ -50,9 +49,7 @@ class OCRService {
         
         for (const url of esmUrls) {
           try {
-            console.log(`🔄 Trying ESM URL: ${url}`);
             Tesseract = await import(url);
-            console.log(`✅ Tesseract.js loaded successfully from ${url}`);
             break;
           } catch (urlError) {
             console.warn(`❌ Failed to load from ${url}:`, urlError.message);
@@ -64,9 +61,7 @@ class OCRService {
         
       } else {
         // Use bundled version in development
-        console.log('📦 Loading bundled Tesseract.js for development...');
         Tesseract = await import('tesseract.js');
-        console.log('✅ Tesseract.js loaded from bundle');
       }
     } catch (error) {
       console.warn('⚠️ Failed to load Tesseract.js:', error.message);
@@ -90,7 +85,6 @@ class OCRService {
       }
       
       this.isInitialized = true;
-      console.log('✅ OCR service initialized with ESM loading');
       return true;
     } catch (error) {
       console.error('❌ OCR service initialization failed:', error);
@@ -119,7 +113,6 @@ class OCRService {
     this.initError = null;
 
     try {
-      console.log('🔤 Initializing Tesseract.js worker...');
       
       // First ensure Tesseract.js library is loaded via ESM
       const tesseractLib = await this.loadTesseract();
@@ -137,7 +130,6 @@ class OCRService {
       this.isInitializing = false;
       
       const source = this.isProduction ? 'ESM CDN' : 'Bundled';
-      console.log(`✅ Tesseract.js worker initialized successfully (${source})`);
       return this.worker;
       
     } catch (error) {
@@ -167,7 +159,6 @@ class OCRService {
         throw new Error('Failed to initialize Tesseract.js worker');
       }
 
-      console.log('🔍 Starting OCR text extraction...');
       
       // Prepare image input
       let processedImage = imageInput;
@@ -196,8 +187,6 @@ class OCRService {
       const extractedText = result.data.text || '';
       const confidence = result.data.confidence || 0;
       
-      console.log(`✅ OCR completed in ${processingTime}ms with ${confidence.toFixed(1)}% confidence`);
-      console.log(`📝 Extracted text (${extractedText.length} chars):`, extractedText.substring(0, 200) + '...');
       
       return {
         success: true,
@@ -275,7 +264,6 @@ class OCRService {
     const results = [];
     
     for (let i = 0; i < images.length; i++) {
-      console.log(`🔍 Processing image ${i + 1}/${images.length}`);
       const result = await this.extractText(images[i], options);
       results.push({
         index: i,
@@ -321,7 +309,6 @@ class OCRService {
     if (this.worker) {
       try {
         await this.worker.terminate();
-        console.log('🧹 Tesseract.js worker terminated');
       } catch (error) {
         console.warn('⚠️ Error terminating Tesseract.js worker:', error);
       }

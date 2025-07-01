@@ -56,7 +56,6 @@ class EvidenceProcessor {
     this.isProduction = typeof window !== 'undefined' && 
       (window.location.hostname.includes('icp0.io') || window.location.hostname.includes('ic0.app'));
     this.loadedLibraries = new Set();
-    console.log(`📄 EvidenceProcessor initialized - Production mode: ${this.isProduction}`);
     this.initDB();
   }
   /**
@@ -545,14 +544,11 @@ class EvidenceProcessor {
     try {
       if (this.isProduction) {
         // Use ESM CDN in production
-        console.log('🌐 Loading jsPDF from ESM CDN for production...');
         
         for (const url of JSPDF_ESM_URLS) {
           try {
-            console.log(`🔄 Trying jsPDF ESM URL: ${url}`);
             const module = await import(url);
             jsPDF = module.default || module.jsPDF || module;
-            console.log(`✅ jsPDF loaded successfully from ${url}`);
             break;
           } catch (urlError) {
             console.warn(`❌ Failed to load jsPDF from ${url}:`, urlError.message);
@@ -563,10 +559,8 @@ class EvidenceProcessor {
         }
       } else {
         // Use bundled version in development
-        console.log('📦 Loading bundled jsPDF for development...');
         const module = await import('jspdf');
         jsPDF = module.default || module.jsPDF;
-        console.log('✅ jsPDF loaded from bundle');
       }
     } catch (error) {
       console.warn('⚠️ Failed to load jsPDF:', error.message);
@@ -584,14 +578,11 @@ class EvidenceProcessor {
     try {
       if (this.isProduction) {
         // Use ESM CDN in production
-        console.log('🌐 Loading JSZip from ESM CDN for production...');
         
         for (const url of JSZIP_ESM_URLS) {
           try {
-            console.log(`🔄 Trying JSZip ESM URL: ${url}`);
             const module = await import(url);
             JSZip = module.default || module.JSZip || module;
-            console.log(`✅ JSZip loaded successfully from ${url}`);
             break;
           } catch (urlError) {
             console.warn(`❌ Failed to load JSZip from ${url}:`, urlError.message);
@@ -602,10 +593,8 @@ class EvidenceProcessor {
         }
       } else {
         // Use bundled version in development
-        console.log('📦 Loading bundled JSZip for development...');
         const module = await import('jszip');
         JSZip = module.default || module;
-        console.log('✅ JSZip loaded from bundle');
       }
     } catch (error) {
       console.warn('⚠️ Failed to load JSZip:', error.message);
@@ -679,7 +668,6 @@ class EvidenceProcessor {
       const pdfBlob = pdf.output('blob');
       
       const source = this.isProduction ? 'ESM CDN' : 'Bundled';
-      console.log(`✅ PDF generated successfully using jsPDF from ${source}`);
       
       return {
         blob: pdfBlob,
@@ -744,7 +732,6 @@ class EvidenceProcessor {
       });
 
       const source = this.isProduction ? 'ESM CDN' : 'Bundled';
-      console.log(`✅ ZIP archive created successfully using JSZip from ${source}`);
 
       return {
         blob: zipBlob,

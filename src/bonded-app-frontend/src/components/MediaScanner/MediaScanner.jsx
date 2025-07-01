@@ -304,22 +304,22 @@ export const MediaScanner = ({ onMediaSelected }) => {
   }
   return (
     <div className="media-scanner">
-      <h2>Media Scanner</h2>
+      <h2>Photo Collection</h2>
       {!isChromeOnAndroid && (
         <div className="warning-message">
-          <p>⚠️ This feature works best on Android Chrome. Other browsers may have limited functionality.</p>
+          <p>⚠️ This feature works best on Android Chrome. Other browsers may be limited.</p>
         </div>
       )}
       {!isSupported && (
         <div className="error-message">
-          <p>❌ Your browser doesn't support the required features for media scanning.</p>
+          <p>❌ Your browser doesn't support photo collection from device storage.</p>
           <p>Please use Chrome on Android for the best experience.</p>
         </div>
       )}
       {isSupported && (
         <>
           <div className="scanner-instructions">
-            <p>Click "Start Scan" to select storage on your device. The scanner will search for all images and media.</p>
+            <p>Click "Start Collection" to select storage on your device. We'll find all your photos and media.</p>
             <p className="scanner-tip">Tip: To access your entire device storage, select the highest level directory you're permitted to access.</p>
           </div>
           <button 
@@ -327,7 +327,7 @@ export const MediaScanner = ({ onMediaSelected }) => {
             onClick={startScanning} 
             disabled={isLoading}
           >
-            {isLoading ? "Scanning..." : "Start Full Device Scan"}
+            {isLoading ? "Collecting..." : "Start Photo Collection"}
           </button>
           {isLoading && scanProgress > 0 && (
             <div className="progress-container">

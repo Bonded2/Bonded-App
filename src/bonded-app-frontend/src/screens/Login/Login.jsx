@@ -213,7 +213,7 @@ export const Login = () => {
             disabled={isLoading}
             aria-pressed={loginMethod === "ii"}
           >
-            Internet Identity
+            Secure Login
           </button>
         </div>
         <div className="login-options">
@@ -274,12 +274,12 @@ export const Login = () => {
                     className="icp-logo"
                   />
                 )}
-                {isLoading ? "Connecting to Internet Identity..." : "Login with Internet Identity"}
+                {isLoading ? "Connecting to Secure Login..." : "Login with Secure Identity"}
               </button>
               <p id="ii-info-text" className="ii-info-text">
                 {isLoading 
                   ? "Please complete authentication in the popup window..."
-                  : "You will be redirected to the Internet Identity service to authenticate."
+                  : "You will be redirected to complete secure authentication."
                 }
               </p>
             </div>

@@ -95,7 +95,6 @@ class ESMLoader {
       ]
     };
     
-    console.log(`🔧 ESMLoader initialized - Production mode: ${this.isProduction}`);
   }
 
   /**
@@ -107,7 +106,6 @@ class ESMLoader {
     const hostname = window.location.hostname;
     const isIC = hostname.includes('icp0.io') || hostname.includes('ic0.app');
     
-    console.log(`🌐 Hostname: ${hostname}, IC Platform: ${isIC}`);
     return isIC;
   }
 
@@ -146,19 +144,16 @@ class ESMLoader {
   async _performLoad(moduleName) {
     if (this.isProduction && this.esmConfig[moduleName]) {
       // Use ESM CDN in production
-      console.log(`🌐 Loading ${moduleName} from ESM CDN for production...`);
       
       const urls = this.esmConfig[moduleName];
       
       for (const url of urls) {
         try {
-          console.log(`🔄 Trying ${moduleName} ESM URL: ${url}`);
           const module = await import(url);
           
           // Handle different export patterns
           const resolvedModule = this._resolveModuleExports(module, moduleName);
           
-          console.log(`✅ ${moduleName} loaded successfully from ${url}`);
           return resolvedModule;
         } catch (urlError) {
           console.warn(`❌ Failed to load ${moduleName} from ${url}:`, urlError.message);
@@ -169,12 +164,10 @@ class ESMLoader {
       }
     } else {
       // Use bundled version in development or if no CDN config
-      console.log(`📦 Loading bundled ${moduleName} for development...`);
       
       try {
         const module = await import(moduleName);
         const resolvedModule = this._resolveModuleExports(module, moduleName);
-        console.log(`✅ ${moduleName} loaded from bundle`);
         return resolvedModule;
       } catch (error) {
         console.error(`❌ Failed to load bundled ${moduleName}:`, error.message);
@@ -229,19 +222,16 @@ class ESMLoader {
 
     const criticalModules = ['react', 'react-dom', 'idb'];
     
-    console.log('🚀 Preloading critical ESM modules...');
     
     const preloadPromises = criticalModules.map(async (moduleName) => {
       try {
         await this.loadModule(moduleName);
-        console.log(`✅ Preloaded ${moduleName}`);
       } catch (error) {
         console.warn(`⚠️ Failed to preload ${moduleName}:`, error.message);
       }
     });
 
     await Promise.allSettled(preloadPromises);
-    console.log('🎯 Critical module preloading complete');
   }
 
   /**
@@ -263,7 +253,6 @@ class ESMLoader {
   clearCache() {
     this.loadedModules.clear();
     this.loadingPromises.clear();
-    console.log('🧹 ESM module cache cleared');
   }
 }
 

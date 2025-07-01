@@ -50,7 +50,7 @@ export const FAQ = () => {
       question: "What is Bonded?",
       answer: (
         <>
-          <p>Bonded is an AI and blockchain-based relationship verification app designed to assist with visa, residency, and citizenship application success.</p>
+          <p>Bonded is a smart relationship verification app designed to assist with visa, residency, and citizenship application success.</p>
           <p>We automatically collect and organize proof of your genuine relationship, creating a secure, timestamped timeline that can be used as evidence for immigration authorities.</p>
         </>
       )
@@ -60,7 +60,7 @@ export const FAQ = () => {
       answer: (
         <>
           <p>Your data is fully encrypted and 100% yours. No one—not even Bonded—can access your personal information.</p>
-          <p>We use blockchain technology to securely timestamp your relationship evidence without storing the actual content of your communications or photos on our servers.</p>
+          <p>We use secure technology to timestamp your relationship evidence without storing the actual content of your communications or photos on our servers.</p>
           <p>All processing happens locally on your device, with strict filters that you control.</p>
         </>
       )

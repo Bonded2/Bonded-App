@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { TopAppBar } from "../../components/TopAppBar";
-import { AIClassificationDemo } from "../../components/AIClassificationDemo";
+import { AIClassificationTest } from "../../components/AIClassificationTest";
 import AutomatedTelegramSetup from "../../components/AutomatedTelegramSetup/AutomatedTelegramSetup";
 import { aiClassificationService } from "../../utils/aiClassification";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import "./style.css";
 export const AISettings = () => {
   const navigate = useNavigate();
-  const [showDemo, setShowDemo] = useState(false);
+  const [showTest, setShowTest] = useState(false);
   const [showTelegramSetup, setShowTelegramSetup] = useState(false);
   const [telegramEnabled, setTelegramEnabled] = useState(false);
   const [aiSettings, setAiSettings] = useState({
@@ -178,12 +178,12 @@ export const AISettings = () => {
           </div>
         </div>
         <div className="settings-header">
-          <h1>AI Classification Settings</h1>
-          <p>Configure AI models for content filtering and analysis</p>
+          <h1>Content Filter Settings</h1>
+          <p>Configure smart filters for your relationship evidence</p>
         </div>
         {/* AI Status */}
         <div className="ai-status-section">
-          <h2>AI Models Status</h2>
+          <h2>Smart Filter Status</h2>
           <div className={`status-indicator ${isInitialized ? 'ready' : 'error'}`}>
             <span className="status-icon">
               {isInitialized ? '✅' : '❌'}
@@ -193,21 +193,19 @@ export const AISettings = () => {
           <div className="model-info">
             <div className="model-card">
               <h3>Computer Vision</h3>
-              <p><strong>Model:</strong> YOLO v5 nano</p>
-              <p><strong>Purpose:</strong> Human detection, nudity filtering</p>
+              <p><strong>Purpose:</strong> Photo validation and content filtering</p>
               <p><strong>Status:</strong> {isInitialized ? 'Ready' : 'Not initialized'}</p>
             </div>
             <div className="model-card">
               <h3>Textual Analysis</h3>
-              <p><strong>Model:</strong> TinyBert</p>
-              <p><strong>Purpose:</strong> Explicit content detection</p>
+              <p><strong>Purpose:</strong> Message content verification</p>
               <p><strong>Status:</strong> {isInitialized ? 'Ready' : 'Not initialized'}</p>
             </div>
           </div>
         </div>
         {/* Computer Vision Settings */}
         <div className="settings-section">
-          <h2>Computer Vision Settings</h2>
+          <h2>Photo Filter Settings</h2>
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -216,11 +214,11 @@ export const AISettings = () => {
                   checked={aiSettings.computerVision.enabled}
                   onChange={(e) => handleSettingChange('computerVision', 'enabled', e.target.checked)}
                 />
-                Enable Computer Vision
+                Enable Photo Filtering
               </label>
             </div>
             <p className="setting-description">
-              Use AI to analyze images for content appropriateness
+              Automatically filter photos for appropriate content
             </p>
           </div>
           <div className="setting-item">
@@ -273,7 +271,7 @@ export const AISettings = () => {
           </div>
           <div className="setting-item">
             <label className="setting-label">
-              Confidence Threshold: {(aiSettings.computerVision.confidenceThreshold * 100).toFixed(0)}%
+              Filter Sensitivity: {(aiSettings.computerVision.confidenceThreshold * 100).toFixed(0)}%
             </label>
             <input
               type="range"
@@ -286,13 +284,13 @@ export const AISettings = () => {
               className="confidence-slider"
             />
             <p className="setting-description">
-              Minimum confidence level required for AI decisions
+              How strict the content filter should be
             </p>
           </div>
         </div>
         {/* Textual Analysis Settings */}
         <div className="settings-section">
-          <h2>Textual Analysis Settings</h2>
+          <h2>Message Filter Settings</h2>
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -301,11 +299,11 @@ export const AISettings = () => {
                   checked={aiSettings.textualAnalysis.enabled}
                   onChange={(e) => handleSettingChange('textualAnalysis', 'enabled', e.target.checked)}
                 />
-                Enable Textual Analysis
+                Enable Message Filtering
               </label>
             </div>
             <p className="setting-description">
-              Use AI to analyze text messages for content appropriateness
+              Automatically filter messages for appropriate content
             </p>
           </div>
           <div className="setting-item">
@@ -342,7 +340,7 @@ export const AISettings = () => {
           </div>
           <div className="setting-item">
             <label className="setting-label">
-              Confidence Threshold: {(aiSettings.textualAnalysis.confidenceThreshold * 100).toFixed(0)}%
+              Filter Sensitivity: {(aiSettings.textualAnalysis.confidenceThreshold * 100).toFixed(0)}%
             </label>
             <input
               type="range"
@@ -355,14 +353,14 @@ export const AISettings = () => {
               className="confidence-slider"
             />
             <p className="setting-description">
-              Minimum confidence level required for AI decisions
+              How strict the content filter should be
             </p>
           </div>
         </div>
         {/* Automatic Gallery Scanning */}
         <div className="settings-section">
-          <h2>Automatic Gallery Scanning</h2>
-          <p>AI automatically scans your device gallery and updates timelines intelligently</p>
+          <h2>Smart Photo Collection</h2>
+          <p>Automatically finds and organizes appropriate photos from your device</p>
           <div className="setting-item">
             <div className="setting-header">
               <label className="setting-label">
@@ -371,11 +369,11 @@ export const AISettings = () => {
                   checked={scannerSettings.autoScanEnabled}
                   onChange={(e) => handleScannerSettingChange('autoScanEnabled', e.target.checked)}
                 />
-                Enable Automatic Scanning
+                Enable Smart Collection
               </label>
             </div>
             <p className="setting-description">
-              Automatically scan device gallery for appropriate content
+              Automatically find appropriate photos for your timeline
             </p>
           </div>
           <div className="setting-item">
@@ -387,11 +385,11 @@ export const AISettings = () => {
                   onChange={(e) => handleScannerSettingChange('backgroundScanning', e.target.checked)}
                   disabled={!scannerSettings.autoScanEnabled}
                 />
-                Background Scanning
+                Background Collection
               </label>
             </div>
             <p className="setting-description">
-              Continue scanning in the background at regular intervals
+              Continue finding new photos in the background
             </p>
           </div>
           <div className="setting-item">
@@ -412,7 +410,7 @@ export const AISettings = () => {
           </div>
           <div className="setting-item">
             <label className="setting-label">
-              Scan Interval: {Math.round(scannerSettings.scanInterval / 1000)}s
+              Check Frequency: {Math.round(scannerSettings.scanInterval / 1000)}s
             </label>
             <input
               type="range"
@@ -425,12 +423,12 @@ export const AISettings = () => {
               className="confidence-slider"
             />
             <p className="setting-description">
-              How often to scan for new content (10s - 5min)
+              How often to check for new photos
             </p>
           </div>
           <div className="setting-item">
             <label className="setting-label">
-              Batch Size: {scannerSettings.batchSize} files
+              Photos per check: {scannerSettings.batchSize}
             </label>
             <input
               type="range"
@@ -443,17 +441,17 @@ export const AISettings = () => {
               className="confidence-slider"
             />
             <p className="setting-description">
-              Number of files to process simultaneously
+              How many photos to check at once
             </p>
           </div>
           {/* Scan Status */}
           <div className="scan-status-section">
-            <h3>Scan Status</h3>
+            <h3>Collection Status</h3>
             <div className={`scan-status ${scanStatus.isScanning ? 'scanning' : 'idle'}`}>
               <div className="status-row">
                 <span className="status-label">Status:</span>
                 <span className="status-value">
-                  {scanStatus.isScanning ? '🔄 Scanning...' : '⏸️ Idle'}
+                  {scanStatus.isScanning ? '🔄 Finding photos...' : '⏸️ Ready'}
                 </span>
               </div>
               {scanStatus.isScanning && (
@@ -488,14 +486,14 @@ export const AISettings = () => {
                   onClick={handleStartAutoScan}
                   disabled={!isInitialized || !scannerSettings.autoScanEnabled}
                 >
-                  Start Scan
+                  Start Collection
                 </button>
               ) : (
                 <button 
                   className="scan-button stop"
                   onClick={handleStopAutoScan}
                 >
-                  Stop Scan
+                  Stop Collection
                 </button>
               )}
             </div>
@@ -552,38 +550,38 @@ export const AISettings = () => {
 
         {/* Test AI Models */}
         <div className="settings-section">
-          <h2>Test AI Models</h2>
-          <p>Test the AI classification models with your own content</p>
+          <h2>Test Content Filters</h2>
+          <p>Test the smart filters with your own photos and messages</p>
           <button 
             className="test-ai-button"
-            onClick={() => setShowDemo(true)}
+            onClick={() => setShowTest(true)}
             disabled={!isInitialized}
           >
-            Open AI Classification Demo
+            Test Content Filters
           </button>
         </div>
         {/* MVP Information */}
-        <div className="settings-section mvp-info">
-          <h2>MVP Information</h2>
+        <div className="settings-section info-section">
+          <h2>How It Works</h2>
           <div className="info-grid">
             <div className="info-item">
-              <h3>Pre-trained Models</h3>
-              <p>Both AI models are pre-trained and ready to use. No custom training is required for the MVP.</p>
+              <h3>Smart Technology</h3>
+              <p>Advanced filters are built-in and ready to use. No setup required.</p>
             </div>
             <div className="info-item">
               <h3>Content Filtering</h3>
-              <p>Images and messages are automatically filtered based on AI analysis to ensure appropriate content for immigration evidence.</p>
+              <p>Photos and messages are automatically reviewed to ensure appropriate content for your relationship evidence.</p>
             </div>
             <div className="info-item">
               <h3>Privacy & Security</h3>
-              <p>All AI processing happens locally or through secure endpoints. Your content is never stored or shared.</p>
+              <p>All content review happens securely on your device. Your photos and messages stay private.</p>
             </div>
           </div>
         </div>
       </div>
-      {/* AI Classification Demo Modal */}
-      {showDemo && (
-        <AIClassificationDemo onClose={() => setShowDemo(false)} />
+      {/* Content Filter Test Modal */}
+      {showTest && (
+        <AIClassificationTest onClose={() => setShowTest(false)} />
       )}
 
       {/* Telegram Setup Modal */}

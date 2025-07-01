@@ -201,7 +201,6 @@ export const TimelineCreated = () => {
           });
         }
       } catch (timelineError) {
-        console.log('Timeline service load failed:', timelineError.message);
       }
       
       // 2. Also load from canister storage as fallback
@@ -220,7 +219,6 @@ export const TimelineCreated = () => {
           }
         }
       } catch (storageError) {
-        console.log('Canister storage load failed:', storageError.message);
       }
       
       // Sort by timestamp, newest first
@@ -352,7 +350,6 @@ export const TimelineCreated = () => {
             
           } else {
             rejectedCount++;
-            console.log(`File rejected: ${fileData.file.name} - ${filterResult.reasoning}`);
           }
           
         } catch (error) {

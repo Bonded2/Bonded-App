@@ -97,721 +97,212 @@ class ICPCanisterService {
             // Root key fetch might fail, continue anyway
           }
         }
-      } else if (this.identity) {
-        // Update agent identity if changed
-        this.agent.replaceIdentity(this.identity);
       }
-      
-      // Create actor with the prepared agent
+
       this.actor = createActor(canisterId, {
-        agent: this.agent
+        agent: this.agent,
       });
       
-      return this.actor;
     } catch (error) {
       throw error;
     }
+  }
+
+  /**
+   * Get the proper canister host based on environment
+   */
+  getCanisterHost() {
+    const dfxNetwork = process.env.DFX_NETWORK;
+    
+    if (dfxNetwork === 'local') {
+      return 'http://127.0.0.1:4943';
+    } else if (dfxNetwork === 'playground') {
+      return 'https://icp-api.io';
+    } else {
+      // IC mainnet
+      return 'https://icp-api.io';
+    }
+  }
+
+  /**
+   * Check if we're in playground environment
+   */
+  isPlaygroundEnvironment() {
+    return process.env.DFX_NETWORK === 'playground' || 
+           window.location.hostname.includes('icp0.io') ||
+           window.location.hostname.includes('ic0.app');
   }
 
   /**
    * Login using Internet Identity
    */
   async login() {
-    
-    try {
-      const success = await new Promise((resolve) => {
-        this.authClient.login({
-          identityProvider: process.env.DFX_NETWORK === 'local' 
-            ? `http://127.0.0.1:4943/?canister=rdmx6-jaaaa-aaaaa-aaadq-cai`
-            : 'https://identity.ic0.app',
-          onSuccess: () => resolve(true),
-          onError: (error) => {
-            resolve(false);
-          }
-        });
-      });
-
-      if (success) {
-        this.isAuthenticated = true;
-        this.identity = this.authClient.getIdentity();
-        await this.createActor();
-        
-        return { success: true };
-      } else {
-        return { success: false, error: 'Login failed' };
-      }
-    } catch (error) {
-      return { success: false, error: error.message };
+    if (!this.authClient) {
+      await this.initialize();
     }
+
+    return new Promise((resolve, reject) => {
+      this.authClient.login({
+        identityProvider: process.env.DFX_NETWORK === 'local' 
+          ? 'http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:4943'
+          : 'https://identity.ic0.app',
+        onSuccess: async () => {
+          this.isAuthenticated = true;
+          this.identity = this.authClient.getIdentity();
+          
+          try {
+            await this.createActor();
+            resolve(this.identity);
+          } catch (error) {
+            reject(error);
+          }
+        },
+        onError: reject
+      });
+    });
   }
 
   /**
    * Logout and clear session
    */
   async logout() {
-    
-    try {
+    if (this.authClient) {
       await this.authClient.logout();
-      this.isAuthenticated = false;
-      this.identity = null;
-      this.actor = null;
-      
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: error.message };
     }
+    
+    this.isAuthenticated = false;
+    this.identity = null;
+    this.actor = null;
+    this.agent = null;
   }
 
   /**
-   * Get current user's principal
+   * Get the current user's principal
    */
-  getPrincipal() {
+  getCurrentUserPrincipal() {
     if (!this.identity) {
-      throw new Error('Not authenticated');
+      return null;
     }
     return this.identity.getPrincipal();
   }
 
   /**
-   * Ensure user is authenticated before making calls
+   * Check if user is authenticated
    */
-  ensureAuthenticated() {
-    if (!this.isAuthenticated || !this.actor) {
-      throw new Error('Not authenticated or actor not available');
-    }
+  isUserAuthenticated() {
+    return this.isAuthenticated && this.identity && this.actor;
   }
 
   /**
-   * Check if we're in a development environment where certificate errors are expected
+   * Call backend methods safely with error handling
    */
-  isPlaygroundEnvironment() {
-    return (
-      window.location.hostname.includes('icp0.io') ||
-      window.location.hostname.includes('playground') ||
-      window.location.hostname.includes('localhost') ||
-      process.env.DFX_NETWORK !== 'ic' ||
-      process.env.DFX_NETWORK === 'playground'
-    );
-  }
-
-  /**
-   * Get the correct host for the current environment
-   */
-  getCanisterHost() {
-    if (process.env.DFX_NETWORK === 'local') {
-      return 'http://127.0.0.1:4943';
-    }
-    
-    // For playground deployments (--playground flag)
-    if (process.env.DFX_NETWORK === 'playground' || window.location.hostname.includes('icp0.io')) {
-      return 'https://icp0.io';
-    }
-    
-    // Default to IC mainnet
-    return 'https://icp-api.io';
-  }
-
-  /**
-   * Make a resilient canister call with automatic retry and root key refresh
-   * Suppresses expected certificate validation errors in playground environments
-   */
-  async makeResilientCall(callFunction, maxRetries = 5) {
-    let lastError;
-    const isPlayground = this.isPlaygroundEnvironment();
-    
-    // In playground mode, be more aggressive with retries
-    const actualMaxRetries = isPlayground ? Math.max(maxRetries, 5) : maxRetries;
-    
-    for (let attempt = 0; attempt < actualMaxRetries; attempt++) {
-      try {
-        return await callFunction();
-      } catch (error) {
-        lastError = error;
-        
-        // Check if it's a certificate validation error
-        const isCertError = error.message && (
-          error.message.includes('Invalid certificate') ||
-          error.message.includes('Invalid signature from replica')
-        );
-        
-        if (isCertError) {
-          try {
-            // Force fresh agent creation by clearing it first
-            this.agent = null;
-            await this.createActor();
-            
-            // If this was the last attempt, don't retry
-            if (attempt === actualMaxRetries - 1) {
-              break;
-            }
-            
-            // Wait with exponential backoff before retry
-            const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          } catch (recreateError) {
-            break;
-          }
-        } else {
-          // Not a certificate error, don't retry
-          break;
-        }
-      }
-    }
-    
-    // If we get here, all retries failed
-    throw lastError;
-  }
-
-  /**
-   * Make a graceful query call that returns null instead of throwing on certificate errors in playground
-   */
-  async makeGracefulQueryCall(callFunction, maxRetries = 5) {
-    try {
-      // In playground mode, be even more aggressive with retries for queries
-      const actualRetries = this.isPlaygroundEnvironment() ? Math.max(maxRetries, 8) : maxRetries;
-      return await this.makeResilientCall(callFunction, actualRetries);
-    } catch (error) {
-      const isCertError = error.message && (
-        error.message.includes('Invalid certificate') ||
-        error.message.includes('Invalid signature from replica')
-      );
-      
-      // In playground environment, certificate errors are expected for new users
-      if (isCertError && this.isPlaygroundEnvironment()) {
-        return null;
-      }
-      
-      // Also check for "Settings not found" or other common errors that should return null
-      const isNotFoundError = error.message && (
-        error.message.includes('Settings not found') ||
-        error.message.includes('Profile not found') ||
-        error.message.includes('not found')
-      );
-      
-      if (isNotFoundError) {
-        return null;
-      }
-      
-      // Re-throw other errors or certificate errors in production
-      throw error;
-    }
-  }
-
-  // ==========================================
-  // INVITE METHODS - Using proper ICP calls
-  // ==========================================
-
-  /**
-   * Create partner invite - stores in ICP canister
-   */
-  async createPartnerInvite(inviteData) {
-    this.ensureAuthenticated();
-    
-    
-    try {
-      // Get consistent frontend URL (same logic as in PartnerInvite component)
-      let frontendUrl = window.location.origin;
-      if (window.location.hostname.includes('localhost') || 
-          window.location.hostname.includes('127.0.0.1')) {
-        frontendUrl = `${window.location.protocol}//${window.location.host}`;
-      }
-
-      const request = {
-        partner_email: inviteData.partnerEmail,
-        inviter_name: inviteData.inviterName,
-        expires_at: BigInt((Date.now() + (7 * 24 * 60 * 60 * 1000)) * 1_000_000), // 7 days from now in nanoseconds (convert ms to ns)
-        metadata: inviteData.metadata ? [JSON.stringify(inviteData.metadata)] : [],
-        frontend_url: [frontendUrl] // Consistent deployment URL
-      };
-
-      const result = await this.actor.create_partner_invite(request);
-      
-      if ('Ok' in result) {
-        return {
-          success: true,
-          invite_id: result.Ok.invite_id,
-          invite_link: result.Ok.invite_link,
-          expires_at: Number(result.Ok.expires_at)
-        };
-      } else {
-        throw new Error(result.Err);
-      }
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Send invite email via canister
-   */
-  async sendInviteEmail(email, inviteLink, senderName) {
-    this.ensureAuthenticated();
-    
-    
-    try {
-      const request = {
-        recipient_email: email,
-        subject: `You're invited to join Bonded - Build your relationship timeline together`,
-        email_content: `Hi there!
-
-You've been invited by ${senderName} to join Bonded - a secure platform for building and sharing your relationship timeline together.
-
-Click this link to accept the invitation:
-${inviteLink}
-
-This invitation will expire in 7 days.
-
-Best regards,
-The Bonded Team`
-      };
-
-      const result = await this.actor.send_invite_email(request);
-      
-      if ('Ok' in result) {
-        return {
-          success: true,
-          message_id: result.Ok.message_id,
-          provider: result.Ok.provider
-        };
-      } else {
-        throw new Error(result.Err);
-      }
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Get partner invite from canister
-   */
-  async getPartnerInvite(inviteId) {
-    
-    try {
-      // For playground environment, try multiple approaches to get invite data
-      const isPlayground = this.isPlaygroundEnvironment();
-      
-      // First attempt: Try with existing actor if available
-      if (this.actor) {
-        try {
-          const result = await this.actor.get_partner_invite(inviteId);
-          
-          if ('Ok' in result) {
-            const invite = result.Ok;
-            
-            // Convert BigInt timestamps to regular numbers for frontend use
-            return {
-              id: invite.id,
-              inviterName: invite.inviter_name,
-              inviterPrincipal: invite.inviter_principal,
-              partnerEmail: invite.partner_email,
-              status: Object.keys(invite.status)[0], // Extract the variant key
-              createdAt: Number(invite.created_at),
-              expiresAt: Number(invite.expires_at),
-              metadata: invite.metadata && invite.metadata.length > 0 ? invite.metadata[0] : null
-            };
-          } else {
-            return null;
-          }
-        } catch (actorError) {
-          // Continue to fresh actor attempt below
-        }
-      }
-      
-      // Second attempt: Create fresh actor using the same configuration as main actor
-      const host = this.getCanisterHost();
-      const isLocal = process.env.DFX_NETWORK === 'local';
-      
-      const { HttpAgent, AnonymousIdentity } = await import('@dfinity/agent');
-      
-      
-      const freshAgent = new HttpAgent({ 
-        host,
-        identity: new AnonymousIdentity(), // Use anonymous identity for query calls
-        verifyQuerySignatures: false // Disable signature verification for playground
-      });
-      
-      // Fetch root key for non-mainnet environments
-      if (isLocal || isPlayground) {
-        try {
-          await freshAgent.fetchRootKey();
-        } catch (rootKeyError) {
-          // Continue anyway for query calls
-        }
-      }
-      
-      const freshActor = createActor(canisterId, {
-        agent: freshAgent
-      });
-
-      const result = await freshActor.get_partner_invite(inviteId);
-      
-      if ('Ok' in result) {
-        const invite = result.Ok;
-        
-        // Convert BigInt timestamps to regular numbers for frontend use
-        return {
-          id: invite.id,
-          inviterName: invite.inviter_name,
-          inviterPrincipal: invite.inviter_principal,
-          partnerEmail: invite.partner_email,
-          status: Object.keys(invite.status)[0], // Extract the variant key
-          createdAt: Number(invite.created_at),
-          expiresAt: Number(invite.expires_at),
-          metadata: invite.metadata && invite.metadata.length > 0 ? invite.metadata[0] : null
-        };
-      } else {
-        
-        // For debugging - try to list all invites and check connectivity
-        if (this.isPlaygroundEnvironment()) {
-          try {
-            const healthResult = await freshActor.health_check();
-            
-            // Try to list all invites for debugging
-            try {
-              const debugResult = await freshActor.debug_list_all_invites();
-            } catch (debugError) {
-            }
-          } catch (healthError) {
-          }
-        }
-        
-        return null;
-      }
-      
-    } catch (error) {
-      // Distinguish between network/certificate errors and genuine failures
-      const isCertError = error.message?.includes('Invalid certificate') || 
-                         error.message?.includes('Invalid signature from replica');
-      
-        // Error handled silently
-      
-      if (isCertError) {
-        throw new Error('Certificate validation failed - unable to connect to canister');
-      } else {
-        throw error;
-      }
-      
-      return null;
-    }
-  }
-
-  /**
-   * Accept partner invite via canister
-   */
-  async acceptPartnerInvite(inviteId) {
-    this.ensureAuthenticated();
-    
-    
-    try {
-      const result = await this.actor.accept_partner_invite(inviteId);
-      
-      if ('Ok' in result) {
-        const response = result.Ok;
-        
-        return {
-          success: true,
-          relationship_id: response.relationship_id,
-          relationship: {
-            ...response.relationship,
-            created_at: Number(response.relationship.created_at),
-            last_activity: Number(response.relationship.last_activity),
-            evidence_count: Number(response.relationship.evidence_count)
-          },
-          user_key_share: Array.from(response.user_key_share),
-          public_key: Array.from(response.public_key)
-        };
-      } else {
-        throw new Error(result.Err);
-      }
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  // ==========================================
-  // USER METHODS
-  // ==========================================
-
-  /**
-   * Register user in canister
-   */
-  async registerUser(profileMetadata = null) {
-    this.ensureAuthenticated();
-    
-    
-    try {
-      const result = await this.makeResilientCall(async () => {
-        return await this.actor.register_user(profileMetadata ? [profileMetadata] : []);
-      });
-      
-      if ('Ok' in result) {
-        return { success: true, message: result.Ok };
-      } else {
-        const errorMsg = result.Err;
-        if (errorMsg === 'User already registered') {
-          return { 
-            success: true, 
-            message: 'User already exists',
-            isExistingUser: true 
-          };
-        } else {
-          throw new Error(errorMsg);
-        }
-      }
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  /**
-   * Get user profile from canister
-   */
-  async getUserProfile() {
-    this.ensureAuthenticated();
-    
-    const result = await this.makeGracefulQueryCall(async () => {
-      return await this.actor.get_user_profile();
-    });
-    
-    if (!result) {
-      // Graceful failure - return null for new users or certificate errors
-      return null;
-    }
-    
-    if ('Ok' in result) {
-      const profile = result.Ok;
-      return {
-        principal: profile.principal,
-        createdAt: Number(profile.created_at),
-        relationships: profile.relationships,
-        totalEvidenceUploaded: Number(profile.total_evidence_uploaded),
-        kycVerified: profile.kyc_verified,
-        lastSeen: Number(profile.last_seen)
-      };
-    } else {
-      throw new Error(result.Err);
-    }
-  }
-
-  /**
-   * Get user settings from canister
-   */
-  async getUserSettings() {
-    this.ensureAuthenticated();
-    
-    const result = await this.makeGracefulQueryCall(async () => {
-      return await this.actor.get_user_settings();
-    });
-    
-    if (!result) {
-      // Graceful failure - return null for new users or certificate errors
-      return null;
-    }
-    
-    if ('Ok' in result) {
-      const settings = result.Ok;
-      
-      const processedSettings = {
-        aiFiltersEnabled: settings.ai_filters_enabled,
-        nsfwFilter: settings.nsfw_filter,
-        explicitTextFilter: settings.explicit_text_filter,
-        uploadSchedule: settings.upload_schedule,
-        geolocationEnabled: settings.geolocation_enabled,
-        notificationPreferences: settings.notification_preferences,
-        profileMetadata: settings.profile_metadata && settings.profile_metadata.length > 0 ? settings.profile_metadata[0] : null,
-        updatedAt: Number(settings.updated_at)
-      };
-      
-      return processedSettings;
-    } else {
-      throw new Error(result.Err);
-    }
-  }
-
-  // ==========================================
-  // SYSTEM METHODS
-  // ==========================================
-
-  /**
-   * Get whoami from canister
-   */
-  async whoami() {
+  async callBackend(methodName, ...args) {
     if (!this.actor) {
-      throw new Error('Actor not available');
+      throw new Error('Not authenticated - please login first');
     }
-    
-    try {
-      const principal = await this.makeResilientCall(async () => {
-        return await this.actor.whoami();
-      });
-      return principal;
-    } catch (error) {
-      throw error;
-    }
-  }
 
-  /**
-   * Health check
-   */
-  async healthCheck() {
     try {
-      const actor = this.actor || createActor(canisterId, {
-        agentOptions: {
-          host: process.env.DFX_NETWORK === 'local' ? 'http://127.0.0.1:4943' : 'https://icp0.io'
-        }
-      });
-
-      const result = await actor.health_check();
+      const result = await this.actor[methodName](...args);
+      
+      // Convert any BigInt values to Numbers for safe handling
+      if (result && typeof result === 'object') {
+        return this.convertBigIntToNumber(result);
+      }
+      
       return result;
     } catch (error) {
       throw error;
     }
   }
 
-  // ==========================================
-  // TIMELINE & EVIDENCE METHODS
-  // ==========================================
-
   /**
-   * Get timeline with filters from canister
+   * Recursively convert BigInt values to Numbers in objects
    */
-  async getTimeline(filters = {}) {
-    this.ensureAuthenticated();
-    
-    try {
-      // For now, return empty timeline since backend doesn't have evidence yet
-      // This will be implemented when evidence upload is ready
-      
-      return {
-        success: true,
-        timeline: [],
-        total_count: 0,
-        message: 'Timeline functionality ready - evidence upload to be implemented'
-      };
-    } catch (error) {
-      throw error;
+  convertBigIntToNumber(obj) {
+    if (obj === null || obj === undefined) {
+      return obj;
     }
-  }
-
-  /**
-   * Fetch timeline data (alias for getTimeline for compatibility)
-   */
-  async fetchTimeline(options = {}) {
-    return this.getTimeline(options);
-  }
-
-  /**
-   * Upload evidence to canister
-   */
-  async uploadEvidence(relationshipId, encryptedData, metadata) {
-    this.ensureAuthenticated();
     
-    try {
-      
-      // For now, return success without actual upload since backend needs evidence storage
-      // This will be implemented when evidence storage is ready in the backend
-      
-      return {
-        success: true,
-        evidence_id: `evidence_${Date.now()}`,
-        upload_timestamp: Date.now(),
-        message: 'Evidence upload functionality ready - backend storage to be implemented'
-      };
-    } catch (error) {
-      throw error;
+    if (typeof obj === 'bigint') {
+      return Number(obj);
     }
-  }
-
-  /**
-   * Update user settings in canister
-   */
-  async updateUserSettings(settings) {
-    this.ensureAuthenticated();
     
-    try {
-      // Convert settings to canister format
-      const canisterSettings = {
-        ai_filters_enabled: [settings.ai?.enabled || true],
-        nsfw_filter: [settings.ai?.nsfwFilter || true], 
-        explicit_text_filter: [settings.ai?.explicitTextFilter || true],
-        upload_schedule: [settings.scheduler?.interval || 'daily'],
-        geolocation_enabled: [settings.geolocation?.enabled || true],
-        notification_preferences: [], // Empty array for now since the format is unclear
-        profile_metadata: settings.profile_metadata ? [settings.profile_metadata] : 
-                         settings.profile ? [settings.profile] : []
-      };
-      
-      const result = await this.actor.update_user_settings(canisterSettings);
-      
-      if ('Ok' in result) {
-        return { success: true };
-      } else {
-        throw new Error(result.Err);
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.convertBigIntToNumber(item));
+    }
+    
+    if (typeof obj === 'object') {
+      const converted = {};
+      for (const [key, value] of Object.entries(obj)) {
+        converted[key] = this.convertBigIntToNumber(value);
       }
-    } catch (error) {
-      throw error;
+      return converted;
     }
-  }
-
-  /**
-   * Test connectivity to canister
-   */
-  async testConnectivity() {
-    try {
-      
-      // Test health check
-      await this.healthCheck();
-      
-      // Test whoami if authenticated
-      if (this.isAuthenticated) {
-        await this.whoami();
-      }
-      
-      return {
-        connected: true,
-        isAuthenticated: this.isAuthenticated,
-        timestamp: Date.now(),
-        message: 'Canister connectivity successful'
-      };
-    } catch (error) {
-      return {
-        connected: false,
-        isAuthenticated: false,
-        error: error.message,
-        timestamp: Date.now()
-      };
-    }
-  }
-
-  /**
-   * Delete all user data (kill switch)
-   */
-  async deleteAllUserData() {
-    this.ensureAuthenticated();
     
-    try {
-      
-      const result = await this.actor.delete_user_account();
-      
-      if ('Ok' in result) {
-        
-        // Clear local authentication after successful deletion
-        this.isAuthenticated = false;
-        this.identity = null;
-        this.actor = null;
-        
-        return { success: true, message: result.Ok };
-      } else {
-        throw new Error(result.Err);
-      }
-    } catch (error) {
-      throw error;
-    }
+    return obj;
+  }
+
+  // User profile methods
+  async getUserProfile() {
+    return await this.callBackend('get_user_profile');
+  }
+
+  async updateUserProfile(profile) {
+    return await this.callBackend('update_user_profile', profile);
+  }
+
+  async createUserProfile(profile) {
+    return await this.callBackend('create_user_profile', profile);
+  }
+
+  // Evidence methods
+  async storeEvidence(evidence) {
+    return await this.callBackend('store_evidence', evidence);
+  }
+
+  async getEvidence(evidenceId) {
+    return await this.callBackend('get_evidence', evidenceId);
+  }
+
+  async listUserEvidence() {
+    return await this.callBackend('list_user_evidence');
+  }
+
+  async deleteEvidence(evidenceId) {
+    return await this.callBackend('delete_evidence', evidenceId);
+  }
+
+  // Relationship methods
+  async createRelationshipInvite(partnerEmail) {
+    return await this.callBackend('create_relationship_invite', partnerEmail);
+  }
+
+  async acceptRelationshipInvite(inviteCode) {
+    return await this.callBackend('accept_relationship_invite', inviteCode);
+  }
+
+  async getRelationshipStatus() {
+    return await this.callBackend('get_relationship_status');
+  }
+
+  async getPartnerEvidence() {
+    return await this.callBackend('get_partner_evidence');
+  }
+
+  // System methods
+  async getCanisterStats() {
+    return await this.callBackend('get_canister_stats');
+  }
+
+  async greet(name) {
+    return await this.callBackend('greet', name);
+  }
+
+  async whoami() {
+    return await this.callBackend('whoami');
   }
 }
 
-// Create singleton instance
-const icpCanisterService = new ICPCanisterService();
-
-export default icpCanisterService; 
+// Export singleton instance
+export const icpCanisterService = new ICPCanisterService();
+export default icpCanisterService;

@@ -65,22 +65,18 @@ export const ProfileSetup = () => {
           try {
             currentUser = await icpUserService.getCurrentUser(true);
             if (currentUser && currentUser.isAuthenticated) {
-              console.log(`ProfileSetup: Retrieved user on attempt ${getUserAttempts + 1}:`, currentUser);
               
               // If we have profile metadata, great! If not, keep trying a bit more
               if (currentUser.settings && 
                   (currentUser.settings.profile_metadata || currentUser.settings.profileMetadata)) {
-                console.log('ProfileSetup: Found profile metadata, proceeding');
                 break;
               } else if (getUserAttempts < 6) {
                 // Give the canister more time to process the save from registration
-                console.log(`ProfileSetup: No profile metadata yet, retrying... (attempt ${getUserAttempts + 1})`);
                 await new Promise(resolve => setTimeout(resolve, 1000 * (getUserAttempts + 1)));
                 getUserAttempts++;
                 continue;
               } else {
                 // After 6 attempts, proceed anyway with authenticated user
-                console.log('ProfileSetup: Proceeding with authenticated user even without profile metadata');
                 break;
               }
             }
@@ -94,14 +90,11 @@ export const ProfileSetup = () => {
           getUserAttempts++;
         }
         
-        console.log('Current user from ICP:', currentUser);
         
         if (currentUser) {
-          console.log('User settings:', currentUser.settings);
           
           // For authenticated users, assume they've completed registration and have basic info
           if (currentUser.isAuthenticated && currentUser.principal) {
-            console.log('User is authenticated, should have basic info from registration');
             
             // Check if we have settings with profile metadata
             if (currentUser.settings) {
@@ -110,18 +103,15 @@ export const ProfileSetup = () => {
                                       currentUser.settings.profile_metadata || 
                                       currentUser.settings.profile;
               
-              console.log('Profile metadata found:', profileMetadata);
               
               if (profileMetadata) {
                 try {
                   const profileData = typeof profileMetadata === 'string' ? 
                                       JSON.parse(profileMetadata) : profileMetadata;
                   
-                  console.log('Parsed profile data:', profileData);
                   
                   // If profile is already complete, redirect to timeline
                   if (profileData.profileComplete) {
-                    console.log('Profile already complete, redirecting to timeline');
                     navigate("/timeline");
                     return;
                   }
@@ -140,31 +130,25 @@ export const ProfileSetup = () => {
                   // Check if user already has basic info (name + email)
                   if (profileData.hasBasicInfo || 
                       (profileData.fullName && profileData.email)) {
-                    console.log('User has basic info from profile data, setting hasExistingBasicInfo to true');
                     setHasExistingBasicInfo(true);
                   }
                 } catch (parseError) {
                   console.warn('Failed to parse profile metadata:', parseError);
                   // Even if parsing fails, assume authenticated user has basic info
-                  console.log('Parse failed but user is authenticated, assuming basic info exists');
                   setHasExistingBasicInfo(true);
                 }
               } else {
                 // No profile metadata yet, but user is authenticated so they went through registration
-                console.log('No profile metadata but user is authenticated - assuming registration completed');
                 setHasExistingBasicInfo(true);
               }
             } else {
               // No settings yet, but user is authenticated so they went through registration
-              console.log('No settings yet but user is authenticated - assuming registration completed');
               // For authenticated users without settings yet, assume they just completed registration
               setHasExistingBasicInfo(true);
             }
           } else {
-            console.log('User not authenticated, starting fresh');
           }
         } else {
-          console.log('No current user found');
         }
       } catch (error) {
         // If ICP data fails, start with empty form

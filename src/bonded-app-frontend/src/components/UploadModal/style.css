@@ -392,7 +392,7 @@
   font-family: "Rethink Sans", sans-serif;
 }
 
-.ai-demo-button {
+.ai-test-button {
   background-color: transparent;
   color: #B9FF46;
   border: 1px solid #B9FF46;
@@ -405,7 +405,7 @@
   font-family: "Rethink Sans", sans-serif;
 }
 
-.ai-demo-button:hover {
+.ai-test-button:hover {
   background-color: rgba(185, 255, 70, 0.1);
   border-color: #ccff7a;
   color: #ccff7a;

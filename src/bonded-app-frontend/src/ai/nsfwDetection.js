@@ -39,7 +39,6 @@ class NSFWDetectionService {
     try {
       if (this.isProduction) {
         // Use ESM CDN in production for better performance
-        console.log('🌐 Loading NSFWJS from ESM CDN for production...');
         
         // Try multiple ESM CDN providers for redundancy
         const esmUrls = [
@@ -50,9 +49,7 @@ class NSFWDetectionService {
         
         for (const url of esmUrls) {
           try {
-            console.log(`🔄 Trying ESM URL: ${url}`);
             nsfwjs = await import(url);
-            console.log(`✅ NSFWJS loaded successfully from ${url}`);
             break;
           } catch (urlError) {
             console.warn(`❌ Failed to load from ${url}:`, urlError.message);
@@ -64,9 +61,7 @@ class NSFWDetectionService {
         
       } else {
         // Use bundled version in development
-        console.log('📦 Loading bundled NSFWJS for development...');
         nsfwjs = await import('nsfwjs');
-        console.log('✅ NSFWJS loaded from bundle');
       }
     } catch (error) {
       console.warn('⚠️ Failed to load NSFWJS:', error.message);
@@ -96,7 +91,6 @@ class NSFWDetectionService {
     this.loadError = null;
 
     try {
-      console.log('🔍 Loading NSFW detection model...');
       
       // First load the NSFWJS library via ESM
       const nsfwjsLib = await this.loadNSFWJS();
@@ -121,7 +115,6 @@ class NSFWDetectionService {
           this.model = await loadStrategies[i]();
           const modelType = ['Default MobileNetV2', 'MobileNetV2Mid', 'InceptionV3'][i];
           const source = this.isProduction ? 'ESM CDN' : 'Bundled';
-          console.log(`✅ NSFW model loaded successfully (${modelType} from ${source})`);
           break;
         } catch (strategyError) {
           console.warn(`Strategy ${i + 1} failed:`, strategyError.message);

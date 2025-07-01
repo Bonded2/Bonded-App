@@ -5,7 +5,7 @@ import { Photo1 } from "../../icons/Photo1";
 import { Today } from "../../icons/Today"; // For date
 import { useGeoMetadata } from "../../features/geolocation/hooks/useGeoMetadata";
 import { aiClassificationService } from "../../utils/aiClassification";
-import { AIClassificationDemo } from "../AIClassificationDemo";
+import { AIClassificationTest } from "../AIClassificationTest";
 import "./style.css";
 // Helper to get a simple file type category
 const getFileTypeCategory = (fileNameOrType) => {
@@ -310,10 +310,10 @@ export const UploadModal = ({
                       }
                     </p>
                     <button 
-                      className="ai-demo-button"
+                      className="ai-test-button"
                       onClick={() => setShowAIDemo(true)}
                     >
-                      Test AI Classification
+                      Test Content Filter
                     </button>
                   </div>
                 )}
@@ -332,7 +332,7 @@ export const UploadModal = ({
       </div>
       {/* AI Classification Demo Modal */}
       {showAIDemo && (
-        <AIClassificationDemo onClose={() => setShowAIDemo(false)} />
+        <AIClassificationTest onClose={() => setShowAIDemo(false)} />
       )}
     </div>
   );

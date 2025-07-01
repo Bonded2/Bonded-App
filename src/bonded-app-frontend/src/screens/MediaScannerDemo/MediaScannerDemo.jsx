@@ -22,7 +22,7 @@ export const MediaImport = () => {
   // Handle files added to timeline
   const handleFilesAdded = (filesWithMetadata) => {
     // In a real app, this would store the files in your backend
-    // For this demo, we'll store them in state to display
+    // For this example, we'll store them in state to display
     setRecentFiles(prev => [...filesWithMetadata, ...prev].slice(0, 10));
     // Show success notification
     alert(`Successfully added ${filesWithMetadata.length} files to your timeline!`);
@@ -72,7 +72,7 @@ export const MediaImport = () => {
               onMouseOver={(e) => e.currentTarget.style.backgroundColor = "#a8e63f"}
               onMouseOut={(e) => e.currentTarget.style.backgroundColor = "#B9FF46"}
             >
-              Open Media Scanner
+              Open Photo Collection
             </button>
           </div>
           {recentFiles.length > 0 && (

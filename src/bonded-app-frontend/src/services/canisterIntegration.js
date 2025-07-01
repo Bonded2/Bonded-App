@@ -6,6 +6,7 @@
  * 
  * No mock data - connects to real ICP canisters for production use
  */
+
 import { HttpAgent, Actor } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
 import { AuthClient } from '@dfinity/auth-client';

@@ -80,21 +80,21 @@ export const OfflineStatusBar = () => {
     }
 
     if (syncStatus.syncInProgress) {
-      return 'Syncing your data...';
+      return 'Saving your data...';
     }
 
     if (syncStatus.failed > 0) {
-      return `${syncStatus.failed} items failed to sync`;
+      return `${syncStatus.failed} items need to retry`;
     }
 
     if (syncStatus.pending > 0) {
-      return `${syncStatus.pending} items pending sync`;
+      return `${syncStatus.pending} items waiting to save`;
     }
 
     if (syncStatus.completed > 0 && lastSyncTime) {
       const elapsed = Math.floor((Date.now() - lastSyncTime) / 1000);
       if (elapsed < 60) {
-        return 'All synced';
+        return 'All saved';
       }
     }
 
@@ -159,7 +159,7 @@ export const OfflineStatusBar = () => {
       {showDetails && (
         <div className="status-details">
           <div className="details-header">
-            <h4>Sync Status</h4>
+            <h4>Save Status</h4>
             <button
               className="close-details"
               onClick={() => setShowDetails(false)}

@@ -1,4 +1,6 @@
-// Import polyfills first
+// Import BigInt replacement FIRST - before any other imports
+import './bigint-replacement.js';
+// Import BigNumber polyfill for CBOR compatibility
 import './utils/bignumber-polyfill.js';
 // Ensure React is available globally for hook utilities before any other imports
 import React from 'react';

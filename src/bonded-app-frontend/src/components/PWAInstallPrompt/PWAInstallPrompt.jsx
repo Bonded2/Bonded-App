@@ -217,7 +217,7 @@ export const PWAInstallPrompt = () => {
         <div className="pwa-prompt-benefits">
           <ul>
             <li>Capture evidence even offline</li>
-            <li>Get secure blockchain timestamping</li>
+            <li>Get secure verification timestamps</li>
             <li>Faster access to your timeline</li>
             <li>Private, encrypted storage</li>
           </ul>

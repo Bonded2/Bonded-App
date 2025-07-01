@@ -38,7 +38,6 @@ export const MenuFrame = ({ onClose }) => {
           
           // If we have an authenticated user (with or without settings), break out
           if (currentUser && currentUser.isAuthenticated) {
-            console.log(`MenuFrame: Got user on attempt ${attempts + 1}:`, currentUser);
             break;
           }
           
@@ -67,7 +66,6 @@ export const MenuFrame = ({ onClose }) => {
                 const profileData = typeof profileMetadata === 'string' ? 
                                     JSON.parse(profileMetadata) : profileMetadata;
                 
-                console.log('MenuFrame: Found profile data:', profileData);
                 
                 userData = {
                   fullName: profileData.fullName || "User",
@@ -80,15 +78,12 @@ export const MenuFrame = ({ onClose }) => {
                 console.warn('MenuFrame: Failed to parse profile metadata:', parseError);
               }
             } else {
-              console.log('MenuFrame: No profile metadata found, user may need to complete profile');
             }
           } else {
-            console.log('MenuFrame: No settings found, user may need to complete registration');
           }
           
           setUserData(userData);
         } else {
-          console.log('MenuFrame: User not authenticated or not found');
           setUserData({
             fullName: "User",
             email: "user@example.com",
@@ -292,9 +287,9 @@ export const MenuFrame = ({ onClose }) => {
             aria-current={isActive("/ai-settings") ? "page" : undefined}
           >
             <div className="menu-icon ai-icon">AI</div>
-            <span className="menu-text">AI Settings & Demo</span>
+            <span className="menu-text">Smart Filters</span>
             <div className="menu-badge">
-              {aiStatus.isScanning ? 'Scanning...' : 'Configure'}
+              {aiStatus.isScanning ? 'Collecting...' : 'Configure'}
             </div>
           </Link>
           <Link 

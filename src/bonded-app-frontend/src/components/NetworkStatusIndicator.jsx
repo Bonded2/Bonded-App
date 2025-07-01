@@ -31,7 +31,7 @@ const NetworkStatusIndicator = () => {
       return 'No Internet Connection';
     }
     if (networkStatus.icpNetworkStatus === 'disconnected') {
-      return 'ICP Network Issues';
+      return 'Secure Network Issues';
     }
     return 'Network Limited';
   };
@@ -41,7 +41,7 @@ const NetworkStatusIndicator = () => {
       return 'Please check your internet connection. The app is running in offline mode.';
     }
     if (networkStatus.icpNetworkStatus === 'disconnected') {
-      return 'Having trouble connecting to ICP network. The app is using local storage and will sync when connection is restored.';
+      return 'Having trouble connecting to secure network. The app is using local storage and will sync when connection is restored.';
     }
     return 'Limited connectivity detected. Some features may be delayed.';
   };
@@ -85,7 +85,7 @@ const NetworkStatusIndicator = () => {
               <strong>Internet:</strong> {networkStatus.isOnline ? '✅ Connected' : '❌ Disconnected'}
             </div>
             <div>
-              <strong>ICP Network:</strong> {
+              <strong>Secure Network:</strong> {
                 networkStatus.icpNetworkStatus === 'connected' ? '✅ Connected' :
                 networkStatus.icpNetworkStatus === 'disconnected' ? '❌ Issues' :
                 '⏳ Checking...'

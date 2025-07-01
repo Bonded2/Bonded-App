@@ -23,169 +23,179 @@ export default defineConfig({
       fastRefresh: process.env.NODE_ENV !== 'production'
     }),
     EnvironmentPlugin("all", { prefix: "CANISTER_" }),
-    EnvironmentPlugin("all", { prefix: "DFX_" })
-    // Temporarily disable PWA plugin to fix build issues
-  ],
-  root: path.join(__dirname),
-  build: {
-    outDir: "dist",
-    sourcemap: false,
-    // Aggressive chunk size warnings for ultra-light production
-    chunkSizeWarningLimit: isProduction ? 200 : 1000,
-    // Optimize for fastest possible loading
-    target: 'es2020',
-    minify: 'terser',
-    cssMinify: 'esbuild',
-    rollupOptions: {
-      // AGGRESSIVE: Externalize ALL heavy libraries for production
-      external: isProduction ? [
-        // AI Libraries (already done)
-        'nsfwjs',
-        'tesseract.js',
-        '@xenova/transformers',
-        'onnxruntime-web',
+    EnvironmentPlugin("all", { prefix: "DFX_" }),
+    // NUCLEAR BigInt elimination - apply to ALL files including dependencies
+    {
+      name: 'ultimate-bigint-elimination',
+      enforce: 'pre', // Apply before other transforms
+      transform(code, id) {
+        // Skip our own BigInt replacement file to avoid circular transformation
+        if (id.includes('bigint-replacement.js') || id.includes('bigint-polyfill.js')) {
+          return null;
+        }
         
-        // Heavy utility libraries
-        'jspdf',
-        'jszip',
-        'crypto-js',
-        'idb',
-        
-        // React ecosystem (can be loaded from CDN)
-        'react',
-        'react-dom',
-        'react-router-dom',
-        'react-select',
-        
-        // Polyfills and utilities
-        'buffer',
-        'crypto-browserify',
-        'stream-browserify',
-        'core-js',
-        
-        // Workbox (can be loaded separately)
-        'workbox-window'
-      ] : [],
-      output: {
-        // Remove globals configuration - using import maps instead
-        // Import maps in HTML handle module resolution automatically
-        manualChunks: (id) => {
-          // Ultra-aggressive chunking for production
-          if (isProduction) {
-            // ICP SDK - keep bundled as it's specific to our app
-            if (id.includes('@dfinity/')) {
-              return 'icp-sdk';
-            }
-            
-            // App-specific services - minimal chunks
-            if (id.includes('/services/') && id.includes('.js') && !id.includes('/ai/')) {
-              return 'app-services';
-            }
-            
-            // Minimal vendor chunk for non-externalized dependencies
-            if (id.includes('node_modules')) {
-              return 'vendor';
-            }
-          } else {
-            // Development mode - keep AI models in chunks for easier debugging
-            if (id.includes('tesseract.js')) {
-              return 'ai-ocr';
-            }
-            if (id.includes('nsfwjs')) {
-              return 'ai-nsfw';
-            }
-            if (id.includes('@tensorflow/tfjs')) {
-              return 'ai-tensorflow';
-            }
-            
-            // Core React libraries - minimal bundle
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'react-core';
-            }
-            if (id.includes('react-router')) {
-              return 'react-router';
-            }
-            
-            // ICP SDK
-            if (id.includes('@dfinity/')) {
-              return 'icp-sdk';
-            }
-            
-            // Crypto and polyfills
-            if (id.includes('crypto-browserify') || id.includes('stream-browserify') || id.includes('buffer')) {
-              return 'polyfills';
-            }
-            
-            // AI services
-            if (id.includes('/ai/') && id.includes('.js')) {
-              return 'ai-services';
-            }
-            
-            // Other services
-            if (id.includes('/services/') && id.includes('.js')) {
-              return 'app-services';
-            }
-            
-            // Group other node_modules
-            if (id.includes('node_modules')) {
-              return 'vendor';
-            }
+        // Apply selective BigInt elimination - preserve CBOR functionality
+        if (code.includes('BigInt') || code.includes('bigint')) {
+          // Skip CBOR-related files to preserve serialization
+          if (id.includes('cbor') || 
+              id.includes('serializer') || 
+              id.includes('deserializer') ||
+              id.includes('SelfDescribeCborSerializer') ||
+              id.includes('borc') ||
+              id.includes('cbor-web') ||
+              id.includes('cbor-') ||
+              id.includes('/cbor/') ||
+              id.includes('Cbor') ||
+              id.includes('CBOR') ||
+              code.includes('SelfDescribeCborSerializer') ||
+              code.includes('new Decoder') ||
+              code.includes('cbor.encode') ||
+              code.includes('cbor.decode')) {
+            return null; // Don't transform CBOR files
           }
-        },
-        
-        // ULTRA-SMALL: Minimize chunk names
-        chunkFileNames: 'js/[name]-[hash:6].js',
-        entryFileNames: 'js/main-[hash:6].js',
-        assetFileNames: 'assets/[name]-[hash:6].[ext]'
-      }
-    },
-    terserOptions: {
-      compress: {
-        drop_console: isProduction,
-        drop_debugger: true,
-        pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug', 'console.warn'] : [],
-        passes: 3, // More aggressive compression
-        unsafe: isProduction, // Enable unsafe optimizations in production
-        unsafe_comps: isProduction,
-        unsafe_math: isProduction
-      },
-      mangle: {
-        safari10: true,
-        toplevel: isProduction // Mangle top-level names in production
-      },
-      format: {
-        comments: false
+          
+          let transformedCode = code
+            // Replace all BigInt constructors with safe Number conversion
+            .replace(/\bBigInt\s*\(/g, '((value) => { try { return typeof value === "string" ? parseInt(value, 10) || 0 : Number(value) || 0; } catch(e) { return 0; } })(')
+            // Replace BigInt type checks
+            .replace(/typeof\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*===\s*['""]bigint['"]/g, 'typeof $1 === "number"')
+            .replace(/typeof\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*!==\s*['""]bigint['"]/g, 'typeof $1 !== "number"')
+            // Replace instanceof checks
+            .replace(/([a-zA-Z_$][a-zA-Z0-9_$]*)\s*instanceof\s*BigInt/g, 'typeof $1 === "number"')
+            // Replace BigInt literals
+            .replace(/\b(\d+)n\b/g, '$1')
+            // Replace BigInt.prototype references
+            .replace(/BigInt\.prototype/g, 'Number.prototype')
+            // Replace BigInt static methods
+            .replace(/BigInt\.asIntN\s*\(/g, '((bits, value) => Number(value) || 0)(')
+            .replace(/BigInt\.asUintN\s*\(/g, '((bits, value) => Math.abs(Number(value)) || 0)(')
+            // Handle more complex BigInt patterns
+            .replace(/new\s+BigInt\s*\(/g, '((value) => Number(value) || 0)(')
+            // Replace bigint type annotations in TypeScript-like syntax
+            .replace(/:\s*bigint\b/g, ': number')
+            // Replace bigint in union types
+            .replace(/\|\s*bigint\b/g, '| number')
+            .replace(/bigint\s*\|/g, 'number |')
+            // Handle destructuring with bigint
+            .replace(/\{\s*([^}]*)\s*\}\s*:\s*\{[^}]*bigint[^}]*\}/g, (match) => {
+              return match.replace(/bigint/g, 'number');
+            });
+          
+          if (transformedCode !== code) {
+            console.log(`🔧 [BigInt-Elimination] Fixed: ${id.split('/').pop()}`);
+            return {
+              code: transformedCode,
+              map: null
+            };
+          }
+        }
+        return null;
       }
     }
+    // Temporarily disable PWA plugin to fix build issues
+  ],
+  esbuild: {
+    // Reduce CPU usage during build
+    target: 'es2020',
+    keepNames: true,
+    minifyIdentifiers: false,
+    minifySyntax: isProduction,
+    minifyWhitespace: isProduction,
+    legalComments: 'none',
+    treeShaking: true
   },
   optimizeDeps: {
+    // Exclude heavy AI dependencies from pre-bundling to save CPU
+    exclude: ['@xenova/transformers', 'onnxruntime-web', 'tesseract.js', 'nsfwjs'],
     include: [
-      // Only include critical dependencies for optimization
+      // Critical dependencies for optimization with BigInt fixes
+      '@dfinity/agent',
+      '@dfinity/auth-client', 
+      '@dfinity/candid',
+      '@dfinity/principal',
       ...(isProduction ? [] : [
         'react',
         'react-dom',
         'react-router-dom'
       ])
     ],
-    exclude: [
-      // Exclude ALL heavy dependencies from pre-bundling
-      'tesseract.js',
-      'nsfwjs',
-      '@tensorflow/tfjs',
-      '@xenova/transformers',
-      'onnxruntime-web',
-      'jspdf',
-      'jszip',
-      'crypto-js',
-      'idb',
-      'workbox-window',
-      ...(isProduction ? [
-        'react',
-        'react-dom',
-        'react-router-dom',
-        'react-select'
-      ] : [])
-    ]
+    // Apply BigInt transformation during dependency optimization
+    esbuildOptions: {
+      target: 'es2020'
+    }
+  },
+  root: path.join(__dirname),
+  build: {
+    outDir: "dist",
+    sourcemap: false,
+    // Reasonable chunk size limits to prevent CPU overload
+    chunkSizeWarningLimit: isProduction ? 1000 : 2000,
+    // Optimize for build speed, not ultra-light bundles
+    target: 'es2020',
+    minify: isProduction ? 'esbuild' : false, // esbuild is much faster than terser
+    cssMinify: 'esbuild',
+    // CPU-friendly options to prevent laptop overheating
+    reportCompressedSize: false, // Disable size analysis to save CPU
+    emptyOutDir: true,
+    // Limit concurrent workers to prevent CPU overload
+    rollupOptions: {
+      maxParallelFileOps: 2, // Reduce parallel operations
+      // Handle polyfill resolution issues
+      plugins: [
+        {
+          name: 'resolve-polyfill-issues',
+          resolveId(id, importer) {
+            // Fix the problematic polyfill resolution
+            if (id.includes('define-globalThis-property') && id.includes('?commonjs-external')) {
+              return { id: 'polyfill-globalThis', external: false };
+            }
+            if (id.includes('../internals/define-globalThis-property')) {
+              return { id: 'polyfill-globalThis', external: false };
+            }
+            if (id.includes('../internals/globalThis') && id.includes('?commonjs-external')) {
+              return { id: 'polyfill-globalThis', external: false };
+            }
+            if (id.includes('../internals/globalThis')) {
+              return { id: 'polyfill-globalThis', external: false };
+            }
+            // Handle any other core-js internals patterns
+            if (id.includes('../internals/') && id.includes('?commonjs-external')) {
+              return { id: 'polyfill-globalThis', external: false };
+            }
+            return null;
+          },
+          load(id) {
+            if (id === 'polyfill-globalThis') {
+              return 'export default globalThis;';
+            }
+            return null;
+          }
+        }
+      ],
+      // LIGHTWEIGHT: Only externalize the heaviest AI libraries to reduce build load
+      external: isProduction ? [
+        // Only the most memory-intensive AI libraries
+        '@xenova/transformers',
+        'onnxruntime-web'
+      ] : [],
+      output: {
+        // Remove globals configuration - using import maps instead
+        // Import maps in HTML handle module resolution automatically
+        manualChunks: (id) => {
+          // Simplified chunking to reduce build complexity
+          if (isProduction) {
+            // ICP SDK - keep bundled as it's specific to our app
+            if (id.includes('@dfinity/')) {
+              return 'icp-sdk';
+            }
+            // Only separate the largest vendor libraries
+            if (id.includes('node_modules')) {
+              return 'vendor';
+            }
+          }
+        }
+      }
+    }
   },
   server: {
     port: 3000,
@@ -203,40 +213,44 @@ export default defineConfig({
       }
     })
   },
+  define: {
+    // Global definitions for environment
+    __DEV__: isDev,
+    __PROD__: isProduction,
+    global: 'globalThis',
+    'globalThis': 'globalThis', 
+    // Network-specific
+    "process.env.CANISTER_ID_BONDED_APP_BACKEND": JSON.stringify(
+      isDev
+        ? process.env["CANISTER_ID_BONDED_APP_BACKEND"] || "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        : process.env["CANISTER_ID_BONDED_APP_BACKEND"]
+    ),
+    "process.env.CANISTER_ID_BONDED_APP_FRONTEND": JSON.stringify(
+      isDev
+        ? process.env["CANISTER_ID_BONDED_APP_FRONTEND"] || "rrkah-fqaaa-aaaaa-aaaaq-cai"
+        : process.env["CANISTER_ID_BONDED_APP_FRONTEND"]
+    ),
+    "process.env.DFX_NETWORK": JSON.stringify(network),
+    "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development")
+  },
   resolve: {
     alias: {
+      // Create aliases for cleaner imports
       '@': resolve(__dirname, 'src'),
-      '@components': path.resolve(__dirname, 'src/components'),
-      '@services': path.resolve(__dirname, 'src/services'),
-      '@ai': path.resolve(__dirname, 'src/ai'),
-      '@utils': path.resolve(__dirname, 'src/utils'),
-      'stream': 'stream-browserify',
-      'crypto': 'crypto-browserify',
-      'buffer': 'buffer'
-    }
-  },
-  define: {
-    global: "globalThis",
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
-    'process.env.DFX_NETWORK': JSON.stringify(network),
-    'process.env.VITE_DFX_NETWORK': JSON.stringify(network),
-    'process.env.CANISTER_ID_BONDED_APP_BACKEND': JSON.stringify(process.env.CANISTER_ID_BONDED_APP_BACKEND),
-    'process.env.VITE_PRODUCTION_BUILD': JSON.stringify(isProduction)
-  },
-  worker: {
-    format: 'es',
-    rollupOptions: {
-      output: {
-        entryFileNames: 'workers/[name]-[hash].js'
-      }
-    }
-  },
-  esbuild: {
-    target: 'es2020',
-    legalComments: 'none',
-    treeShaking: true,
-    minifyIdentifiers: isProduction,
-    minifySyntax: isProduction,
-    minifyWhitespace: isProduction
+      '@components': resolve(__dirname, 'src/components'),
+      '@services': resolve(__dirname, 'src/services'),
+      '@utils': resolve(__dirname, 'src/utils'),
+      '@screens': resolve(__dirname, 'src/screens'),
+      // Browser polyfills
+      buffer: 'buffer',
+      crypto: 'crypto-browserify',
+      stream: 'stream-browserify',
+      util: 'util',
+      process: 'process/browser',
+      // BigInt replacement
+      'bigint': resolve(__dirname, 'src/bigint-replacement.js')
+    },
+    // Fix polyfill resolution issues
+    dedupe: ['globalThis', 'core-js']
   }
 });

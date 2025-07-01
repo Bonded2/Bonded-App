@@ -89,7 +89,6 @@ export const MediaImport = () => {
             
           } else {
             rejectedCount++;
-            console.log(`File rejected: ${fileData.file.name} - ${filterResult.reasoning}`);
           }
           
         } catch (error) {

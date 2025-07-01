@@ -69,21 +69,21 @@ export const AIWorkflowTester = ({ isVisible = false, onClose }) => {
     <div className="ai-workflow-tester-overlay">
       <div className="ai-workflow-tester">
         <div className="tester-header">
-          <h2>🧪 AI Workflow Tester</h2>
+          <h2>📋 Content Filter Test</h2>
           <button className="close-btn" onClick={onClose}>
             ✕
           </button>
         </div>
         
         <div className="tester-content">
-          <p>Test the complete AI filtering pipeline:</p>
+          <p>Test all content filters and verification tools:</p>
           <ul>
-            <li>✅ NSFW Detection (Nudity filtering)</li>
-            <li>✅ OCR Text Extraction</li>
-            <li>✅ Text Classification (Explicit content)</li>
-            <li>✅ Evidence Filter Pipeline</li>
+            <li>✅ Adult Content Filter</li>
+            <li>✅ Text Reading from Photos</li>
+            <li>✅ Message Content Review</li>
+            <li>✅ Evidence Verification</li>
             <li>✅ Timeline Integration</li>
-            <li>✅ Auto Scanner</li>
+            <li>✅ Smart Collection</li>
           </ul>
           
           <div className="test-controls">

@@ -156,7 +156,6 @@ class TextClassificationService {
     try {
       if (this.isProduction) {
         // Use ESM CDN in production for better performance
-        console.log('🌐 Loading Transformers.js from ESM CDN for production...');
         
         // Try multiple ESM CDN providers for redundancy
         const esmUrls = [
@@ -167,9 +166,7 @@ class TextClassificationService {
         
         for (const url of esmUrls) {
           try {
-            console.log(`🔄 Trying ESM URL: ${url}`);
             transformers = await import(url);
-            console.log(`✅ Transformers.js loaded successfully from ${url}`);
             break;
           } catch (urlError) {
             console.warn(`❌ Failed to load from ${url}:`, urlError.message);
@@ -181,9 +178,7 @@ class TextClassificationService {
         
       } else {
         // Use bundled version in development
-        console.log('📦 Loading bundled Transformers.js for development...');
         transformers = await import('@xenova/transformers');
-        console.log('✅ Transformers.js loaded from bundle');
       }
     } catch (error) {
       console.warn('⚠️ Failed to load Transformers.js:', error.message);
