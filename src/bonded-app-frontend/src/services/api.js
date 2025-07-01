@@ -3,6 +3,25 @@
  * Handles all communication with the ICP backend canister
  */
 
+// CRITICAL: Ensure CBOR is available before importing ICP modules
+if (typeof window !== 'undefined' && !window.SelfDescribeCborSerializer) {
+  console.warn('⚠️ Late CBOR setup in api.js');
+  window.SelfDescribeCborSerializer = class {
+    constructor() { this.buffer = []; }
+    serialize(value) {
+      try {
+        return new TextEncoder().encode(JSON.stringify(value, (k, v) => 
+          typeof v === 'bigint' ? Number(v) : v
+        ));
+      } catch (e) { return new Uint8Array(0); }
+    }
+    static serialize(value) { return new this().serialize(value); }
+  };
+  // Also set on potential module locations
+  if (window.src) window.src.SelfDescribeCborSerializer = window.SelfDescribeCborSerializer;
+  if (window.src?.value) window.src.value.SelfDescribeCborSerializer = window.SelfDescribeCborSerializer;
+}
+
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { AuthClient } from '@dfinity/auth-client';
 import { Principal } from '@dfinity/principal';

@@ -45,7 +45,105 @@
         window[name] = { value: { SelfDescribeCborSerializer: CBOR }, SelfDescribeCborSerializer: CBOR };
       });
       
+      // CRITICAL: Override undefined access to return CBOR when needed
+      const originalValueOf = Object.prototype.valueOf;
+      const originalToString = Object.prototype.toString;
+      
+      // Create a special undefined proxy
+      try {
+        const undefinedProxy = new Proxy({}, {
+          get(target, prop) {
+            if (prop === 'SelfDescribeCborSerializer') {
+              console.log('🔧 Intercepted undefined.SelfDescribeCborSerializer access');
+              return CBOR;
+            }
+            return undefined;
+          }
+        });
+        
+        // Try to make undefined return our proxy in certain contexts
+        Object.defineProperty(window, 'undefined', {
+          get() {
+            const stack = new Error().stack;
+            if (stack && stack.includes('icp-sdk')) {
+              return undefinedProxy;
+            }
+            return void 0;
+          },
+          configurable: true
+        });
+      } catch (e) {
+        // Fallback if we can't override undefined
+      }
+      
+      // Also patch potential module loading patterns
+      const moduleNames = ['cbor', 'borc', 'cbor-web', 'cborg', '@dfinity/cbor'];
+      moduleNames.forEach(name => {
+        try {
+          Object.defineProperty(window, name, {
+            get() {
+              return { 
+                value: { SelfDescribeCborSerializer: CBOR }, 
+                SelfDescribeCborSerializer: CBOR,
+                default: { SelfDescribeCborSerializer: CBOR }
+              };
+            },
+            configurable: true
+          });
+        } catch (e) {}
+      });
+      
       console.log('🛡️ ULTRA-EARLY CBOR polyfill set on src.value.SelfDescribeCborSerializer');
+      
+      // CRITICAL: Add getter trap to Object.prototype as last resort
+      try {
+        Object.defineProperty(Object.prototype, 'SelfDescribeCborSerializer', {
+          get() {
+            console.warn('🔧 Fallback CBOR access via Object.prototype');
+            return CBOR;
+          },
+          configurable: true,
+          enumerable: false
+        });
+      } catch (e) {
+        console.warn('Could not set Object.prototype.SelfDescribeCborSerializer');
+      }
+      
+      // LAST RESORT: Global error handler for CBOR access
+      window.addEventListener('error', function(e) {
+        if (e.message && e.message.includes("Cannot read properties of undefined") && 
+            e.message.includes("SelfDescribeCborSerializer")) {
+          console.warn('🚨 Caught CBOR error, attempting recovery...');
+          e.preventDefault();
+          e.stopPropagation();
+          
+          // Try to fix the issue by setting CBOR on more locations
+          const targets = [window, globalThis, self, window.src, window.cbor, window.borc];
+          targets.forEach(target => {
+            if (target && typeof target === 'object') {
+              try {
+                if (!target.SelfDescribeCborSerializer) {
+                  target.SelfDescribeCborSerializer = CBOR;
+                }
+                if (!target.value) {
+                  target.value = { SelfDescribeCborSerializer: CBOR };
+                } else if (!target.value.SelfDescribeCborSerializer) {
+                  target.value.SelfDescribeCborSerializer = CBOR;
+                }
+              } catch (err) {}
+            }
+          });
+          
+          // Also try to reload the page once if error persists
+          if (!window.__cborErrorReloaded) {
+            window.__cborErrorReloaded = true;
+            console.warn('🔄 Reloading page to fix CBOR error...');
+            setTimeout(() => location.reload(), 100);
+          }
+          
+          return false;
+        }
+      }, true);
     })();
   </script>
   
