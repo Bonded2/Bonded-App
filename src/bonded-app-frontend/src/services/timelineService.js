@@ -5,7 +5,7 @@
  * Handles decryption of evidence items for display and PDF generation
  */
 import { encryptionService } from '../crypto/encryption.js';
-import icpCanisterService from './icpCanisterService.js';
+import { api } from "./api.js";
 import { openDB } from 'idb';
 // import jsPDF from 'jspdf'; // Temporarily disabled for build
 class TimelineService {
@@ -69,7 +69,7 @@ class TimelineService {
       }
       // Fetch timeline data from ICP canisters
       const relationshipId = 'mock-relationship-id'; // Would come from user session
-      const timelineData = await icpCanisterService.fetchTimeline({ relationshipId, page, limit });
+      const timelineData = await api.fetchTimeline({ relationshipId, page, limit });
       // Decrypt timeline items
       const decryptedTimeline = await this.decryptTimelineItems(timelineData);
       // Cache the results
@@ -721,7 +721,7 @@ class TimelineService {
 
       for (const entry of pendingEntries) {
         try {
-          await icpCanisterService.uploadEvidence({
+          await api.uploadEvidence({
             relationshipId,
             evidenceData: entry,
             encrypt: true

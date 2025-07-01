@@ -216,9 +216,9 @@ export const Capture = () => {
   // Handle save button click
   const handleSave = async () => {
     try {
-      const { default: realCanisterStorage } = await import('../../../services/realCanisterStorage.js');
-      await realCanisterStorage.setItem("captureSettings", JSON.stringify(captureSettings));
-      await realCanisterStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
+      const { default: canisterStorage } = await import('../../../services/canisterStorage.js');
+      await canisterStorage.setItem("captureSettings", JSON.stringify(captureSettings));
+      await canisterStorage.setItem("fileTypeOverrides", JSON.stringify(fileTypeOverrides));
       
       const toast = document.createElement("div");
       toast.className = "toast success";
@@ -261,18 +261,18 @@ export const Capture = () => {
   useEffect(() => {
     const initializeSettings = async () => {
       try {
-        const { default: realCanisterStorage } = await import('../../../services/realCanisterStorage.js');
+        const { default: canisterStorage } = await import('../../../services/canisterStorage.js');
         
-        const isFirstRun = !(await realCanisterStorage.getItem("settings_configured"));
+        const isFirstRun = !(await canisterStorage.getItem("settings_configured"));
         if (isFirstRun) {
           // Fetch user nationality/region from profile data
           let userNationality = "US"; // Default fallback
           let userRegion = "North America"; // Default fallback
           
           try {
-            const { default: icpCanisterService } = await import('../../../services/icpCanisterService.js');
-            if (icpCanisterService.isAuthenticated) {
-              const userProfile = await icpCanisterService.getUserProfile();
+            const { api } = await import('../../../services/api.js');
+            if (api.isAuthenticated) {
+              const userProfile = await api.getUserProfile();
               if (userProfile) {
                 // Try to extract nationality from profile metadata
                 const metadata = userProfile.profileMetadata || '{}';
@@ -313,15 +313,15 @@ export const Capture = () => {
           }
           setCaptureSettings(initialSettings);
           setFileTypeOverrides(initialOverrides);
-          await realCanisterStorage.setItem("settings_configured", "true");
+          await canisterStorage.setItem("settings_configured", "true");
         }
         
         // Load saved settings if not first run
-        const savedCaptureSettings = await realCanisterStorage.getItem("captureSettings");
+        const savedCaptureSettings = await canisterStorage.getItem("captureSettings");
         if (savedCaptureSettings) {
           setCaptureSettings(JSON.parse(savedCaptureSettings));
         }
-        const savedFileTypeOverrides = await realCanisterStorage.getItem("fileTypeOverrides");
+        const savedFileTypeOverrides = await canisterStorage.getItem("fileTypeOverrides");
         if (savedFileTypeOverrides) {
           setFileTypeOverrides(JSON.parse(savedFileTypeOverrides));
         }

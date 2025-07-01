@@ -8,7 +8,7 @@
  * PRIVACY: Bots are managed but data remains encrypted
  */
 
-import realCanisterStorage from './realCanisterStorage.js';
+import canisterStorage from "./canisterStorage.js";
 import realAIProcessor from './realAIProcessor.js';
 
 class AutomatedTelegramService {
@@ -26,7 +26,7 @@ class AutomatedTelegramService {
   async initialize() {
     try {
       // Get Bonded's main bot token from secure storage
-      this.bondedBotToken = await realCanisterStorage.getItem('bonded_main_bot_token');
+      this.bondedBotToken = await canisterStorage.getItem('bonded_main_bot_token');
       
       if (!this.bondedBotToken) {
         throw new Error('Bonded main bot not configured. Contact support.');
@@ -285,7 +285,7 @@ class AutomatedTelegramService {
   async checkExistingSetup(userId, partnerEmail) {
     try {
       const relationshipKey = `telegram_relationship_${userId}_${partnerEmail}`;
-      const existingData = await realCanisterStorage.getItem(relationshipKey);
+      const existingData = await canisterStorage.getItem(relationshipKey);
       
       if (existingData) {
         const data = JSON.parse(existingData);
@@ -330,11 +330,11 @@ class AutomatedTelegramService {
       status: 'active'
     };
     
-    await realCanisterStorage.setItem(relationshipKey, JSON.stringify(relationshipData));
+    await canisterStorage.setItem(relationshipKey, JSON.stringify(relationshipData));
     
     // Also store reverse mapping for partner lookup
     const partnerKey = `telegram_relationship_${partnerEmail}_${userId}`;
-    await realCanisterStorage.setItem(partnerKey, JSON.stringify(relationshipData));
+    await canisterStorage.setItem(partnerKey, JSON.stringify(relationshipData));
   }
 
   /**
@@ -342,7 +342,7 @@ class AutomatedTelegramService {
    */
   async getRelationshipData(userId, partnerEmail) {
     const relationshipKey = `telegram_relationship_${userId}_${partnerEmail}`;
-    const data = await realCanisterStorage.getItem(relationshipKey);
+    const data = await canisterStorage.getItem(relationshipKey);
     
     if (data) {
       return JSON.parse(data);
@@ -505,7 +505,7 @@ class AutomatedTelegramService {
    */
   async getUserTelegramId(userId) {
     try {
-      const userProfile = await realCanisterStorage.getItem(`user_profile_${userId}`);
+      const userProfile = await canisterStorage.getItem(`user_profile_${userId}`);
       if (userProfile) {
         const profile = JSON.parse(userProfile);
         return profile.telegramId;
@@ -530,7 +530,7 @@ class AutomatedTelegramService {
         status: 'pending'
       };
       
-      await realCanisterStorage.setItem(invitationKey, JSON.stringify(invitationData));
+      await canisterStorage.setItem(invitationKey, JSON.stringify(invitationData));
       
       // Try to send direct Telegram message if partner's Telegram ID is known
       const partnerTelegramId = await this.getPartnerTelegramId(partnerEmail);
@@ -556,7 +556,7 @@ class AutomatedTelegramService {
   async getPartnerTelegramId(partnerEmail) {
     try {
       // Look up user by email to get their Telegram ID
-      const userLookup = await realCanisterStorage.getItem(`user_email_${partnerEmail}`);
+      const userLookup = await canisterStorage.getItem(`user_email_${partnerEmail}`);
       if (userLookup) {
         const userId = JSON.parse(userLookup).userId;
         return await this.getUserTelegramId(userId);
@@ -737,7 +737,7 @@ class AutomatedTelegramService {
       const analysis = await realAIProcessor.analyzeText(message.text);
       
       if (analysis.confidence > 0.7) {
-        await realCanisterStorage.setItem(
+        await canisterStorage.setItem(
           `telegram_message_${message.message_id}`,
           JSON.stringify({
             text: message.text,

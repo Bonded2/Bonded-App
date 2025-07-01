@@ -51,8 +51,8 @@ const AutomatedTelegramSetup = ({ userId, partnerEmail, onSetupComplete, onError
 
   const checkExistingTelegramSetup = async () => {
     try {
-      const { default: realCanisterStorage } = await import('../../services/realCanisterStorage.js');
-      const telegramData = await realCanisterStorage.getItem(`telegram_setup_${userId}`);
+      const { default: canisterStorage } = await import('../../services/canisterStorage.js');
+      const telegramData = await canisterStorage.getItem(`telegram_setup_${userId}`);
       
       if (telegramData) {
         const setup = JSON.parse(telegramData);
@@ -148,8 +148,8 @@ const AutomatedTelegramSetup = ({ userId, partnerEmail, onSetupComplete, onError
 
   const storeTelegramCredentials = async (data) => {
     try {
-      const { default: realCanisterStorage } = await import('../../services/realCanisterStorage.js');
-      await realCanisterStorage.setItem(`telegram_setup_${userId}`, JSON.stringify(data));
+      const { default: canisterStorage } = await import('../../services/canisterStorage.js');
+      await canisterStorage.setItem(`telegram_setup_${userId}`, JSON.stringify(data));
     } catch (error) {
       // Fallback to localStorage if canister storage fails
       localStorage.setItem(`telegram_setup_${userId}`, JSON.stringify(data));

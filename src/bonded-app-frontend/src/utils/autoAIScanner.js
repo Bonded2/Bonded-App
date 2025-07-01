@@ -43,8 +43,8 @@ export class AutoAIScanner {
    */
   async asyncLoadSettings(defaultSettings) {
     try {
-      const { default: realCanisterStorage } = await import('../services/realCanisterStorage.js');
-      const savedSettings = await realCanisterStorage.getItem('bonded_ai_scanner_settings');
+      const { default: canisterStorage } = await import('../services/canisterStorage.js');
+      const savedSettings = await canisterStorage.getItem('bonded_ai_scanner_settings');
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         this.settings = { ...defaultSettings, ...parsedSettings };
@@ -61,8 +61,8 @@ export class AutoAIScanner {
   async saveSettings(newSettings) {
     this.settings = { ...this.settings, ...newSettings };
     try {
-      const { default: realCanisterStorage } = await import('../services/realCanisterStorage.js');
-      await realCanisterStorage.setItem('bonded_ai_scanner_settings', JSON.stringify(this.settings));
+      const { default: canisterStorage } = await import('../services/canisterStorage.js');
+      await canisterStorage.setItem('bonded_ai_scanner_settings', JSON.stringify(this.settings));
       this.notifyObservers('settingsUpdated', this.settings);
     } catch (error) {
       // Fallback to localStorage if canister storage fails

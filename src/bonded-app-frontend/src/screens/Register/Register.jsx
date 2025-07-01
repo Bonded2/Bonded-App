@@ -91,18 +91,18 @@ export const Register = () => {
             
             // IMPORTANT: Update the canister integration service with the new authentication state
             // Import the canister integration service
-            const { default: icpCanisterService } = await import('../../services/icpCanisterService.js');
+            const { api } = await import('../../services/api.js');
             
             // Set the authentication state in the central service
-            icpCanisterService.isAuthenticated = true;
-            icpCanisterService.identity = identity;
-            icpCanisterService.authClient = authClient;
+            api.isAuthenticated = true;
+            api.identity = identity;
+            api.authClient = authClient;
             
             // Create the backend actor with the new identity
-            await icpCanisterService.createActor();
+            await api.createActor();
             
             // Verify authentication is working
-            const isLoggedIn = icpCanisterService.isAuthenticated;
+            const isLoggedIn = api.isAuthenticated;
             
             if (!isLoggedIn) {
               throw new Error('Authentication verification failed after login');
@@ -121,7 +121,7 @@ export const Register = () => {
               
               if (inviteId) {
                 try {
-                  await icpCanisterService.acceptPartnerInvite(inviteId);
+                  await api.acceptPartnerInvite(inviteId);
                 } catch (inviteError) {
                   // Failed to accept invite - continue with registration
                 }

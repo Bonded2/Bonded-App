@@ -127,7 +127,7 @@ export const safeAuthCall = async (authenticatedFn, authService, options = {}) =
 export const clearAuthStorage = async () => {
   try {
     // Import canister storage adapters dynamically to avoid circular dependencies
-          const { canisterLocalStorage, canisterSessionStorage } = await import('../services/realCanisterStorage.js');
+    const canisterStorage = await import('../services/canisterStorage.js');
     
     // Clear localStorage items related to auth
     const authKeys = [
@@ -137,15 +137,15 @@ export const clearAuthStorage = async () => {
       'bonded-session'
     ];
     
-    await Promise.all(authKeys.map(key => canisterLocalStorage.removeItem(key)));
+    await Promise.all(authKeys.map(key => canisterStorage.default.removeItem(key)));
     
-    // Clear sessionStorage items related to auth
+    // Clear sessionStorage items related to auth (using same storage)
     const sessionKeys = [
       'auth-temp',
       'login-state'
     ];
     
-    await Promise.all(sessionKeys.map(key => canisterSessionStorage.removeItem(key)));
+    await Promise.all(sessionKeys.map(key => canisterStorage.default.removeItem(key)));
     
 // Console statement removed for production
   } catch (error) {

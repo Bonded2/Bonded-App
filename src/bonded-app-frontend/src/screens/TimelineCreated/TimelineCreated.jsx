@@ -74,9 +74,9 @@ export const TimelineCreated = () => {
       // Get relationship ID from user profile
       let relationshipId = 'mock-relationship-id'; // fallback
       try {
-        const { default: icpCanisterService } = await import('../../services/icpCanisterService.js');
-        if (icpCanisterService.isAuthenticated) {
-          const userProfile = await icpCanisterService.getUserProfile();
+        const { api } = await import('../../services/api.js');
+        if (api.isAuthenticated) {
+          const userProfile = await api.getUserProfile();
           if (userProfile.relationships && userProfile.relationships.length > 0) {
             relationshipId = userProfile.relationships[0]; // Use first relationship
           }
@@ -168,7 +168,7 @@ export const TimelineCreated = () => {
               // Fallback to local data if available
         try {
           // Replace localStorage with canister storage
-          const canisterLocalStorage = (await import('../../services/realCanisterStorage.js')).default;
+          const canisterLocalStorage = (await import('../../services/canisterStorage.js')).default;
           const localData = await canisterLocalStorage.getItem(TIMELINE_DATA_KEY);
         if (localData) {
           const parsedData = JSON.parse(localData);
@@ -205,7 +205,7 @@ export const TimelineCreated = () => {
       
       // 2. Also load from canister storage as fallback
       try {
-        const canisterLocalStorage = (await import('../../services/realCanisterStorage.js')).default;
+        const canisterLocalStorage = (await import('../../services/canisterStorage.js')).default;
         const savedAIData = await canisterLocalStorage.getItem(AI_TIMELINE_DATA_KEY);
         if (savedAIData) {
           const parsedAIData = JSON.parse(savedAIData);

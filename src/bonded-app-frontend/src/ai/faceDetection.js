@@ -773,8 +773,8 @@ export class FaceDetectionService {
       };
       // Store in canister with partner ID - importing storage adapter dynamically to avoid circular imports
       try {
-        const { canisterLocalStorage } = await import('../services/realCanisterStorage.js');
-        await canisterLocalStorage.setItem(`bonded_face_${partnerId}`, JSON.stringify(data));
+        const canisterStorage = await import('../services/canisterStorage.js');
+        await canisterStorage.default.setItem(`bonded_face_${partnerId}`, JSON.stringify(data));
       } catch (error) {
 // Console statement removed for production
       }
@@ -789,13 +789,13 @@ export class FaceDetectionService {
     try {
       // Get stored face embeddings from canister storage
       try {
-        const { canisterLocalStorage } = await import('../services/realCanisterStorage.js');
+        const canisterStorage = await import('../services/canisterStorage.js');
         
         // For now, we'll try to get common face embedding keys
         // In production, this should be replaced with a proper canister query for all face embeddings
         for (const partnerId of ['partner1', 'partner2', 'current_user', 'self']) {
           try {
-            const dataStr = await canisterLocalStorage.getItem(`bonded_face_${partnerId}`);
+            const dataStr = await canisterStorage.default.getItem(`bonded_face_${partnerId}`);
             if (dataStr) {
               const data = JSON.parse(dataStr);
               this.storedEmbeddings.set(data.partnerId, new Float32Array(data.embedding));
@@ -818,12 +818,12 @@ export class FaceDetectionService {
     this.storedEmbeddings.clear();
     // Clear from canister storage
     try {
-      const { canisterLocalStorage } = await import('../services/realCanisterStorage.js');
+      const canisterStorage = await import('../services/canisterStorage.js');
       
       // Clear known face embedding keys
       for (const partnerId of ['partner1', 'partner2', 'current_user', 'self']) {
         try {
-          await canisterLocalStorage.removeItem(`bonded_face_${partnerId}`);
+          await canisterStorage.default.removeItem(`bonded_face_${partnerId}`);
         } catch (error) {
           // Continue to next item
         }

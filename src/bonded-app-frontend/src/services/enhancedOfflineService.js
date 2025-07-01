@@ -110,26 +110,26 @@ class EnhancedOfflineService {
     const { data, options } = uploadTask;
     
     // Import the real canister storage service
-    const { default: realCanisterStorage } = await import('./realCanisterStorage.js');
+    const { default: canisterStorage } = await import('./canisterStorage.js');
     
     // Process the evidence data
     if (data.type === 'file') {
       // Handle file upload
-      const result = await realCanisterStorage.setEvidenceData(
+      const result = await canisterStorage.setEvidenceData(
         data.id || `evidence_${Date.now()}`,
         data.content
       );
       return result;
     } else if (data.type === 'timeline_entry') {
       // Handle timeline entry
-      const result = await realCanisterStorage.setTimelineData(
+      const result = await canisterStorage.setTimelineData(
         data.id || `timeline_${Date.now()}`,
         data.content
       );
       return result;
     } else {
       // Generic data upload
-      const result = await realCanisterStorage.setItem(
+      const result = await canisterStorage.setItem(
         data.key,
         data.value
       );
@@ -294,16 +294,16 @@ class EnhancedOfflineService {
   async preloadCriticalData() {
     try {
       // Preload user profile
-      const { default: realCanisterStorage } = await import('./realCanisterStorage.js');
-      const profile = await realCanisterStorage.getUserProfile();
+      const { default: canisterStorage } = await import('./canisterStorage.js');
+      const profile = await canisterStorage.getUserProfile();
       await this.cacheData('user_profile', profile);
       
       // Preload dashboard data
-      const dashboardData = await realCanisterStorage.getUserDashboardData();
+      const dashboardData = await canisterStorage.getUserDashboardData();
       await this.cacheData('dashboard_data', dashboardData);
       
       // Preload settings
-      const settings = await realCanisterStorage.getSettings();
+      const settings = await canisterStorage.getSettings();
       await this.cacheData('user_settings', settings);
       
     } catch (error) {

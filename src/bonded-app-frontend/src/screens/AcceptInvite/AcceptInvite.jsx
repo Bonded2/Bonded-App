@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import icpCanisterService from "../../services/icpCanisterService";
+import { api } from "../../services/api.js";
 import "./style.css";
 
 export const AcceptInvite = () => {
@@ -47,7 +47,7 @@ export const AcceptInvite = () => {
       // Get invite from ICP canister using proper service with resilient error handling
       
       try {
-        const inviteData = await icpCanisterService.getPartnerInvite(inviteId);
+        const inviteData = await api.getPartnerInvite(inviteId);
         
         // Handle network error (certificate validation issues) - removed as this is now handled in service
         

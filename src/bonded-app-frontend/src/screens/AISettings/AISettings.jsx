@@ -35,15 +35,15 @@ export const AISettings = () => {
     // Load saved settings from canister storage
     const loadSettings = async () => {
       try {
-        const { default: realCanisterStorage } = await import('../../services/realCanisterStorage.js');
-        const savedSettings = await realCanisterStorage.getItem('bonded_ai_settings');
+        const { default: canisterStorage } = await import('../../services/canisterStorage.js');
+        const savedSettings = await canisterStorage.getItem('bonded_ai_settings');
         if (savedSettings) {
           setAiSettings(JSON.parse(savedSettings));
         }
 
         // Check telegram setup status
         const userId = 'current_user'; // Would come from auth context
-        const telegramData = await realCanisterStorage.getItem(`telegram_setup_${userId}`);
+        const telegramData = await canisterStorage.getItem(`telegram_setup_${userId}`);
         setTelegramEnabled(!!telegramData);
       } catch (error) {
 // Console statement removed for production
@@ -105,8 +105,8 @@ export const AISettings = () => {
     
     // Save to canister storage
     try {
-      const { default: realCanisterStorage } = await import('../../services/realCanisterStorage.js');
-      await realCanisterStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
+      const { default: canisterStorage } = await import('../../services/canisterStorage.js');
+      await canisterStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));
     } catch (error) {
 // Console statement removed for production
       localStorage.setItem('bonded_ai_settings', JSON.stringify(newSettings));

@@ -24,12 +24,12 @@ class CanisterStorageService {
         
         try {
             // Import and initialize ICP canister service
-            const { default: icpCanisterService } = await import('./icpCanisterService.js');
-            await icpCanisterService.initialize();
+            const { api } = await import('./api.js');
+            await api.initialize();
             
             // Only set backend actor if user is authenticated
-            if (icpCanisterService.isAuthenticated) {
-                this.backendActor = icpCanisterService.actor;
+            if (api.isAuthenticated) {
+                this.backendActor = api.actor;
             }
             
             this.isInitialized = true;

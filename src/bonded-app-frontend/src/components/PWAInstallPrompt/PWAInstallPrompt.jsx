@@ -94,8 +94,8 @@ export const PWAInstallPrompt = () => {
         // If not dismissed recently, optionally try to get from canister storage later
         if (!lastDismissed) {
           try {
-            const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
-            const canisterDismissed = await canisterLocalStorage.getItem('pwaPromptDismissed');
+            const canisterStorage = await import('../../services/canisterStorage.js');
+            const canisterDismissed = await canisterStorage.default.getItem('pwaPromptDismissed');
             if (canisterDismissed) {
               const canisterDismissedTime = parseInt(canisterDismissed, 10);
               setIsDismissedRecently(canisterDismissedTime > oneDayAgo);
@@ -190,9 +190,9 @@ export const PWAInstallPrompt = () => {
       
       // Optionally save to canister storage if available and user is authenticated
       try {
-        const { canisterLocalStorage } = await import('../../services/realCanisterStorage.js');
-        await canisterLocalStorage.setItem('pwaPromptDismissed', Date.now().toString());
-        await canisterLocalStorage.setItem('bonded_pwa_dismissals', JSON.stringify(newDismissalData));
+        const canisterStorage = await import('../../services/canisterStorage.js');
+        await canisterStorage.default.setItem('pwaPromptDismissed', Date.now().toString());
+        await canisterStorage.default.setItem('bonded_pwa_dismissals', JSON.stringify(newDismissalData));
       } catch (canisterError) {
         // Ignore canister errors for PWA prompt - localStorage is sufficient
       }

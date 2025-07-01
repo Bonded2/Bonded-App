@@ -34,17 +34,15 @@ export const clearAllSessionData = async () => {
     
     // Also clear canister storage data
     try {
-      const { canisterStorage } = await import('../services/canisterStorage.js');
-      await canisterStorage.clear();
-// Console statement removed for production
-    } catch (canisterError) {
-// Console statement removed for production
+      const canisterStorage = await import('../services/canisterStorage.js');
+      // Clear both local and session storage
+      await canisterStorage.default.clear();
+    } catch (error) {
+      console.error('Failed to clear canister storage:', error);
     }
     
-// Console statement removed for production
     return true;
   } catch (error) {
-// Console statement removed for production
     return false;
   }
 };
@@ -72,7 +70,7 @@ export const clearUserProfileData = async () => {
     
     // Clear user-specific canister storage data
     try {
-      const { canisterLocalStorage, canisterSessionStorage } = await import('../services/realCanisterStorage.js');
+      const canisterStorage = await import('../services/canisterStorage.js');
       
       // List of user-specific keys that should be cleared
       const userKeys = [
@@ -83,18 +81,13 @@ export const clearUserProfileData = async () => {
         'currentRelationship'
       ];
       
-      await Promise.all(userKeys.map(key => canisterLocalStorage.removeItem(key)));
-      await Promise.all(userKeys.map(key => canisterSessionStorage.removeItem(key)));
+      await Promise.all(userKeys.map(key => canisterStorage.default.removeItem(key)));
       
-// Console statement removed for production
     } catch (canisterError) {
-// Console statement removed for production
     }
     
-// Console statement removed for production
     return true;
   } catch (error) {
-// Console statement removed for production
     return false;
   }
 };
@@ -112,7 +105,6 @@ export const forceICPDataRefresh = async () => {
     
     return true;
   } catch (error) {
-// Console statement removed for production
     return false;
   }
 };

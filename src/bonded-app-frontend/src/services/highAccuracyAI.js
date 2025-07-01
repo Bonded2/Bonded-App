@@ -9,7 +9,7 @@
  * - Multi-modal analysis (text + image + metadata)
  */
 
-import * as tf from '@tensorflow/tfjs';
+import * as ort from 'onnxruntime-web';
 
 class HighAccuracyAI {
   constructor() {
@@ -44,28 +44,45 @@ class HighAccuracyAI {
     this.isInitialized = false;
     this.validationCache = new Map();
     this.feedbackData = [];
+    this.initPromise = null;
   }
 
   async initialize() {
-    if (this.isInitialized) return;
-    
+    if (this.isInitialized) return true;
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = this._performInit();
+    return this.initPromise;
+  }
+
+  async _performInit() {
     try {
+      console.log('🚀 Initializing high-accuracy AI models...');
+      
+      // Initialize ONNX Runtime
+      ort.env.wasm.wasmPaths = '/';
+      
+      // Load models in parallel
       await Promise.all([
         this.loadPrimaryModels(),
         this.loadEnsembleModels(),
         this.loadRelationshipModels(),
         this.initializeValidationSystems()
       ]);
-      
+
       this.isInitialized = true;
+      console.log('✅ High-accuracy AI models initialized successfully');
+      return true;
     } catch (error) {
-      throw new Error(`High accuracy AI initialization failed: ${error.message}`);
+      console.error('❌ Failed to initialize high-accuracy AI models:', error);
+      this.initPromise = null;
+      return false;
     }
   }
 
   async loadPrimaryModels() {
     // Load NSFW detection with high accuracy
-    const nsfwjs = await import('@nsfwjs/nsfwjs');
+    const nsfwjs = await import('nsfwjs');
     this.models.nsfwModel = await nsfwjs.load('/models/nsfw-mobilenet-v2');
     
     // Load backup NSFW model for ensemble
@@ -76,28 +93,28 @@ class HighAccuracyAI {
     this.models.ocrEngine = Tesseract;
     
     // Load face detection models
-    const faceapi = await import('face-api.js');
-    await faceapi.nets.ssdMobilenetv1.loadFromUri('/models/face-api');
-    await faceapi.nets.faceRecognitionNet.loadFromUri('/models/face-api');
-    await faceapi.nets.faceExpressionNet.loadFromUri('/models/face-api');
-    await faceapi.nets.ageGenderNet.loadFromUri('/models/face-api');
-    this.models.faceDetector = faceapi;
+    // const faceapi = await import('face-api.js');
+    // await faceapi.nets.ssdMobilenetv1.loadFromUri('/models/face-api');
+    // await faceapi.nets.faceRecognitionNet.loadFromUri('/models/face-api');
+    // await faceapi.nets.faceExpressionNet.loadFromUri('/models/face-api');
+    // await faceapi.nets.ageGenderNet.loadFromUri('/models/face-api');
+    // this.models.faceDetector = faceapi;
     
     // Load text classification models
-    this.models.textClassifier = await tf.loadLayersModel('/models/text/bert-relationship-classifier/model.json');
-    this.models.alternativeTextClassifier = await tf.loadLayersModel('/models/text/distilbert-backup/model.json');
+    this.models.textClassifier = await ort.InferenceSession.create('/models/text/bert-relationship-classifier/model.onnx');
+    this.models.alternativeTextClassifier = await ort.InferenceSession.create('/models/text/distilbert-backup/model.onnx');
   }
 
   async loadEnsembleModels() {
     // Load specialized ensemble models for cross-validation
-    this.models.contextValidator = await tf.loadLayersModel('/models/ensemble/context-validator/model.json');
-    this.models.relationshipClassifier = await tf.loadLayersModel('/models/ensemble/relationship-classifier/model.json');
+    this.models.contextValidator = await ort.InferenceSession.create('/models/ensemble/context-validator/model.onnx');
+    this.models.relationshipClassifier = await ort.InferenceSession.create('/models/ensemble/relationship-classifier/model.onnx');
   }
 
   async loadRelationshipModels() {
     // Load relationship-specific models trained on couple data
-    this.models.intimacyDetector = await tf.loadLayersModel('/models/relationship/intimacy-detector/model.json');
-    this.models.timelineValidator = await tf.loadLayersModel('/models/relationship/timeline-validator/model.json');
+    this.models.intimacyDetector = await ort.InferenceSession.create('/models/relationship/intimacy-detector/model.onnx');
+    this.models.timelineValidator = await ort.InferenceSession.create('/models/relationship/timeline-validator/model.onnx');
   }
 
   async initializeValidationSystems() {
@@ -110,8 +127,15 @@ class HighAccuracyAI {
    * ENSEMBLE NSFW DETECTION - 95%+ accuracy
    */
   async detectNSFW(imageElement) {
-    await this.initialize();
-    
+    if (!this.isInitialized || !this.models.nsfwModel) {
+      // Return safe default if model not loaded
+      return {
+        isSafe: false,
+        confidence: 0,
+        predictions: []
+      };
+    }
+
     try {
       // Run multiple models in parallel
       const [primary, backup, context] = await Promise.all([
@@ -153,7 +177,13 @@ class HighAccuracyAI {
         meetsThreshold: calibratedConfidence >= this.accuracyThresholds.nsfw
       };
     } catch (error) {
-      throw new Error(`NSFW detection failed: ${error.message}`);
+      console.error('NSFW detection error:', error);
+      // Return safe default on error
+      return {
+        isSafe: false,
+        confidence: 0,
+        predictions: []
+      };
     }
   }
 
@@ -161,7 +191,23 @@ class HighAccuracyAI {
    * HIGH ACCURACY TEXT CLASSIFICATION
    */
   async classifyText(text) {
-    await this.initialize();
+    if (!this.isInitialized) {
+      // Return default classification
+      return {
+        classification: 'safe',
+        confidence: 0,
+        sentiment: 'neutral',
+        entities: [],
+        relationshipRelevance: 0,
+        validation: {
+          similarity: 0,
+          avgConfidence: 0,
+          isValid: false,
+          conflictAreas: []
+        },
+        meetsThreshold: false
+      };
+    }
     
     try {
       // Preprocess text
@@ -193,7 +239,22 @@ class HighAccuracyAI {
         meetsThreshold: calibratedConfidence >= this.accuracyThresholds.textClassification
       };
     } catch (error) {
-      throw new Error(`Text classification failed: ${error.message}`);
+      console.error('Text classification error:', error);
+      // Return default classification on error
+      return {
+        classification: 'safe',
+        confidence: 0,
+        sentiment: 'neutral',
+        entities: [],
+        relationshipRelevance: 0,
+        validation: {
+          similarity: 0,
+          avgConfidence: 0,
+          isValid: false,
+          conflictAreas: []
+        },
+        meetsThreshold: false
+      };
     }
   }
 
@@ -201,7 +262,21 @@ class HighAccuracyAI {
    * HIGH ACCURACY OCR with validation
    */
   async extractText(imageElement) {
-    await this.initialize();
+    if (!this.isInitialized || !this.models.ocrEngine) {
+      // Return default OCR result if model not loaded
+      return {
+        text: '',
+        confidence: 0,
+        words: [],
+        validation: {
+          similarity: 0,
+          avgConfidence: 0,
+          isValid: false,
+          conflictAreas: []
+        },
+        meetsThreshold: false
+      };
+    }
     
     try {
       // Create multiple OCR workers with different settings
@@ -228,7 +303,20 @@ class HighAccuracyAI {
         meetsThreshold: calibratedConfidence >= this.accuracyThresholds.ocr
       };
     } catch (error) {
-      throw new Error(`OCR extraction failed: ${error.message}`);
+      console.error('OCR extraction error:', error);
+      // Return default OCR result on error
+      return {
+        text: '',
+        confidence: 0,
+        words: [],
+        validation: {
+          similarity: 0,
+          avgConfidence: 0,
+          isValid: false,
+          conflictAreas: []
+        },
+        meetsThreshold: false
+      };
     }
   }
 
@@ -236,8 +324,16 @@ class HighAccuracyAI {
    * COMPREHENSIVE FACE ANALYSIS
    */
   async analyzeFaces(imageElement) {
-    await this.initialize();
-    
+    if (!this.isInitialized || !this.models.faceDetector) {
+      // Return empty face analysis if model not loaded
+      return {
+        faces: [],
+        confidence: 0,
+        relationshipContext: null,
+        meetsThreshold: false
+      };
+    }
+
     try {
       // Run comprehensive face analysis
       const detections = await this.models.faceDetector
@@ -270,7 +366,14 @@ class HighAccuracyAI {
         meetsThreshold: calibratedConfidence >= this.accuracyThresholds.faceDetection
       };
     } catch (error) {
-      throw new Error(`Face analysis failed: ${error.message}`);
+      console.error('Face analysis error:', error);
+      // Return empty face analysis on error
+      return {
+        faces: [],
+        confidence: 0,
+        relationshipContext: null,
+        meetsThreshold: false
+      };
     }
   }
 

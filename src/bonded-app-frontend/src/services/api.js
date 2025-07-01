@@ -13,13 +13,7 @@ const CANISTER_ID = import.meta.env.VITE_BACKEND_CANISTER_ID || 'f4nqh-tiaaa-aaa
 const IS_LOCAL = import.meta.env.VITE_DFX_NETWORK === 'local';
 
 // IDL factory - will be imported from declarations after dfx generate
-let idlFactory;
-try {
-  const declarations = await import('../../declarations/bonded-app-backend');
-  idlFactory = declarations.idlFactory;
-} catch (e) {
-  console.warn('Backend declarations not found. Run "dfx generate" to create them.');
-}
+let idlFactory = null;
 
 class APIService {
   constructor() {
@@ -34,6 +28,15 @@ class APIService {
    */
   async init() {
     try {
+      // Load IDL factory if not already loaded
+      if (!idlFactory) {
+        try {
+          const declarations = await import('../../../../src/declarations/bonded-app-backend');
+          idlFactory = declarations.idlFactory;
+        } catch (e) {
+          console.warn('Backend declarations not found. Run "dfx generate" to create them.');
+        }
+      }
       // Create auth client
       this.authClient = await AuthClient.create();
       

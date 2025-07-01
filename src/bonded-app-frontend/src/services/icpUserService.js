@@ -10,7 +10,7 @@
  * - User settings persistence on blockchain
  * - Relationship management through canisters
  */
-import icpCanisterService from './icpCanisterService.js';
+import { api } from "./api.js";
 
 /**
  * ICP User Service
@@ -57,10 +57,10 @@ class ICPUserService {
     if (this.isInitialized) return;
     
     try {
-      await icpCanisterService.initialize();
+      await api.initialize();
       
       // Check if user is already authenticated
-      if (icpCanisterService.isAuthenticated) {
+      if (api.isAuthenticated) {
         await this.loadCurrentUser();
       }
       
@@ -77,7 +77,7 @@ class ICPUserService {
    */
   async login() {
     try {
-      await icpCanisterService.login();
+      await api.login();
       await this.loadCurrentUser();
       return this.currentUser;
     } catch (error) {
@@ -91,7 +91,7 @@ class ICPUserService {
    */
   async logout() {
     try {
-      await icpCanisterService.logout();
+      await api.logout();
       this.currentUser = null;
 // Console statement removed for production
     } catch (error) {
@@ -105,7 +105,7 @@ class ICPUserService {
    */
   async registerUser(profileMetadata = null) {
     try {
-      const result = await icpCanisterService.registerUser(profileMetadata);
+      const result = await api.registerUser(profileMetadata);
       
       // For existing users or successful new registrations, load current user data
       if (result.success) {
@@ -133,18 +133,18 @@ class ICPUserService {
   async loadCurrentUser() {
     try {
       // Ensure we're authenticated first
-      if (!icpCanisterService.isAuthenticated) {
+      if (!api.isAuthenticated) {
         throw new Error('User not authenticated');
       }
 
       // Use resilient calls with graceful handling of certificate errors (expected in dev)
       const [profileResult, settingsResult] = await Promise.all([
         this.safeCanisterCall(
-          () => icpCanisterService.getUserProfile(),
+          () => api.getUserProfile(),
           'Profile not found (expected for new users)'
         ),
         this.safeCanisterCall(
-          () => icpCanisterService.getUserSettings(),
+          () => api.getUserSettings(),
           'Settings not found (expected for new users)'
         )
       ]);
@@ -156,7 +156,7 @@ class ICPUserService {
           // Profile and settings loaded successfully
 
       this.currentUser = {
-        principal: icpCanisterService.getPrincipal()?.toString(),
+        principal: api.getPrincipal()?.toString(),
         profile,
         settings,
         isAuthenticated: true
@@ -167,10 +167,10 @@ class ICPUserService {
 // Console statement removed for production
       // For new users or auth issues, create minimal user object
       this.currentUser = {
-        principal: icpCanisterService.getPrincipal()?.toString(),
+        principal: api.getPrincipal()?.toString(),
         profile: null,
         settings: null,
-        isAuthenticated: icpCanisterService.isAuthenticated
+        isAuthenticated: api.isAuthenticated
       };
       return this.currentUser;
     }
@@ -190,7 +190,7 @@ class ICPUserService {
    * Check if user is authenticated
    */
   async isAuthenticated() {
-    return icpCanisterService.isAuthenticated;
+    return api.isAuthenticated;
   }
 
   /**
@@ -219,7 +219,7 @@ class ICPUserService {
    */
   async getUserProfile() {
     try {
-      const profile = await icpCanisterService.getUserProfile();
+      const profile = await api.getUserProfile();
       if (this.currentUser) {
         this.currentUser.profile = profile;
       }
@@ -235,7 +235,7 @@ class ICPUserService {
    */
   async getUserSettings() {
     try {
-      const settings = await icpCanisterService.getUserSettings();
+      const settings = await api.getUserSettings();
       if (this.currentUser) {
         this.currentUser.settings = settings;
       }
@@ -251,7 +251,7 @@ class ICPUserService {
    */
   async updateUserSettings(settings) {
     try {
-      const result = await icpCanisterService.updateUserSettings(settings);
+      const result = await api.updateUserSettings(settings);
       
       // Wait a moment for the canister to process the update
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -330,7 +330,7 @@ class ICPUserService {
    */
   async uploadEvidence(relationshipId, encryptedData, metadata) {
     try {
-      return await icpCanisterService.uploadEvidence(relationshipId, encryptedData, metadata);
+      return await api.uploadEvidence(relationshipId, encryptedData, metadata);
     } catch (error) {
 // Console statement removed for production
       throw error;
@@ -342,7 +342,7 @@ class ICPUserService {
    */
   async getTimeline(query) {
     try {
-      return await icpCanisterService.getTimeline(query);
+      return await api.getTimeline(query);
     } catch (error) {
 // Console statement removed for production
       throw error;
@@ -368,7 +368,7 @@ class ICPUserService {
    */
   async deleteAccount() {
     try {
-      const result = await icpCanisterService.deleteAllUserData();
+      const result = await api.deleteAllUserData();
       this.currentUser = null;
       return result;
     } catch (error) {
@@ -383,7 +383,7 @@ class ICPUserService {
   async getCanisterStats() {
     try {
       // For now, return basic health stats
-      return await icpCanisterService.testConnectivity();
+      return await api.testConnectivity();
     } catch (error) {
 // Console statement removed for production
       throw error;
@@ -395,7 +395,7 @@ class ICPUserService {
    */
   async healthCheck() {
     try {
-      return await icpCanisterService.healthCheck();
+      return await api.healthCheck();
     } catch (error) {
 // Console statement removed for production
       throw error;
@@ -406,7 +406,7 @@ class ICPUserService {
    * Get principal
    */
   getPrincipal() {
-    return icpCanisterService.getPrincipal();
+    return api.getPrincipal();
   }
 
   /**
@@ -414,7 +414,7 @@ class ICPUserService {
    */
   async whoami() {
     try {
-      return await icpCanisterService.whoami();
+      return await api.whoami();
     } catch (error) {
 // Console statement removed for production
       throw error;

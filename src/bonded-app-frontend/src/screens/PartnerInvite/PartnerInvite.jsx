@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
-import icpCanisterService from "../../services/icpCanisterService";
+import { api } from "../../services/api.js";
 import emailService from "../../services/emailService";
 import "./style.css";
 
@@ -24,8 +24,8 @@ export const PartnerInvite = () => {
 
   const initializeUserData = async () => {
     try {
-      await icpCanisterService.initialize();
-      const profile = await icpCanisterService.getUserProfile();
+      await api.initialize();
+      const profile = await api.getUserProfile();
       setCurrentUser({
         name: 'Bonded User', // Default name for now
         email: profile.principal.toString(),
@@ -356,7 +356,7 @@ export const PartnerInvite = () => {
       };
 
       // Create invite in ICP canister (proper canister storage)
-      const inviteResult = await icpCanisterService.createPartnerInvite(inviteData);
+      const inviteResult = await api.createPartnerInvite(inviteData);
 
       if (inviteResult.success) {
         

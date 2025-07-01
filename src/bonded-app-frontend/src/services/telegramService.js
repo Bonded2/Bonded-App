@@ -11,7 +11,7 @@
  */
 
 import realAIProcessor from './realAIProcessor.js';
-import realCanisterStorage from './realCanisterStorage.js';
+import canisterStorage from "./canisterStorage.js";
 
 class TelegramService {
   constructor() {
@@ -47,9 +47,9 @@ class TelegramService {
       }
 
       // Store bot credentials securely in canister
-      await realCanisterStorage.setItem('telegram_bot_token', botToken);
+      await canisterStorage.setItem('telegram_bot_token', botToken);
       if (chatId) {
-        await realCanisterStorage.setItem('telegram_chat_id', chatId);
+        await canisterStorage.setItem('telegram_chat_id', chatId);
       }
 
       this.isInitialized = true;
@@ -223,7 +223,7 @@ class TelegramService {
         
         if (matchingChat) {
           this.chatId = matchingChat.id;
-          await realCanisterStorage.setItem('telegram_chat_id', matchingChat.id);
+          await canisterStorage.setItem('telegram_chat_id', matchingChat.id);
           return matchingChat;
         }
       }
@@ -232,7 +232,7 @@ class TelegramService {
       const privateChats = chats.filter(chat => chat.type === 'private');
       if (privateChats.length > 0) {
         this.chatId = privateChats[0].id;
-        await realCanisterStorage.setItem('telegram_chat_id', privateChats[0].id);
+        await canisterStorage.setItem('telegram_chat_id', privateChats[0].id);
         return privateChats[0];
       }
 
@@ -530,7 +530,7 @@ class TelegramService {
       
       // Store in canister if relevant to relationship
       if (analysis.confidence > 0.7) {
-        await realCanisterStorage.setItem(
+        await canisterStorage.setItem(
           `telegram_message_${message.message_id}`,
           JSON.stringify({
             text: message.text,
