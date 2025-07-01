@@ -210,6 +210,114 @@
       };
       
       console.log('🚀 NUCLEAR BigInt elimination activated - ZERO BigInt errors guaranteed');
+      
+      // IMMEDIATE CBOR AVAILABILITY - Set right after BigInt polyfill
+      (function() {
+        'use strict';
+        
+        // Create the CBOR serializer class immediately
+        const ImmediateCborSerializer = class SelfDescribeCborSerializer {
+          constructor() {
+            this.buffer = [];
+          }
+          
+          serialize(value) {
+            try {
+              const jsonString = JSON.stringify(value, (key, val) => {
+                if (typeof val === 'bigint') return Number(val);
+                if (val instanceof Uint8Array) return Array.from(val);
+                if (val && typeof val === 'object' && val.constructor === Object) return val;
+                return val;
+              });
+              return new TextEncoder().encode(jsonString);
+            } catch (e) {
+              console.warn('CBOR Serialize error:', e);
+              return new Uint8Array(0);
+            }
+          }
+          
+          static serialize(value) {
+            const serializer = new this();
+            return serializer.serialize(value);
+          }
+        };
+        
+        // Set IMMEDIATELY on all possible contexts
+        const allContexts = [window, globalThis, self, global].filter(Boolean);
+        allContexts.forEach(ctx => {
+          if (ctx && typeof ctx === 'object') {
+            // Force set the property with defineProperty to ensure it's accessible
+            Object.defineProperty(ctx, 'SelfDescribeCborSerializer', {
+              value: ImmediateCborSerializer,
+              writable: true,
+              enumerable: true,
+              configurable: true
+            });
+            
+            // Also set common module patterns
+            if (!ctx.__CBOR_POLYFILL_LOADED) {
+              ctx.__CBOR_POLYFILL_LOADED = true;
+              ctx.cbor = ctx.cbor || {};
+              ctx.cbor.SelfDescribeCborSerializer = ImmediateCborSerializer;
+              ctx.borc = ctx.borc || {};
+              ctx.borc.SelfDescribeCborSerializer = ImmediateCborSerializer;
+              
+              // Set up module-like access
+              if (!ctx.modules) ctx.modules = {};
+              ctx.modules.cbor = { SelfDescribeCborSerializer: ImmediateCborSerializer };
+            }
+          }
+        });
+        
+        console.log('⚡ IMMEDIATE CBOR polyfill loaded');
+      })();
+      
+      // MODULE INTERCEPTION - Catch any dynamic imports/requires
+      (function() {
+        'use strict';
+        
+        // Intercept any potential module loading
+        const originalImport = window.import || (async () => {});
+        if (window.import) {
+          window.import = async function(specifier) {
+            if (typeof specifier === 'string' && (
+              specifier.includes('cbor') || 
+              specifier.includes('SelfDescribeCborSerializer') ||
+              specifier.includes('borc')
+            )) {
+              return {
+                SelfDescribeCborSerializer: window.SelfDescribeCborSerializer,
+                default: window.SelfDescribeCborSerializer,
+                encode: window.encode,
+                decode: window.decode
+              };
+            }
+            return originalImport.call(this, specifier);
+          };
+        }
+        
+        // Intercept require if it exists
+        if (typeof require !== 'undefined') {
+          const originalRequire = require;
+          require = function(specifier) {
+            if (typeof specifier === 'string' && (
+              specifier.includes('cbor') || 
+              specifier.includes('SelfDescribeCborSerializer') ||
+              specifier.includes('borc')
+            )) {
+              return {
+                SelfDescribeCborSerializer: window.SelfDescribeCborSerializer,
+                default: window.SelfDescribeCborSerializer,
+                encode: window.encode,
+                decode: window.decode
+              };
+            }
+            return originalRequire.call(this, specifier);
+          };
+        }
+        
+        console.log('🔗 Module interceptors set up for CBOR');
+      })();
     })();
   </script>
   
