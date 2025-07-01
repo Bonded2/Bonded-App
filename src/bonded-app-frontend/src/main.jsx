@@ -1,44 +1,6 @@
-// IMMEDIATE CBOR POLYFILL - Set before ANY imports
-(function() {
-  'use strict';
-  const CborSerializer = class SelfDescribeCborSerializer {
-    constructor() { this.buffer = []; }
-    serialize(value) {
-      try {
-        const jsonString = JSON.stringify(value, (key, val) => {
-          if (typeof val === 'bigint') return Number(val);
-          if (val instanceof Uint8Array) return Array.from(val);
-          return val;
-        });
-        return new TextEncoder().encode(jsonString);
-      } catch (e) {
-        return new Uint8Array(0);
-      }
-    }
-    static serialize(value) {
-      return new this().serialize(value);
-    }
-  };
-  
-  // Ensure global is defined before using it
-  if (typeof global === 'undefined') {
-    globalThis.global = globalThis;
-  }
-  [window, globalThis, self, global].filter(Boolean).forEach(ctx => {
-    if (ctx && typeof ctx === 'object') {
-      ctx.SelfDescribeCborSerializer = CborSerializer;
-      Object.defineProperty(ctx, 'SelfDescribeCborSerializer', {
-        value: CborSerializer,
-        writable: true,
-        enumerable: true,
-        configurable: true
-      });
-    }
-  });
-})();
-
-// Import BigInt replacement FIRST - before any other imports
+// Import critical polyfills FIRST - before any other imports
 import './bigint-replacement.js';
+import './utils/cborPolyfill.js';
 // Import BigNumber polyfill for CBOR compatibility
 import './utils/bignumber-polyfill.js';
 // Ensure React is available globally for hook utilities before any other imports
