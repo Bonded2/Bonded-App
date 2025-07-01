@@ -9,14 +9,58 @@
         "node_compatibility": true
       }
     },
-    "bonded-app-frontend": {
+    "bonded-app-main": {
       "source": [
-        "src/bonded-app-frontend/dist"
+        "src/bonded-app-frontend/dist-main"
       ],
       "type": "assets",
       "workspace": "bonded-app-frontend",
       "declarations": {
-        "output": "src/declarations/bonded-app-frontend",
+        "output": "src/declarations/bonded-app-main",
+        "node_compatibility": true
+      }
+    },
+    "bonded-app-assets": {
+      "source": [
+        "src/bonded-app-frontend/dist-assets"
+      ],
+      "type": "assets",
+      "workspace": "bonded-app-frontend",
+      "declarations": {
+        "output": "src/declarations/bonded-app-assets",
+        "node_compatibility": true
+      }
+    },
+    "bonded-app-ai": {
+      "source": [
+        "src/bonded-app-frontend/dist-ai"
+      ],
+      "type": "assets",
+      "workspace": "bonded-app-frontend",
+      "declarations": {
+        "output": "src/declarations/bonded-app-ai",
+        "node_compatibility": true
+      }
+    },
+    "bonded-app-vendor": {
+      "source": [
+        "src/bonded-app-frontend/dist-vendor"
+      ],
+      "type": "assets",
+      "workspace": "bonded-app-frontend",
+      "declarations": {
+        "output": "src/declarations/bonded-app-vendor",
+        "node_compatibility": true
+      }
+    },
+    "bonded-app-media": {
+      "source": [
+        "src/bonded-app-frontend/dist-media"
+      ],
+      "type": "assets",
+      "workspace": "bonded-app-frontend",
+      "declarations": {
+        "output": "src/declarations/bonded-app-media",
         "node_compatibility": true
       }
     }

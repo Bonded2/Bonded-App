@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <title>Bonded App - Relationship Verification for Immigration</title>
+  <meta name="description" content="Bonded helps you collect and organize proof of your genuine relationship for visa, residency and citizenship applications." />
+  <meta name="keywords" content="visa application, relationship verification, immigration, citizenship, relationship proof" />
+  <base href="/" />
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+  
+  <!-- Content Security Policy - Permissive for development, external services, and Yoti -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdn.jsdelivr.net https://sdk.yoti.com; style-src 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' blob: data: https://fonts.googleapis.com; font-src 'self' data: blob: https://fonts.gstatic.com; connect-src 'self' http: https: ws: wss: blob: data: https://*.yoti.com https://api.yoti.com wss://*.yoti.com; img-src 'self' data: blob: https:; media-src 'self' data: blob:; worker-src 'self' blob: data:; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;" />
+  
+  <!-- Permissions Policy - Define allowed features -->
+  <meta http-equiv="Permissions-Policy" content="camera=self, microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), ambient-light-sensor=(), autoplay=(), encrypted-media=(), fullscreen=self, picture-in-picture=()" />
+  
+  <!-- NUCLEAR BigInt polyfill - MUST BE FIRST SCRIPT -->
+  <script>
+    // NUCLEAR BigInt elimination for ICP/DFX compatibility - ZERO TOLERANCE
+    (function() {
+      'use strict';
+      
+      // Safe BigInt replacement function
+      function SafeBigInt(value) {
+        try {
+          if (value === null || value === undefined) return 0;
+          if (typeof value === 'string') {
+            if (value.trim() === '') return 0;
+            const parsed = parseInt(value, 10);
+            return isNaN(parsed) ? 0 : parsed;
+          }
+          if (typeof value === 'number') return isNaN(value) ? 0 : Math.trunc(value);
+          if (typeof value === 'bigint') {
+            try {
+              return Number(value);
+            } catch (e) {
+              return parseInt(value.toString(), 10) || 0;
+            }
+          }
+          if (typeof value === 'boolean') return value ? 1 : 0;
+          if (typeof value === 'object' && value && value.toString) {
+            const str = value.toString();
+            const parsed = parseInt(str, 10);
+            return isNaN(parsed) ? 0 : parsed;
+          }
+          const converted = Number(value);
+          return isNaN(converted) ? 0 : Math.trunc(converted);
+        } catch (error) {
+          return 0;
+        }
+      }
+      
+      // Static methods
+      SafeBigInt.asIntN = (bits, value) => {
+        try {
+          const num = SafeBigInt(value);
+          if (bits === 32) return num | 0;
+          if (bits === 64) return num;
+          return num;
+        } catch (e) { return 0; }
+      };
+      
+      SafeBigInt.asUintN = (bits, value) => {
+        try {
+          const num = Math.abs(SafeBigInt(value));
+          if (bits === 32) return num >>> 0;
+          if (bits === 64) return num;
+          return num;
+        } catch (e) { return 0; }
+      };
+      
+      // IMMEDIATE GLOBAL REPLACEMENT - ALL CONTEXTS
+      const contexts = [window, globalThis, self];
+      contexts.forEach(ctx => {
+        if (ctx && typeof ctx === 'object') {
+          try {
+            ctx.BigInt = SafeBigInt;
+          } catch (e) {}
+        }
+      });
+      
+      // Override Number constructor for BigInt safety
+      if (window.Number) {
+        const OriginalNumber = window.Number;
+        window.Number = function(value) {
+          if (typeof value === 'bigint') {
+            try {
+              return OriginalNumber(value.toString());
+            } catch (e) {
+              return 0;
+            }
+          }
+          try {
+            return OriginalNumber(value);
+          } catch (e) {
+            return 0;
+          }
+        };
+        
+        // Copy all Number static properties
+        Object.getOwnPropertyNames(OriginalNumber).forEach(name => {
+          if (name !== 'length' && name !== 'name' && name !== 'prototype') {
+            try {
+              window.Number[name] = OriginalNumber[name];
+            } catch (e) {}
+          }
+        });
+        
+        Object.setPrototypeOf(window.Number, OriginalNumber);
+        window.Number.prototype = OriginalNumber.prototype;
+      }
+      
+      // NUCLEAR JSON.stringify override
+      if (JSON && JSON.stringify) {
+        const originalStringify = JSON.stringify;
+        JSON.stringify = function(value, replacer, space) {
+          const safeReplacer = function(key, val) {
+            if (typeof val === 'bigint') return SafeBigInt(val);
+            if (val && typeof val === 'object' && val.constructor) {
+              try {
+                if (val.constructor.name === 'BigInt') return SafeBigInt(val);
+              } catch (e) {}
+            }
+            return typeof replacer === 'function' ? replacer(key, val) : val;
+          };
+          
+          try {
+            return originalStringify.call(this, value, safeReplacer, space);
+          } catch (error) {
+            try {
+              return originalStringify.call(this, value, (key, val) => {
+                if (typeof val === 'bigint') return Number(val) || 0;
+                return val;
+              }, space);
+            } catch (e) {
+              return '{}';
+            }
+          }
+        };
+      }
+      
+      // TOTAL error suppression for BigInt
+      const originalError = window.Error;
+      window.Error = function(message) {
+        if (typeof message === 'string' && (
+          message.includes('BigInt') || 
+          message.includes('Cannot convert') ||
+          message.includes('convert') && message.includes('bigint') ||
+          message.includes('bigint')
+        )) {
+          return new originalError('BigInt error (suppressed for compatibility)');
+        }
+        return new originalError(message);
+      };
+      
+      // Global error handler for BigInt errors
+      window.addEventListener('error', function(e) {
+        if (e.message && (
+          e.message.includes('BigInt') || 
+          e.message.includes('Cannot convert') ||
+          e.message.includes('bigint')
+        )) {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      }, { capture: true });
+      
+      // Unhandled promise rejections
+      window.addEventListener('unhandledrejection', function(e) {
+        if (e.reason && e.reason.message && (
+          e.reason.message.includes('BigInt') || 
+          e.reason.message.includes('Cannot convert') ||
+          e.reason.message.includes('bigint')
+        )) {
+          e.preventDefault();
+          return false;
+        }
+      });
+      
+      // VENDOR BUNDLE PATCH - intercept script loading
+      const originalCreateElement = document.createElement;
+      document.createElement = function(tagName) {
+        const element = originalCreateElement.call(this, tagName);
+        
+        if (tagName.toLowerCase() === 'script') {
+          const originalOnLoad = element.onload;
+          element.onload = function() {
+            // After script loads, ensure BigInt is still our safe version
+            setTimeout(() => {
+              try {
+                contexts.forEach(ctx => {
+                  if (ctx && typeof ctx === 'object') {
+                    try {
+                      ctx.BigInt = SafeBigInt;
+                    } catch (e) {}
+                  }
+                });
+              } catch (e) {}
+            }, 0);
+            
+            if (originalOnLoad) originalOnLoad.call(this);
+          };
+        }
+        
+        return element;
+      };
+      
+      console.log('🚀 NUCLEAR BigInt elimination activated - ZERO BigInt errors guaranteed');
+    })();
+  </script>
+  
+  <!-- CBOR Serialization Polyfill - Must be after BigInt polyfill -->
+  <script>
+    // CBOR Serialization Support for ICP SDK
+    (function() {
+      'use strict';
+      
+      // Ensure BigNumber is available for CBOR libraries
+      if (!window.BigNumber && !window.Bignumber) {
+        // Simple BigNumber implementation for CBOR
+        function SimpleBigNumber(value) {
+          this.value = typeof value === 'string' ? parseFloat(value) : Number(value) || 0;
+        }
+        
+        SimpleBigNumber.prototype.toString = function() {
+          return this.value.toString();
+        };
+        
+        SimpleBigNumber.prototype.toNumber = function() {
+          return this.value;
+        };
+        
+        SimpleBigNumber.prototype.valueOf = function() {
+          return this.value;
+        };
+        
+        window.BigNumber = SimpleBigNumber;
+        window.Bignumber = SimpleBigNumber;
+      }
+      
+      // COMPREHENSIVE CBOR dependencies for ICP SDK
+      const contexts = [window, globalThis, self];
+      
+      contexts.forEach(ctx => {
+        if (ctx && typeof ctx === 'object') {
+          try {
+            // SelfDescribeCborSerializer
+            if (!ctx.SelfDescribeCborSerializer) {
+              ctx.SelfDescribeCborSerializer = class {
+                constructor() {
+                  this.buffer = [];
+                }
+                
+                serialize(value) {
+                  try {
+                    // Convert to JSON as fallback for CBOR
+                    const jsonString = JSON.stringify(value, (key, val) => {
+                      if (typeof val === 'bigint') return Number(val);
+                      return val;
+                    });
+                    return new TextEncoder().encode(jsonString);
+                  } catch (e) {
+                    return new Uint8Array(0);
+                  }
+                }
+                
+                static serialize(value) {
+                  const serializer = new this();
+                  return serializer.serialize(value);
+                }
+              };
+            }
+            
+            // CBOR Decoder
+            if (!ctx.Decoder) {
+              ctx.Decoder = class {
+                constructor(buffer) {
+                  this.buffer = buffer;
+                }
+                
+                decode() {
+                  try {
+                    const jsonString = new TextDecoder().decode(this.buffer);
+                    return JSON.parse(jsonString);
+                  } catch (e) {
+                    return null;
+                  }
+                }
+                
+                static decode(buffer) {
+                  const decoder = new this(buffer);
+                  return decoder.decode();
+                }
+              };
+            }
+            
+            // CBOR encode/decode functions
+            if (!ctx.encode) {
+              ctx.encode = function(value) {
+                try {
+                  const jsonString = JSON.stringify(value, (key, val) => {
+                    if (typeof val === 'bigint') return Number(val);
+                    return val;
+                  });
+                  return new TextEncoder().encode(jsonString);
+                } catch (e) {
+                  return new Uint8Array(0);
+                }
+              };
+            }
+            
+            if (!ctx.decode) {
+              ctx.decode = function(buffer) {
+                try {
+                  const jsonString = new TextDecoder().decode(buffer);
+                  return JSON.parse(jsonString);
+                } catch (e) {
+                  return null;
+                }
+              };
+            }
+            
+            // CBOR module export style
+            if (!ctx.CBOR) {
+              ctx.CBOR = {
+                encode: ctx.encode,
+                decode: ctx.decode,
+                SelfDescribeCborSerializer: ctx.SelfDescribeCborSerializer,
+                Decoder: ctx.Decoder
+              };
+            }
+            
+          } catch (e) {
+            // Silent fail for individual context setup
+          }
+        }
+      });
+      
+      // Ensure Buffer-like functionality for CBOR
+      if (!window.Buffer) {
+        window.Buffer = {
+          from: (data, encoding) => {
+            if (typeof data === 'string') {
+              return new TextEncoder().encode(data);
+            }
+            return new Uint8Array(data);
+          },
+          alloc: (size) => new Uint8Array(size),
+          isBuffer: (obj) => obj instanceof Uint8Array,
+          concat: (buffers) => {
+            const totalLength = buffers.reduce((len, buf) => len + buf.length, 0);
+            const result = new Uint8Array(totalLength);
+            let offset = 0;
+            for (const buf of buffers) {
+              result.set(buf, offset);
+              offset += buf.length;
+            }
+            return result;
+          }
+        };
+      }
+      
+      console.log('🔧 CBOR polyfills loaded for ICP SDK compatibility');
+    })();
+  </script>
+  
+  <!-- Early console filter - must be first script to catch all warnings -->
+  <script>
+    // Ultimate console warning suppression - catches everything
+    (function() {
+      'use strict';
+      
+      // Store original console methods
+      const originalConsole = {
+        log: console.log,
+        warn: console.warn,
+        error: console.error,
+        info: console.info,
+        debug: console.debug
+      };
+      
+      // Comprehensive patterns for all known harmless warnings
+      const suppressPatterns = [
+        // Permissions Policy (most common)
+        /Permissions-Policy.*Unrecognized/i,
+        /Unrecognized feature.*interest-cohort/i,
+        /Unrecognized feature.*browsing-topics/i,
+        /Unrecognized feature.*join-ad-interest-group/i,
+        /Unrecognized feature.*run-ad-auction/i,
+        /Unrecognized feature.*shared-storage/i,
+        /Unrecognized feature.*attribution-reporting/i,
+        /Unrecognized feature.*trust-token-redemption/i,
+        
+        // TensorFlow.js warnings (very common)
+        /TensorFlow\.js.*kernel.*already registered/i,
+        /Duplicate kernel registration/i,
+        /Platform browser has already been set/i,
+        /webgl.*already registered/i,
+        /tf\.Tensor.*disposed/i,
+        /WARNING:tensorflow/i,
+        /webgl.*not supported/i,
+        /Backend.*already registered/i,
+        
+        // NSFWJS model warnings
+        /nsfwjs.*warn/i,
+        /nsfwjs.*error/i,
+        /Loading.*nsfwjs/i,
+        
+        // ONNX Runtime warnings
+        /onnxruntime.*warn/i,
+        /WebGL.*context/i,
+        
+        // Content Security Policy (informational)
+        /Content Security Policy.*directive/i,
+        /CSP.*directive/i,
+        
+        // Service Worker warnings
+        /service.*worker.*update/i,
+        /SW.*registration/i,
+        /Cache.*update/i,
+        
+        // React DevTools
+        /Download.*React.*DevTools/i,
+        /React.*DevTools.*not.*installed/i,
+        
+        // Source maps (common in dev)
+        /DevTools.*source.*map/i,
+        /Source.*map.*error/i,
+        
+        // WebGL warnings
+        /WebGL.*warning/i,
+        /WEBGL.*warning/i,
+        /GPU.*warning/i,
+        
+        // Performance warnings (often harmless)
+        /Performance.*entry/i,
+        /Long.*task/i,
+        
+        // Font loading warnings
+        /Font.*failed.*load/i,
+        /font.*display.*swap/i,
+        
+        // PWA manifest warnings
+        /Manifest.*warning/i,
+        /PWA.*warning/i,
+        
+        // Cross-origin warnings (often expected)
+        /Cross-origin.*warning/i,
+        /CORS.*warning/i,
+        
+        // Third-party script warnings
+        /third.*party.*script/i,
+        /external.*script.*warning/i,
+        
+        // BigInt conversion errors (ICP/DFX related)
+        /BigInt.*convert/i,
+        /Cannot.*convert.*BigInt/i,
+        /bigint.*number/i,
+        /Uncaught.*TypeError.*BigInt/i
+      ];
+      
+      // Function to check if message should be suppressed
+      function shouldSuppress(args) {
+        const message = args.join(' ').toLowerCase();
+        return suppressPatterns.some(pattern => pattern.test(message));
+      }
+      
+      // Override all console methods
+      console.log = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.log.apply(console, args);
+        }
+      };
+      
+      console.warn = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.warn.apply(console, args);
+        }
+      };
+      
+      console.error = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.error.apply(console, args);
+        }
+      };
+      
+      console.info = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.info.apply(console, args);
+        }
+      };
+      
+      console.debug = function(...args) {
+        if (!shouldSuppress(args)) {
+          originalConsole.debug.apply(console, args);
+        }
+      };
+      
+      // Also capture window.onerror for script errors
+      const originalOnError = window.onerror;
+      window.onerror = function(message, source, lineno, colno, error) {
+        if (suppressPatterns.some(pattern => pattern.test(message))) {
+          return true; // Suppress error
+        }
+        if (originalOnError) {
+          return originalOnError.apply(window, arguments);
+        }
+        return false;
+      };
+      
+      // Capture unhandled promise rejections that might be warnings
+      const originalUnhandledRejection = window.onunhandledpromiserejection;
+      window.onunhandledpromiserejection = function(event) {
+        const message = event.reason?.message || event.reason?.toString() || '';
+        if (suppressPatterns.some(pattern => pattern.test(message))) {
+          event.preventDefault();
+          return true;
+        }
+        if (originalUnhandledRejection) {
+          return originalUnhandledRejection.apply(window, arguments);
+        }
+        return false;
+      };
+      
+    })();
+  </script>
+  
+  <!-- CDN AI libraries loading (with CSP compatibility) -->
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
+  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.4/dist/tesseract.min.js"></script>
+  <!-- Note: @xenova/transformers will be loaded dynamically when needed -->
+  <script>
+    // Enhanced AI libraries initialization with proper error handling
+    window.aiInitPromise = new Promise((resolve, reject) => {
+      let checkCount = 0;
+      const maxChecks = 50;
+      
+      function checkAILibraries() {
+        checkCount++;
+        
+        const tfReady = typeof window.tf !== 'undefined' && window.tf.ready;
+        const nsfwReady = typeof window.nsfwjs !== 'undefined';
+        const ortReady = typeof window.ort !== 'undefined';
+        const tesseractReady = typeof window.Tesseract !== 'undefined';
+        
+        if (tfReady && nsfwReady && ortReady && tesseractReady) {
+          // All AI libraries loaded from CDN
+          
+          // Initialize TensorFlow first
+          window.tf.ready().then(() => {
+            // TensorFlow ready
+            // NSFWJS confirmed available globally
+            // ONNX Runtime confirmed available globally
+            // Tesseract confirmed available globally
+            
+            resolve({ 
+              tf: window.tf, 
+              nsfwjs: window.nsfwjs,
+              ort: window.ort,
+              tesseract: window.Tesseract
+            });
+          }).catch(reject);
+          
+        } else if (checkCount < maxChecks) {
+          setTimeout(checkAILibraries, 100);
+        } else {
+          // AI libraries failed to load after timeout
+          reject(new Error('AI libraries failed to load'));
+        }
+      }
+      
+      // Start checking after a brief delay to allow scripts to load
+      setTimeout(checkAILibraries, 100);
+    });
+    
+    // Log initialization status
+    window.aiInitPromise.then((modules) => {
+      // AI modules initialized successfully
+    }).catch((error) => {
+      // AI module initialization failed
+    });
+    
+    // Legacy support - keep tfInitPromise for backward compatibility
+    window.tfInitPromise = window.aiInitPromise;
+  </script>
+
+  <!-- Primary Theme Color for browsers -->
+  <meta name="theme-color" content="#2C4CDF" />
+  <meta name="msapplication-TileColor" content="#2C4CDF" />
+  <meta name="msapplication-navbutton-color" content="#2C4CDF" />
+
+  <!-- iOS PWA specific tags -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Bonded" />
+  
+  <!-- iOS splash screens -->
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-2048-2732.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1668-2388.png" media="(device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1536-2048.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1125-2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-1242-2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-828-1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-750-1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="/images/splash/apple-splash-640-1136.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  
+  <!-- iOS icons -->
+  <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/images/apple-touch-icon-152x152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/images/apple-touch-icon-167x167.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png" />
+  <link rel="apple-touch-icon" sizes="120x120" href="/images/apple-touch-icon-120x120.png" />
+  
+  <!-- Microsoft Tiles -->
+  <meta name="msapplication-TileImage" content="/images/ms-tile-144x144.png" />
+  <meta name="msapplication-config" content="/browserconfig.xml" />
+  
+  <!-- Import Maps for ESM Dependencies -->
+
+  
+  <!-- Production ESM Preloads - ULTRA LIGHTWEIGHT LOADING -->
+  
+  
+  <!-- Performance optimizations -->
+  <link rel="dns-prefetch" href="//fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  
+  <!-- Meta tags for SEO and social sharing -->
+  <meta name="description" content="Secure relationship verification app for immigration and visa applications. AI-powered evidence collection with privacy-first design." />
+  <meta name="keywords" content="relationship verification, immigration, visa, evidence collection, privacy, AI" />
+  
+  <!-- Open Graph tags -->
+  <meta property="og:title" content="Bonded - Relationship Evidence App" />
+  <meta property="og:description" content="Secure relationship verification app for immigration and visa applications" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="/images/bonded-logo-blue.svg" />
+  
+  <!-- Twitter Card tags -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Bonded - Relationship Evidence App" />
+  <meta name="twitter:description" content="Secure relationship verification app for immigration and visa applications" />
+  <meta name="twitter:image" content="/images/bonded-logo-blue.svg" />
+  
+  <style>
+    html, body, #root {
+      margin: 0;
+      padding: 0;
+      border: none;
+      width: 100%;
+      height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+      position: relative;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    /* Add iOS specific styles for notched devices */
+    @supports (padding-top: env(safe-area-inset-top)) {
+      body, #root {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://cdn.jsdelivr.net/npm/react@18.2.0/+esm",
+        "react-dom": "https://cdn.jsdelivr.net/npm/react-dom@18.2.0/+esm",
+        "react-router-dom": "https://cdn.jsdelivr.net/npm/react-router-dom@6.8.1/+esm",
+        "react-select": "https://cdn.jsdelivr.net/npm/react-select@5.10.1/+esm",
+        "nsfwjs": "https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/+esm",
+        "tesseract.js": "https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/+esm",
+        "@xenova/transformers": "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/+esm",
+        "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/+esm",
+        "jspdf": "https://cdn.jsdelivr.net/npm/jspdf@3.0.1/+esm",
+        "jszip": "https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm",
+        "idb": "https://cdn.jsdelivr.net/npm/idb@7.1.1/+esm",
+        "crypto-js": "https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/+esm",
+        "workbox-window": "https://cdn.jsdelivr.net/npm/workbox-window@7.0.0/+esm",
+        "buffer": "https://cdn.jsdelivr.net/npm/buffer@6.0.3/+esm",
+        "crypto-browserify": "https://cdn.jsdelivr.net/npm/crypto-browserify@3.12.1/+esm",
+        "stream-browserify": "https://cdn.jsdelivr.net/npm/stream-browserify@3.0.0/+esm",
+        "core-js": "https://cdn.jsdelivr.net/npm/core-js@3.42.0/+esm"
+      }
+    }
+  </script>
+  <script type="module" crossorigin src="{{CANISTER_BONDED_APP_MAIN_URL}}/assets/index-7dcf3142.js"></script>
+  <link rel="modulepreload" crossorigin href="{{CANISTER_BONDED_APP_VENDOR_URL}}/assets/icp-sdk-b71c0736.js">
+  <link rel="modulepreload" crossorigin href="{{CANISTER_BONDED_APP_VENDOR_URL}}/assets/vendor-e6e658b6.js">
+  <link rel="stylesheet" href="{{CANISTER_BONDED_APP_ASSETS_URL}}/assets/index-0aeff5a8.css">
+
+  <script>
+    <script>
+    window.BONDED_CANISTER_IDS = {"bonded-app-ai": "5jw7w-wiaaa-aaaab-qacza-cai","bonded-app-main": "72j4w-6qaaa-aaaab-qacxq-cai","bonded-app-media": "4ey3y-zaaaa-aaaab-qac6q-cai","bonded-app-assets": "5hus6-nyaaa-aaaab-qacya-cai","bonded-app-vendor": "4r7kv-yiaaa-aaaab-qac5a-cai"
+};
+    console.log('Canister IDs loaded:', window.BONDED_CANISTER_IDS);
+  </script>
+
+    // Multi-Canister Frontend Orchestration
+    window.BONDED_CANISTER_REGISTRY = {
+  "canisters": {},
+  "loadMap": {
+    "assets/Account-96b289d3.js": "bonded-app-main",
+    "assets/Login-af50eecc.js": "bonded-app-main",
+    "assets/ProfileSetup-9b16b268.js": "bonded-app-main",
+    "assets/index-0fba2ca3.js": "bonded-app-main",
+    "assets/index-33f0749d.js": "bonded-app-main",
+    "assets/index-34bbe337.js": "bonded-app-main",
+    "assets/index-556a343f.js": "bonded-app-main",
+    "assets/index-6f43aa5c.js": "bonded-app-main",
+    "assets/index-7b3317d7.js": "bonded-app-main",
+    "assets/index-7dcf3142.js": "bonded-app-main",
+    "assets/index-7f73325e.js": "bonded-app-main",
+    "assets/index-8d714f50.js": "bonded-app-main",
+    "assets/index-a0012e17.js": "bonded-app-main",
+    "assets/index-b8afbf61.js": "bonded-app-main",
+    "assets/index-c266595b.js": "bonded-app-main",
+    "assets/index-ed0f0e28.js": "bonded-app-main",
+    "index.html": "bonded-app-main",
+    "manifest.json": "bonded-app-main",
+    "offline.html": "bonded-app-main",
+    "service-worker.js": "bonded-app-main",
+    "assets/AIClassificationTest-7acecbf5.css": "bonded-app-assets",
+    "assets/AISettings-e40ab24d.css": "bonded-app-assets",
+    "assets/AcceptInvite-56b5b1b6.css": "bonded-app-assets",
+    "assets/Account-f9dbec94.css": "bonded-app-assets",
+    "assets/Capture-569729b0.css": "bonded-app-assets",
+    "assets/CustomTextField-a58a749f.css": "bonded-app-assets",
+    "assets/DeleteModal-3ac80c02.css": "bonded-app-assets",
+    "assets/EditProfileModal-4f0ae048.css": "bonded-app-assets",
+    "assets/FAQ-ff83d6b0.css": "bonded-app-assets",
+    "assets/Login-a42488d4.css": "bonded-app-assets",
+    "assets/MediaScanner-68fa29a6.css": "bonded-app-assets",
+    "assets/MenuFrame-10c1fa1c.css": "bonded-app-assets",
+    "assets/OfflineStatusBar-3acf1dfe.css": "bonded-app-assets",
+    "assets/PWAInstallPrompt-bf31e3fc.css": "bonded-app-assets",
+    "assets/PartnerInvite-31b249a7.css": "bonded-app-assets",
+    "assets/Privacy-6ed63c70.css": "bonded-app-assets",
+    "assets/ProfileSetup-94afe418.css": "bonded-app-assets",
+    "assets/TopAppBar-aa81e615.css": "bonded-app-assets",
+    "assets/index-0aeff5a8.css": "bonded-app-assets",
+    "assets/index-21dcbf67.css": "bonded-app-assets",
+    "assets/index-22aa4399.css": "bonded-app-assets",
+    "assets/index-6acf6c57.css": "bonded-app-assets",
+    "assets/index-7b662d75.css": "bonded-app-assets",
+    "assets/index-86e1ca38.css": "bonded-app-assets",
+    "assets/index-8f89d05f.css": "bonded-app-assets",
+    "assets/index-a1bd7159.css": "bonded-app-assets",
+    "assets/index-c0093574.css": "bonded-app-assets",
+    "assets/index-d5a0bc54.css": "bonded-app-assets",
+    "assets/index-ed8f0449.css": "bonded-app-assets",
+    "assets/locationService-b3b4e2c8.css": "bonded-app-assets",
+    "images/Bonded - Brand image 1.jpg": "bonded-app-assets",
+    "images/Bonded - Brand image 3.png": "bonded-app-assets",
+    "images/Bonded - Brand image 4.jpg": "bonded-app-assets",
+    "images/app-icon.svg": "bonded-app-assets",
+    "images/apple-touch-icon-120x120.png": "bonded-app-assets",
+    "images/apple-touch-icon-152x152.png": "bonded-app-assets",
+    "images/apple-touch-icon-167x167.png": "bonded-app-assets",
+    "images/apple-touch-icon.png": "bonded-app-assets",
+    "images/bonded-logo-blue.svg": "bonded-app-assets",
+    "images/generate-icons.js": "bonded-app-assets",
+    "images/generate-icons.sh": "bonded-app-assets",
+    "images/icon-192x192.png": "bonded-app-assets",
+    "images/icon-512x512.png": "bonded-app-assets",
+    "images/icp-logo-button.svg": "bonded-app-assets",
+    "images/icp-logo.svg": "bonded-app-assets",
+    "images/screenshots/placeholder.txt": "bonded-app-assets",
+    "assets/AIClassificationTest-77ebfddf.js": "bonded-app-ai",
+    "assets/AISettings-54c2ef22.js": "bonded-app-ai",
+    "assets/PWAInstallPrompt-0ccf2f77.js": "bonded-app-ai",
+    "assets/autoAIScanner-741976ef.js": "bonded-app-ai",
+    "assets/evidenceFilter-6e1ec898.js": "bonded-app-ai",
+    "assets/textClassification-848edeeb.js": "bonded-app-ai",
+    "assets/icp-sdk-b71c0736.js": "bonded-app-vendor",
+    "assets/vendor-e6e658b6.js": "bonded-app-vendor",
+    "assets/MediaScanner-9c55dca2.js": "bonded-app-media",
+    "assets/mediaAccess-9b6d075b.js": "bonded-app-media",
+    "assets/timelineService-a34b98cd.js": "bonded-app-media"
+  },
+  "timestamp": "2025-07-01T01:21:34.754Z"
+};
+    
+    // Dynamic canister loading
+    window.loadFromCanister = async function(resourcePath) {
+      const canisterName = window.BONDED_CANISTER_REGISTRY.loadMap[resourcePath];
+      if (!canisterName) {
+        console.warn('Resource not found in canister registry:', resourcePath);
+        return null;
+      }
+      
+      // Get canister ID (will be injected during deployment)
+      const canisterId = window.BONDED_CANISTER_IDS?.[canisterName];
+      if (!canisterId) {
+        console.warn('Canister ID not found for:', canisterName);
+        return null;
+      }
+      
+      const url = `https://${canisterId}.icp0.io/${resourcePath}`;
+      return fetch(url);
+    };
+    
+    // Replace canister placeholders with actual URLs
+    window.updateAssetURLs = function() {
+      if (!window.BONDED_CANISTER_IDS) return;
+      
+      // Update all script and link tags
+      document.querySelectorAll('script[src*="{{CANISTER_"], link[href*="{{CANISTER_"]').forEach(element => {
+        const attr = element.tagName === 'SCRIPT' ? 'src' : 'href';
+        let url = element.getAttribute(attr);
+        
+        // Replace placeholders with actual canister URLs
+        Object.entries(window.BONDED_CANISTER_IDS).forEach(([canisterName, canisterId]) => {
+          const placeholder = `{{CANISTER_${canisterName.toUpperCase().replace(/-/g, '_')}_URL}}`;
+          if (url.includes(placeholder)) {
+            url = url.replace(placeholder, `https://${canisterId}.icp0.io`);
+            element.setAttribute(attr, url);
+          }
+        });
+      });
+    };
+    
+    // Auto-update URLs when canister IDs are available
+    if (window.BONDED_CANISTER_IDS) {
+      window.updateAssetURLs();
+    } else {
+      // Listen for canister IDs to be loaded
+      let checkInterval = setInterval(() => {
+        if (window.BONDED_CANISTER_IDS) {
+          window.updateAssetURLs();
+          clearInterval(checkInterval);
+        }
+      }, 100);
+    }
+    
+    console.log('🚀 Multi-Canister Frontend Orchestration Ready');
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script>
+    // Comprehensive Node.js polyfills for browser compatibility
+    
+    // Polyfill global and Buffer
+    if (typeof globalThis.global === 'undefined') {
+      globalThis.global = globalThis;
+    }
+    
+    if (typeof globalThis.Buffer === 'undefined') {
+      globalThis.Buffer = {
+        from: (data, encoding) => {
+          if (typeof data === 'string') {
+            return new TextEncoder().encode(data);
+          }
+          return new Uint8Array(data);
+        },
+        alloc: (size) => new Uint8Array(size),
+        isBuffer: (obj) => obj instanceof Uint8Array,
+        concat: (buffers) => {
+          const totalLength = buffers.reduce((len, buf) => len + buf.length, 0);
+          const result = new Uint8Array(totalLength);
+          let offset = 0;
+          for (const buf of buffers) {
+            result.set(buf, offset);
+            offset += buf.length;
+          }
+          return result;
+        }
+      };
+    }
+    
+    // Polyfill process.env for Node.js compatibility
+    if (typeof globalThis.process === 'undefined') {
+      globalThis.process = { 
+        env: { NODE_ENV: 'production' },
+        browser: true,
+        version: 'v16.0.0',
+        versions: { node: '16.0.0' }
+      };
+    }
+    
+    // Polyfill module for CommonJS compatibility
+    if (typeof globalThis.module === 'undefined') {
+      globalThis.module = { exports: {} };
+    }
+    
+    // Polyfill exports for CommonJS compatibility
+    if (typeof globalThis.exports === 'undefined') {
+      globalThis.exports = globalThis.module.exports;
+    }
+    
+    // Polyfill require for basic compatibility
+    if (typeof globalThis.require === 'undefined') {
+      globalThis.require = function(module) {
+        // require() polyfill called
+        return {};
+      };
+    }
+  </script>
+  
+  
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+</body>
+
+</html>

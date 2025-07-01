@@ -12,6 +12,11 @@ mod evidence;
 mod relationships;
 mod users;
 mod client_storage;
+mod bft_consensus;
+mod bft_storage;
+mod bft_evidence;
+mod bft_relationships;
+mod bft_manager;
 
 // Re-export all public functions from modules
 pub use evidence::*;
@@ -19,6 +24,11 @@ pub use relationships::*;
 pub use users::*;
 pub use types::*;
 pub use client_storage::*;
+
+// Re-export BFT functions
+pub use bft_evidence::*;
+pub use bft_relationships::*;
+pub use bft_manager::*;
 
 // Imports
 use candid::Principal;

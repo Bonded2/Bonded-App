@@ -484,3 +484,179 @@ impl Storable for UserKeyShare {
         Decode!(bytes.as_ref(), Self).unwrap()
     }
 }
+
+// =======================
+// BFT TYPES
+// =======================
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub enum BftResult<T> {
+    Ok(T),
+    Err(String),
+}
+
+impl<T> BftResult<T> {
+    pub fn ok(value: T) -> Self {
+        BftResult::Ok(value)
+    }
+    
+    pub fn err(msg: &str) -> Self {
+        BftResult::Err(msg.to_string())
+    }
+}
+
+impl<T> From<Result<T, String>> for BftResult<T> {
+    fn from(result: Result<T, String>) -> Self {
+        match result {
+            Ok(value) => BftResult::Ok(value),
+            Err(error) => BftResult::Err(error),
+        }
+    }
+}
+
+// Helper macro to make ? operator work with BftResult
+#[macro_export]
+macro_rules! try_bft {
+    ($expr:expr) => {
+        match $expr {
+            Ok(val) => val,
+            Err(err) => return BftResult::err(&err.to_string()),
+        }
+    };
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftSystemStatus {
+    pub is_active: bool,
+    pub health_score: f64,
+    pub total_operations: u64,
+    pub successful_operations: u64,
+    pub failed_operations: u64,
+    pub byzantine_detections: u64,
+    pub active_nodes: u64,
+    pub byzantine_nodes: u64,
+    pub last_health_check: u64,
+    pub fault_tolerance: u32,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftIntegrityReport {
+    pub total_checked: u64,
+    pub integrity_passed: u64,
+    pub integrity_failed: u64,
+    pub corrupted_entries: Vec<String>,
+    pub byzantine_nodes: Vec<Principal>,
+    pub recovery_needed: Vec<String>,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftNodeStatus {
+    pub is_active: bool,
+    pub health_score: f64,
+    pub alerts: Vec<String>,
+    pub last_seen: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftHealthReport {
+    pub timestamp: u64,
+    pub overall_health_score: f64,
+    pub consensus_status: String,
+    pub storage_integrity: BftIntegrityReport,
+    pub node_statuses: std::collections::HashMap<Principal, BftNodeStatus>,
+    pub recommendations: Vec<String>,
+    pub critical_issues: Vec<String>,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftRecoveryOperation {
+    pub entry_id: String,
+    pub operation_type: String,
+    pub status: String,
+    pub timestamp: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftRecoveryReport {
+    pub timestamp: u64,
+    pub total_corrupted: u64,
+    pub successfully_recovered: u64,
+    pub failed_recoveries: u64,
+    pub recovery_operations: Vec<BftRecoveryOperation>,
+    pub system_restored: bool,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftNetworkTopology {
+    pub total_nodes: u64,
+    pub active_nodes: Vec<Principal>,
+    pub byzantine_nodes: Vec<Principal>,
+    pub fault_tolerance: u32,
+    pub consensus_threshold: u32,
+    pub network_health: f64,
+    pub last_updated: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftEvidenceResponse {
+    pub evidence_id: String,
+    pub bft_operation_id: String,
+    pub consensus_proof: Vec<u8>,
+    pub integrity_hash: String,
+    pub replication_status: String,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftTimelineResponse {
+    pub evidence: Vec<Evidence>,
+    pub total_count: u64,
+    pub has_more: bool,
+    pub integrity_report: BftIntegrityReport,
+    pub bft_consensus_timestamp: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftInviteResponse {
+    pub invite_id: String,
+    pub invite_link: String,
+    pub expires_at: u64,
+    pub bft_operation_id: String,
+    pub integrity_proof: Vec<u8>,
+    pub consensus_timestamp: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftAcceptInviteResponse {
+    pub relationship_id: String,
+    pub relationship: Relationship,
+    pub user_key_share: Vec<u8>,
+    pub public_key: Vec<u8>,
+    pub bft_consensus_proof: Vec<u8>,
+    pub creation_timestamp: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftCreateRelationshipResponse {
+    pub relationship_id: String,
+    pub user_key_share: Vec<u8>,
+    pub public_key: Vec<u8>,
+    pub bft_operation_id: String,
+    pub consensus_proof: Vec<u8>,
+    pub creation_timestamp: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftInviteDetails {
+    pub invite: PartnerInvite,
+    pub integrity_proof: Vec<u8>,
+    pub verification_timestamp: u64,
+    pub time_until_expiry: u64,
+}
+
+#[derive(CandidType, Serialize, Deserialize, Clone, Debug)]
+pub struct BftRelationshipDetails {
+    pub relationship: Relationship,
+    pub integrity_proof: Vec<u8>,
+    pub verification_timestamp: u64,
+    pub consensus_status: String,
+}
