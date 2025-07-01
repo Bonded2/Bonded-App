@@ -1,7 +1,0 @@
-Screenshots for the PWA manifest should be placed in this directory.
-
-Required screenshots:
-- screenshot-timeline.png (1280x720) - A screenshot showing the timeline view of relationship evidence
-- screenshot-mobile.png (750x1334) - A mobile screenshot showing the app interface
-
-These screenshots will appear in the app installation process on various platforms. 

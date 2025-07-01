@@ -1,0 +1,287 @@
+/**
+ * Unified API Service for Bonded App
+ * Handles all communication with the ICP backend canister
+ */
+
+import { Actor, HttpAgent } from '@dfinity/agent';
+import { AuthClient } from '@dfinity/auth-client';
+import { Principal } from '@dfinity/principal';
+
+// Environment configuration
+const API_HOST = import.meta.env.VITE_API_HOST || 'https://ic0.app';
+const CANISTER_ID = import.meta.env.VITE_BACKEND_CANISTER_ID || 'f4nqh-tiaaa-aaaab-qb2bq-cai';
+const IS_LOCAL = import.meta.env.VITE_DFX_NETWORK === 'local';
+
+// IDL factory - will be imported from declarations after dfx generate
+let idlFactory;
+try {
+  const declarations = await import('../../declarations/bonded-app-backend');
+  idlFactory = declarations.idlFactory;
+} catch (e) {
+  console.warn('Backend declarations not found. Run "dfx generate" to create them.');
+}
+
+class APIService {
+  constructor() {
+    this.agent = null;
+    this.actor = null;
+    this.authClient = null;
+    this.identity = null;
+  }
+
+  /**
+   * Initialize the API service
+   */
+  async init() {
+    try {
+      // Create auth client
+      this.authClient = await AuthClient.create();
+      
+      // Check if user is authenticated
+      const isAuthenticated = await this.authClient.isAuthenticated();
+      
+      if (isAuthenticated) {
+        this.identity = this.authClient.getIdentity();
+      }
+
+      // Create agent
+      this.agent = new HttpAgent({
+        host: API_HOST,
+        identity: this.identity,
+      });
+
+      // Fetch root key for local development
+      if (IS_LOCAL) {
+        await this.agent.fetchRootKey();
+      }
+
+      // Create actor
+      if (idlFactory) {
+        this.actor = Actor.createActor(idlFactory, {
+          agent: this.agent,
+          canisterId: CANISTER_ID,
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize API service:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Authenticate user with Internet Identity
+   */
+  async authenticate() {
+    try {
+      await this.authClient.login({
+        identityProvider: IS_LOCAL 
+          ? `http://localhost:4943/?canisterId=${CANISTER_ID}`
+          : 'https://identity.ic0.app',
+        onSuccess: async () => {
+          this.identity = this.authClient.getIdentity();
+          await this.init(); // Reinitialize with new identity
+        },
+      });
+      return true;
+    } catch (error) {
+      console.error('Authentication failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Logout user
+   */
+  async logout() {
+    await this.authClient.logout();
+    this.identity = null;
+    await this.init(); // Reinitialize as anonymous
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated() {
+    return this.authClient?.isAuthenticated() || false;
+  }
+
+  /**
+   * Get current user principal
+   */
+  async whoami() {
+    if (!this.actor) throw new Error('API not initialized');
+    return await this.actor.whoami();
+  }
+
+  // ==================
+  // USER MANAGEMENT
+  // ==================
+
+  async registerUser(metadata) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.register_user(metadata ? [metadata] : []);
+    return this.handleResult(result);
+  }
+
+  async getUserProfile() {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_user_profile();
+    return this.handleResult(result);
+  }
+
+  async updateUserSettings(settings) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.update_user_settings(settings);
+    return this.handleResult(result);
+  }
+
+  async getUserSettings() {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_user_settings();
+    return this.handleResult(result);
+  }
+
+  async deleteUserAccount() {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.delete_user_account();
+    return this.handleResult(result);
+  }
+
+  // ==================
+  // RELATIONSHIPS
+  // ==================
+
+  async createRelationship(partnerPrincipal) {
+    if (!this.actor) throw new Error('API not initialized');
+    const request = { partner_principal: Principal.fromText(partnerPrincipal) };
+    const result = await this.actor.create_relationship(request);
+    return this.handleResult(result);
+  }
+
+  async getRelationship(relationshipId) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_relationship(relationshipId);
+    return this.handleResult(result);
+  }
+
+  async getUserRelationships() {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_user_relationships();
+    return this.handleResult(result);
+  }
+
+  async terminateRelationship(relationshipId) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.terminate_relationship(relationshipId);
+    return this.handleResult(result);
+  }
+
+  // ==================
+  // PARTNER INVITES
+  // ==================
+
+  async createPartnerInvite(inviteData) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.create_partner_invite(inviteData);
+    return this.handleResult(result);
+  }
+
+  async acceptPartnerInvite(inviteId) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.accept_partner_invite(inviteId);
+    return this.handleResult(result);
+  }
+
+  async getPartnerInvite(inviteId) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_partner_invite(inviteId);
+    return this.handleResult(result);
+  }
+
+  // ==================
+  // EVIDENCE
+  // ==================
+
+  async uploadEvidence(relationshipId, encryptedData, metadata) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.upload_evidence(relationshipId, encryptedData, metadata);
+    return this.handleResult(result);
+  }
+
+  async getEvidence(evidenceId) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_evidence_by_id(evidenceId);
+    return this.handleResult(result);
+  }
+
+  async deleteEvidence(relationshipId, evidenceId) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.delete_evidence(relationshipId, evidenceId);
+    return this.handleResult(result);
+  }
+
+  async getTimeline(relationshipId, page = 0, pageSize = 20) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_timeline(relationshipId, page, pageSize);
+    return this.handleResult(result);
+  }
+
+  async getTimelineWithFilters(query) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_timeline_with_filters(query);
+    return this.handleResult(result);
+  }
+
+  // ==================
+  // UTILITIES
+  // ==================
+
+  async healthCheck() {
+    if (!this.actor) throw new Error('API not initialized');
+    return await this.actor.health_check();
+  }
+
+  async getCanisterStats() {
+    if (!this.actor) throw new Error('API not initialized');
+    const stats = await this.actor.get_canister_stats();
+    // Convert array of tuples to object
+    return Object.fromEntries(stats);
+  }
+
+  /**
+   * Handle Result variant responses
+   */
+  handleResult(result) {
+    if ('Ok' in result) {
+      return result.Ok;
+    } else if ('Err' in result) {
+      throw new Error(result.Err);
+    }
+    return result;
+  }
+
+  /**
+   * Convert Uint8Array to hex string
+   */
+  uint8ArrayToHex(uint8Array) {
+    return Array.from(uint8Array)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  /**
+   * Convert hex string to Uint8Array
+   */
+  hexToUint8Array(hexString) {
+    const matches = hexString.match(/.{1,2}/g) || [];
+    return new Uint8Array(matches.map(byte => parseInt(byte, 16)));
+  }
+}
+
+// Export singleton instance
+export const api = new APIService();
+
+// Export class for testing
+export default APIService; 
