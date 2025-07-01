@@ -31,10 +31,20 @@ class APIService {
       // Load IDL factory if not already loaded
       if (!idlFactory) {
         try {
-          const declarations = await import('../../../../src/declarations/bonded-app-backend');
+          // Try to import declarations from the expected location
+          const declarations = await import('../declarations/bonded-app-backend');
           idlFactory = declarations.idlFactory;
         } catch (e) {
-          console.warn('Backend declarations not found. Run "dfx generate" to create them.');
+          console.warn('Backend declarations not found. Using fallback configuration.');
+          // Create a minimal IDL factory for basic functionality
+          idlFactory = ({ IDL }) => {
+            return IDL.Service({
+              'health_check': IDL.Func([], [IDL.Text], ['query']),
+              'whoami': IDL.Func([], [IDL.Principal], ['query']),
+              'register_user': IDL.Func([IDL.Opt(IDL.Text)], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+              'get_user_profile': IDL.Func([], [IDL.Variant({ 'Ok': IDL.Record({}), 'Err': IDL.Text })], ['query']),
+            });
+          };
         }
       }
       // Create auth client
