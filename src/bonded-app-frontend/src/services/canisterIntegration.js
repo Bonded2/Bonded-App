@@ -15,7 +15,7 @@ import {
   createActor as createBackendActor, 
   canisterId as declaredCanisterId,
   idlFactory
-} from '../../../declarations/bonded-app-backend';
+} from '../declarations/bonded-app-backend';
 // Import network resilience helpers
 import { 
   resilientCanisterCall, 
@@ -26,8 +26,8 @@ import {
 // Import email service statically to avoid dynamic import issues
 import emailService from './emailService.js';
 
-// Use the correct canister ID for playground deployment
-const backendCanisterId = process.env.CANISTER_ID_BONDED_APP_BACKEND || declaredCanisterId || 'mexqz-aqaaa-aaaab-qabtq-cai';
+// Use the correct canister ID for deployment
+const backendCanisterId = import.meta.env.VITE_BACKEND_CANISTER_ID || declaredCanisterId || 'f4nqh-tiaaa-aaaab-qb2bq-cai';
 
 /**
  * Canister Integration Service
@@ -48,20 +48,19 @@ class CanisterIntegrationService {
     this.CACHE_TTL = 30000; // 30 second cache TTL
     
     // Network detection - playground should be treated as remote
-    this.isLocal = process.env.DFX_NETWORK === 'local' || (!process.env.DFX_NETWORK && window.location.hostname === 'localhost');
+    this.isLocal = import.meta.env.VITE_DFX_NETWORK === 'local' || (!import.meta.env.VITE_DFX_NETWORK && window.location.hostname === 'localhost');
     
     // Determine the correct host based on network
     if (this.isLocal) {
       this.host = 'http://127.0.0.1:4943';
     } else {
-      // For playground and all remote networks, use icp-api.io
-      // This is the correct API endpoint for ICP networks
-      this.host = 'https://icp-api.io';
+      // Use the configured API host or default to ic0.app for mainnet
+      this.host = import.meta.env.VITE_API_HOST || 'https://ic0.app';
     }
     
     // Internet Identity configuration
     this.identityProvider = this.isLocal 
-      ? `http://127.0.0.1:4943/?canisterId=${process.env.CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
+      ? `http://127.0.0.1:4943/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
       : 'https://identity.ic0.app';
   }
 

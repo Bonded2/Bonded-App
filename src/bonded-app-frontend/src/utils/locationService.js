@@ -316,7 +316,7 @@ export const reverseGeocode = async (coordinates) => {
 export const detectVPN = async () => {
   try {
     // In development mode, avoid making real API calls by returning a default response
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       return { 
         isVPN: false, 
         detail: 'VPN detection skipped in development mode',
@@ -361,7 +361,7 @@ export const detectVPN = async () => {
 export const validateLocationConsistency = async (coordinates) => {
   try {
     // In development mode, skip validation
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       return { 
         isConsistent: true, 
         message: 'Location validation skipped in development mode'

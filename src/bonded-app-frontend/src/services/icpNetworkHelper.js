@@ -192,7 +192,7 @@ export const isDevEnvironment = () => {
     window.location.hostname.includes('playground') ||
     window.location.hostname.includes('icp0.io') ||
     window.location.hostname.includes('127.0.0.1') ||
-    process.env.NODE_ENV === 'development'
+          import.meta.env.DEV
   );
 };
 

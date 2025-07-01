@@ -49,7 +49,7 @@ export class YotiService {
         timeout: 30000,
         retryAttempts: 3
       },
-      debug: process.env.NODE_ENV === 'development'
+      debug: import.meta.env.DEV
     };
     
     // Event listeners
@@ -76,8 +76,8 @@ export class YotiService {
 // Console statement removed for production
       
       // Merge configuration
-      this.baseUrl = options.baseUrl || process.env.REACT_APP_YOTI_BASE_URL;
-      this.apiKey = options.apiKey || process.env.REACT_APP_YOTI_API_KEY;
+          this.baseUrl = options.baseUrl || import.meta.env.VITE_YOTI_BASE_URL;
+    this.apiKey = options.apiKey || import.meta.env.VITE_YOTI_API_KEY;
       this.userId = options.userId;
       
       if (options.verificationType) {
@@ -125,7 +125,7 @@ export class YotiService {
       }
       
       // Simulate SDK loading from CDN
-      const sdkUrl = process.env.REACT_APP_YOTI_SDK_URL || 'https://sdk.yoti.com/js/yoti-sdk.js';
+      const sdkUrl = import.meta.env.VITE_YOTI_SDK_URL || 'https://sdk.yoti.com/js/yoti-sdk.js';
       
       return new Promise((resolve, reject) => {
         // Simulate already loaded check

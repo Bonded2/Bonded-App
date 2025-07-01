@@ -25,8 +25,7 @@ class EmailService {
       }
 
       // Get EmailJS public key from environment variables
-      const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 
-                       import.meta.env?.VITE_EMAILJS_PUBLIC_KEY || 
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
                        '2C_y5Y8A7moWYpk96'; // Fallback public key
 
       // Initialize EmailJS with production configuration
@@ -97,15 +96,12 @@ class EmailService {
       };
 
       // Check if EmailJS is properly configured before attempting to send
-      // Get EmailJS configuration from environment variables (support both REACT_APP and VITE prefixes)
-      const serviceId = process.env.REACT_APP_EMAILJS_SERVICE_ID || 
-                       import.meta.env?.VITE_EMAILJS_SERVICE_ID || 
+      // Get EmailJS configuration from environment variables
+      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 
                        'service_n2rlbye'; // Your actual service ID as fallback
-      const templateId = process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 
-                        import.meta.env?.VITE_EMAILJS_TEMPLATE_ID || 
+      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 
                         'template_9qqunmm'; // Your actual template ID as fallback
-      const publicKey = process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 
-                       import.meta.env?.VITE_EMAILJS_PUBLIC_KEY || 
+      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
                        '2C_y5Y8A7moWYpk96'; // Your actual public key as fallback
       
       // Validate configuration - all should be available now with fallbacks

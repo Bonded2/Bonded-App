@@ -30,7 +30,7 @@ class ICPUserService {
       window.location.hostname.includes('icp0.io') ||
       window.location.hostname.includes('playground') ||
       window.location.hostname.includes('localhost') ||
-      process.env.DFX_NETWORK !== 'ic'
+      import.meta.env.VITE_DFX_NETWORK !== 'ic'
     );
   }
 
