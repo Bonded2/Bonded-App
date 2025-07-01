@@ -20,6 +20,10 @@
     }
   };
   
+  // Ensure global is defined before using it
+  if (typeof global === 'undefined') {
+    globalThis.global = globalThis;
+  }
   [window, globalThis, self, global].filter(Boolean).forEach(ctx => {
     if (ctx && typeof ctx === 'object') {
       ctx.SelfDescribeCborSerializer = CborSerializer;

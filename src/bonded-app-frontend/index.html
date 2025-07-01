@@ -242,7 +242,10 @@
           }
         };
         
-        // Set IMMEDIATELY on all possible contexts
+        // Set IMMEDIATELY on all possible contexts (with global polyfill)
+        if (typeof global === 'undefined') {
+          globalThis.global = globalThis;
+        }
         const allContexts = [window, globalThis, self, global].filter(Boolean);
         allContexts.forEach(ctx => {
           if (ctx && typeof ctx === 'object') {
@@ -315,6 +318,32 @@
             return originalRequire.call(this, specifier);
           };
         }
+        
+        // CRITICAL: Vite module interception for vendor bundles
+        // Override Object.defineProperty to catch vendor module definitions
+        const originalDefineProperty = Object.defineProperty;
+        Object.defineProperty = function(obj, prop, descriptor) {
+          // If a module is being defined with 'src' or similar CBOR-related export
+          if (typeof obj === 'object' && obj !== null && 
+              (prop === 'src' || prop === 'borc' || prop === 'cbor') && 
+              descriptor && descriptor.value && typeof descriptor.value === 'object') {
+            
+            // Ensure the CBOR module has our polyfilled SelfDescribeCborSerializer
+            if (!descriptor.value.SelfDescribeCborSerializer) {
+              descriptor.value.SelfDescribeCborSerializer = window.SelfDescribeCborSerializer;
+            }
+            
+            // Also ensure it has the 'value' property with SelfDescribeCborSerializer
+            if (!descriptor.value.value) {
+              descriptor.value.value = descriptor.value.value || {};
+            }
+            if (descriptor.value.value && !descriptor.value.value.SelfDescribeCborSerializer) {
+              descriptor.value.value.SelfDescribeCborSerializer = window.SelfDescribeCborSerializer;
+            }
+          }
+          
+          return originalDefineProperty.call(this, obj, prop, descriptor);
+        };
         
         console.log('🔗 Module interceptors set up for CBOR');
       })();
@@ -1012,6 +1041,46 @@
       };
     }
   </script>
+  <!-- CRITICAL: Immediate CBOR polyfill injection before any modules load -->
+  <script type="module">
+    // Wait for any vendor bundle to load and patch it
+    const originalDefine = window.define;
+    const originalRequire = window.require;
+    
+    // Intercept AMD/CommonJS module loading
+    if (typeof window.define === 'function') {
+      window.define = function(id, deps, factory) {
+        if (typeof factory === 'function') {
+          const originalFactory = factory;
+          factory = function(...args) {
+            const result = originalFactory.apply(this, args);
+            // If this module exports something with 'src' that looks like a CBOR library
+            if (result && typeof result === 'object' && result.src && 
+                typeof result.src === 'object' && !result.src.SelfDescribeCborSerializer) {
+              result.src.SelfDescribeCborSerializer = window.SelfDescribeCborSerializer;
+            }
+            return result;
+          };
+        }
+        return originalDefine.call(this, id, deps, factory);
+      };
+    }
+    
+    // Patch any global 'src' object that gets created
+    let srcPatchInterval = setInterval(() => {
+      if (window.src && typeof window.src === 'object' && !window.src.SelfDescribeCborSerializer) {
+        window.src.SelfDescribeCborSerializer = window.SelfDescribeCborSerializer;
+        clearInterval(srcPatchInterval);
+        console.log('✅ Patched global src object with SelfDescribeCborSerializer');
+      }
+    }, 50);
+    
+    // Clear the interval after 5 seconds to avoid running forever
+    setTimeout(() => {
+      clearInterval(srcPatchInterval);
+    }, 5000);
+  </script>
+  
   <script type="module" src="/src/main.jsx"></script>
   <script type="module" src="/src/sw-registration.js"></script>
   <noscript>You need to enable JavaScript to run this app.</noscript>
