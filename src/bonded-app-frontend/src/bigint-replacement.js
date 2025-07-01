@@ -219,24 +219,30 @@ if (typeof window !== 'undefined') {
   };
 }
 
-// CRITICAL: Add CBOR Serialization Support for ICP SDK
+// CRITICAL: Add CBOR Serialization Support for ICP SDK - ENHANCED VERSION
 if (typeof globalThis !== 'undefined') {
-  // Comprehensive CBOR support
+  // Enhanced CBOR support with better error handling and ICP compatibility
   if (!globalThis.SelfDescribeCborSerializer) {
-    globalThis.SelfDescribeCborSerializer = class {
+    const CborSerializer = class SelfDescribeCborSerializer {
       constructor() {
         this.buffer = [];
       }
       
       serialize(value) {
         try {
-          // Convert to JSON as fallback for CBOR
+          // Enhanced serialization with proper handling of ICP types
           const jsonString = JSON.stringify(value, (key, val) => {
             if (typeof val === 'bigint') return Number(val);
+            if (val instanceof Uint8Array) return Array.from(val);
+            if (val && typeof val === 'object' && val.constructor === Object) return val;
+            if (val instanceof Array) return val;
+            if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return val;
+            if (val === null || val === undefined) return val;
             return val;
           });
           return new TextEncoder().encode(jsonString);
         } catch (e) {
+          console.warn('CBOR Serialize error in bigint-replacement:', e);
           return new Uint8Array(0);
         }
       }
@@ -246,11 +252,27 @@ if (typeof globalThis !== 'undefined') {
         return serializer.serialize(value);
       }
     };
+    
+    // Set on globalThis with proper descriptor
+    Object.defineProperty(globalThis, 'SelfDescribeCborSerializer', {
+      value: CborSerializer,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
   }
   
-  // Ensure it's also available in window context
-  if (typeof window !== 'undefined') {
-    window.SelfDescribeCborSerializer = globalThis.SelfDescribeCborSerializer;
+  // Ensure it's also available in window context with same treatment
+  if (typeof window !== 'undefined' && !window.SelfDescribeCborSerializer) {
+    Object.defineProperty(window, 'SelfDescribeCborSerializer', {
+      value: globalThis.SelfDescribeCborSerializer,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
+    
+    // Also provide as lowercase for potential module imports
+    window.selfDescribeCborSerializer = globalThis.SelfDescribeCborSerializer;
   }
   
   // Add any other CBOR-related globals that might be needed

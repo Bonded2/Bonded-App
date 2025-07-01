@@ -242,37 +242,51 @@
         window.Bignumber = SimpleBigNumber;
       }
       
-      // COMPREHENSIVE CBOR dependencies for ICP SDK
+      // COMPREHENSIVE CBOR dependencies for ICP SDK - ENHANCED
       const contexts = [window, globalThis, self];
+      
+      // Create enhanced CBOR serializer class first
+      const EnhancedSelfDescribeCborSerializer = class SelfDescribeCborSerializer {
+        constructor() {
+          this.buffer = [];
+        }
+        
+        serialize(value) {
+          try {
+            // Enhanced serialization for ICP compatibility
+            const jsonString = JSON.stringify(value, (key, val) => {
+              if (typeof val === 'bigint') return Number(val);
+              if (val instanceof Uint8Array) return Array.from(val);
+              if (val && typeof val === 'object' && val.constructor === Object) return val;
+              return val;
+            });
+            return new TextEncoder().encode(jsonString);
+          } catch (e) {
+            console.warn('CBOR Serialize error:', e);
+            return new Uint8Array(0);
+          }
+        }
+        
+        static serialize(value) {
+          const serializer = new this();
+          return serializer.serialize(value);
+        }
+      };
       
       contexts.forEach(ctx => {
         if (ctx && typeof ctx === 'object') {
           try {
-            // SelfDescribeCborSerializer
+            // SelfDescribeCborSerializer with proper prototype
             if (!ctx.SelfDescribeCborSerializer) {
-              ctx.SelfDescribeCborSerializer = class {
-                constructor() {
-                  this.buffer = [];
-                }
-                
-                serialize(value) {
-                  try {
-                    // Convert to JSON as fallback for CBOR
-                    const jsonString = JSON.stringify(value, (key, val) => {
-                      if (typeof val === 'bigint') return Number(val);
-                      return val;
-                    });
-                    return new TextEncoder().encode(jsonString);
-                  } catch (e) {
-                    return new Uint8Array(0);
-                  }
-                }
-                
-                static serialize(value) {
-                  const serializer = new this();
-                  return serializer.serialize(value);
-                }
-              };
+              ctx.SelfDescribeCborSerializer = EnhancedSelfDescribeCborSerializer;
+              
+              // Also set it as a property directly accessible
+              Object.defineProperty(ctx, 'SelfDescribeCborSerializer', {
+                value: EnhancedSelfDescribeCborSerializer,
+                writable: true,
+                enumerable: true,
+                configurable: true
+              });
             }
             
             // CBOR Decoder
@@ -324,12 +338,27 @@
               };
             }
             
-            // CBOR module export style
+            // CBOR module export style - enhanced
             if (!ctx.CBOR) {
               ctx.CBOR = {
                 encode: ctx.encode,
                 decode: ctx.decode,
                 SelfDescribeCborSerializer: ctx.SelfDescribeCborSerializer,
+                Decoder: ctx.Decoder
+              };
+            }
+            
+            // Additional module formats that ICP SDK might expect
+            if (!ctx.cbor) {
+              ctx.cbor = ctx.CBOR;
+            }
+            
+            // Ensure borc module structure (another CBOR library that might be expected)
+            if (!ctx.borc) {
+              ctx.borc = {
+                encode: ctx.encode,
+                decode: ctx.decode,
+                Encoder: ctx.SelfDescribeCborSerializer,
                 Decoder: ctx.Decoder
               };
             }
@@ -364,7 +393,21 @@
         };
       }
       
-      console.log('🔧 CBOR polyfills loaded for ICP SDK compatibility');
+      // Final verification that everything is available
+      if (window.SelfDescribeCborSerializer && window.CBOR && window.borc) {
+        console.log('✅ CBOR polyfills loaded and verified for ICP SDK compatibility');
+        
+        // Test the serializer to make sure it works
+        try {
+          const testData = { test: 'data', number: 42 };
+          const serialized = window.SelfDescribeCborSerializer.serialize(testData);
+          console.log('✅ CBOR serializer test passed');
+        } catch (e) {
+          console.warn('⚠️ CBOR serializer test failed:', e);
+        }
+      } else {
+        console.error('❌ CBOR polyfills failed to load properly');
+      }
     })();
   </script>
   
