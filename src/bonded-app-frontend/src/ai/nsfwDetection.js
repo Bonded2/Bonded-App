@@ -1,12 +1,12 @@
 /**
- * NSFW Detection Service
+ * NSFW Detection Service - UPDATED v2.1
  * 
  * Privacy-first NSFW content detection using NSFWJS
- * Uses ESM CDN in production, bundled in development
+ * Uses bundled package for better compatibility
  * Based on: https://github.com/infinitered/nsfwjs
  */
 
-// Conditional import based on environment
+// Global NSFWJS module reference
 let nsfwjs;
 
 // ESM CDN URLs for production (much smaller and faster)
@@ -31,44 +31,24 @@ class NSFWDetectionService {
   }
 
   /**
-   * Dynamically load NSFWJS library using ESM imports
+   * Load NSFWJS library using simplified import strategy
    */
   async loadNSFWJS() {
     if (nsfwjs) return nsfwjs;
 
-    try {
-      if (this.isProduction) {
-        // Use ESM CDN in production for better performance
-        
-        // Try multiple ESM CDN providers for redundancy
-        const esmUrls = [
-          NSFWJS_JSDELIVR_ESM_URL,  // jsDelivr ESM (fastest)
-          NSFWJS_ESM_URL,           // Skypack (optimized ESM)
-          NSFWJS_UNPKG_ESM_URL      // unpkg ESM (fallback)
-        ];
-        
-        for (const url of esmUrls) {
-          try {
-            nsfwjs = await import(url);
-            break;
-          } catch (urlError) {
-            console.warn(`❌ Failed to load from ${url}:`, urlError.message);
-            if (url === esmUrls[esmUrls.length - 1]) {
-              throw urlError; // Last URL failed
-            }
-          }
-        }
-        
-      } else {
-        // Use bundled version in development
-        nsfwjs = await import('nsfwjs');
-      }
-    } catch (error) {
-      console.warn('⚠️ Failed to load NSFWJS:', error.message);
-      nsfwjs = null;
-    }
+    console.log('🔄 Loading NSFWJS library...');
 
-    return nsfwjs;
+    try {
+      // Use bundled package directly (most reliable in Vite)
+      const { default: nsfwjsModule } = await import('nsfwjs');
+      nsfwjs = nsfwjsModule || await import('nsfwjs');
+      console.log('✅ NSFWJS loaded successfully');
+      return nsfwjs;
+    } catch (error) {
+      console.error('❌ Failed to load NSFWJS:', error);
+      nsfwjs = null;
+      return null;
+    }
   }
 
   /**

@@ -289,12 +289,20 @@ class ICPUserService {
    */
   async createRelationship(partnerPrincipal) {
     try {
-      // For now, relationships will be handled later - return placeholder
-// Console statement removed for production
-      return { success: true, relationship_id: 'relationship-placeholder' };
+      const response = await api.createRelationship({ partner_principal: partnerPrincipal });
+      
+      if (response && response.relationship_id) {
+        return {
+          success: true,
+          relationship_id: response.relationship_id,
+          user_key_share: response.user_key_share,
+          public_key: response.public_key
+        };
+      }
+      
+      throw new Error('Invalid response from canister');
     } catch (error) {
-// Console statement removed for production
-      throw error;
+      throw new Error(`Failed to create relationship: ${error.message}`);
     }
   }
 
@@ -303,12 +311,21 @@ class ICPUserService {
    */
   async acceptRelationship(relationshipId) {
     try {
-      // For now, relationships will be handled later - return placeholder
-// Console statement removed for production
-      return { success: true, relationship_id: relationshipId };
+      const response = await api.acceptRelationship(relationshipId);
+      
+      if (response && response.relationship_id) {
+        return {
+          success: true,
+          relationship_id: response.relationship_id,
+          user_key_share: response.user_key_share,
+          public_key: response.public_key,
+          relationship: response.relationship
+        };
+      }
+      
+      throw new Error('Invalid response from canister');
     } catch (error) {
-// Console statement removed for production
-      throw error;
+      throw new Error(`Failed to accept relationship: ${error.message}`);
     }
   }
 
@@ -317,11 +334,10 @@ class ICPUserService {
    */
   async getUserRelationships() {
     try {
-      // For now, return empty relationships array
-      return [];
+      const relationships = await api.getUserRelationships();
+      return relationships || [];
     } catch (error) {
-// Console statement removed for production
-      throw error;
+      throw new Error(`Failed to get relationships: ${error.message}`);
     }
   }
 
@@ -354,12 +370,10 @@ class ICPUserService {
    */
   async updateFaceEmbedding(embedding) {
     try {
-      // For now, face embeddings will be handled later - return placeholder
-// Console statement removed for production
-      return { success: true };
+      const response = await api.updateFaceEmbedding(embedding);
+      return { success: true, response };
     } catch (error) {
-// Console statement removed for production
-      throw error;
+      throw new Error(`Failed to update face embedding: ${error.message}`);
     }
   }
 

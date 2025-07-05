@@ -825,4 +825,483 @@
     padding: 14px 20px;
     font-size: 1rem;
   }
+}
+
+/* ============== MVP SPECIFIC STYLES ============== */
+
+/* MVP Setting Item */
+.mvp-setting {
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(185, 255, 70, 0.3);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+/* T2.01 Image Filter Styling */
+.mvp-setting:first-of-type {
+  border-color: rgba(76, 175, 80, 0.4);
+  background: rgba(76, 175, 80, 0.08);
+}
+
+.mvp-setting:first-of-type .setting-badge {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+/* T2.02 Text Filter Styling */
+.mvp-setting:nth-of-type(2) {
+  border-color: rgba(33, 150, 243, 0.4);
+  background: rgba(33, 150, 243, 0.08);
+}
+
+.mvp-setting:nth-of-type(2) .setting-badge {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196F3;
+  border: 1px solid rgba(33, 150, 243, 0.4);
+}
+
+/* T2.03 Location Filter Styling */
+.mvp-setting:nth-of-type(3) {
+  border-color: rgba(255, 152, 0, 0.4);
+  background: rgba(255, 152, 0, 0.08);
+}
+
+.mvp-setting:nth-of-type(3) .setting-badge {
+  background: rgba(255, 152, 0, 0.2);
+  color: #FF9800;
+  border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+/* T2.04 Upload Cycle Settings - Purple Theme */
+.mvp-setting:nth-of-type(4) {
+  border-color: rgba(156, 39, 176, 0.4);
+  background: rgba(156, 39, 176, 0.08);
+}
+
+.mvp-setting:nth-of-type(4) .setting-badge {
+  background: rgba(156, 39, 176, 0.2);
+  color: #9C27B0;
+  border: 1px solid rgba(156, 39, 176, 0.4);
+}
+
+.mvp-setting:nth-of-type(5) {
+  border-color: rgba(156, 39, 176, 0.4);
+  background: rgba(156, 39, 176, 0.08);
+}
+
+.mvp-setting:nth-of-type(5) .setting-badge {
+  background: rgba(156, 39, 176, 0.2);
+  color: #9C27B0;
+  border: 1px solid rgba(156, 39, 176, 0.4);
+}
+
+/* Error Notice Styling */
+.error-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 8px;
+  color: #f44336;
+  font-size: 14px;
+}
+
+.error-notice .error-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* Loading, Error, and Dynamic Status Indicators */
+.status-indicator.loading::before {
+  background: #ff9800;
+  animation: pulse 2s infinite;
+}
+
+.status-indicator.error::before {
+  background: #f44336;
+}
+
+.status-value.loading {
+  color: #ff9800;
+}
+
+.status-value.error {
+  color: #f44336;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.mvp-setting:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(185, 255, 70, 0.4);
+}
+
+.mvp-setting .setting-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mvp-setting .setting-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: default;
+  user-select: none;
+}
+
+/* Custom Checkbox for Demo */
+.setting-checkbox {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  opacity: 0;
+  position: absolute;
+}
+
+.checkbox-custom {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #B9FF46;
+  border-radius: 4px;
+  position: relative;
+  background: #B9FF46;
+  flex-shrink: 0;
+}
+
+.checkbox-custom::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #2C4CDF;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* Setting Badge */
+.setting-badge {
+  background: rgba(185, 255, 70, 0.2);
+  color: #B9FF46;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(185, 255, 70, 0.4);
+}
+
+/* Select Dropdown for Location Filter */
+.setting-select {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 152, 0, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #FFFFFF;
+  cursor: not-allowed;
+  opacity: 0.7;
+  width: auto;
+  min-width: 200px;
+}
+
+.setting-select:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 152, 0, 0.2);
+}
+
+/* Upload Cycle Select Dropdowns - Purple Theme */
+.mvp-setting:nth-of-type(4) .setting-select {
+  border-color: rgba(156, 39, 176, 0.4);
+}
+
+.mvp-setting:nth-of-type(4) .setting-select:disabled {
+  border-color: rgba(156, 39, 176, 0.2);
+}
+
+.mvp-setting:nth-of-type(5) .setting-select {
+  border-color: rgba(156, 39, 176, 0.4);
+}
+
+.mvp-setting:nth-of-type(5) .setting-select:disabled {
+  border-color: rgba(156, 39, 176, 0.2);
+}
+
+.select-label {
+  margin-left: 12px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+/* MVP Notice */
+.mvp-notice {
+  background: rgba(65, 182, 196, 0.1);
+  border: 1px solid rgba(65, 182, 196, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+/* Location Filter Notice */
+.mvp-setting:nth-of-type(3) .mvp-notice {
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+}
+
+.mvp-setting:nth-of-type(3) .notice-title {
+  color: #FF9800;
+}
+
+.notice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.notice-icon {
+  font-size: 16px;
+}
+
+.notice-title {
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 600;
+  color: #41B6C4;
+  font-size: 14px;
+}
+
+.notice-text {
+  font-family: "Rethink Sans", sans-serif;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Status Card */
+.status-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.status-card .status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.status-card .status-row:last-child {
+  margin-bottom: 0;
+}
+
+.status-card .status-label {
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.status-card .status-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Rethink Sans", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.status-card .status-value.active {
+  color: #4CAF50;
+}
+
+.status-card .status-value.enabled {
+  color: #B9FF46;
+}
+
+.status-card .status-value.ready {
+  color: #2196F3;
+}
+
+/* Status Indicators */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-indicator.active {
+  background: #4CAF50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.6);
+}
+
+.status-indicator.enabled {
+  background: #B9FF46;
+  box-shadow: 0 0 6px rgba(185, 255, 70, 0.6);
+}
+
+.status-indicator.ready {
+  background: #2196F3;
+  box-shadow: 0 0 6px rgba(33, 150, 243, 0.6);
+}
+
+/* Info Section Enhancements */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.info-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.info-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(185, 255, 70, 0.3);
+  transform: translateY(-2px);
+}
+
+.info-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.info-item h3 {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: #B9FF46;
+  margin: 0 0 8px 0;
+}
+
+.info-item p {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Mobile Responsiveness for MVP */
+@media (max-width: 768px) {
+  .mvp-setting .setting-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .setting-badge {
+    align-self: flex-start;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .status-card .status-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mvp-setting {
+    padding: 16px;
+  }
+  
+  .mvp-setting .setting-label {
+    font-size: 16px;
+  }
+  
+  .status-card {
+    padding: 16px;
+  }
+  
+  .info-item {
+    padding: 16px;
+  }
 } 
+/* Setting Details */
+.setting-details {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.detail-icon {
+  font-size: 16px;
+}
+
+/* Implementation Notice */
+.implementation-notice {
+  background: linear-gradient(135deg, rgba(185, 255, 70, 0.2) 0%, rgba(185, 255, 70, 0.1) 100%);
+  border: 2px solid rgba(185, 255, 70, 0.4);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 20px;
+}
+
+.implementation-notice .notice-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.implementation-notice .notice-title {
+  font-weight: 600;
+  color: #B9FF46;
+  font-size: 16px;
+}
+
+.implementation-notice .notice-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 0;
+}
+

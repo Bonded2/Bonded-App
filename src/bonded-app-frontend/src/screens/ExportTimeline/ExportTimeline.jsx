@@ -90,7 +90,7 @@ export const ExportTimeline = ({ onClose }) => {
         }
       }
     } catch (err) {
-      showNotification("Failed to load timeline data. Please try again.");
+      showNotification("Load failed. Retry.");
     } finally {
       setLoading(false);
     }
@@ -242,13 +242,13 @@ export const ExportTimeline = ({ onClose }) => {
   };
   const applyDateRangeFilter = () => {
     if (!dateRangeFilter.start || !dateRangeFilter.end) {
-      showNotification("Please select both start and end dates");
+      showNotification("Select start and end dates");
       return;
     }
     const startDate = new Date(dateRangeFilter.start);
     const endDate = new Date(dateRangeFilter.end);
     if (startDate > endDate) {
-      showNotification("Start date must be before end date");
+      showNotification("Invalid date range");
       return;
     }
     // Filter timeline data by date range
@@ -260,14 +260,14 @@ export const ExportTimeline = ({ onClose }) => {
       }
     });
     setSelectedDates(filteredDates);
-    showNotification(`Filtered to dates between ${dateRangeFilter.start} and ${dateRangeFilter.end}`);
+    showNotification("Filter applied");
   };
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
   const searchEvidenceItems = () => {
     if (!searchQuery.trim()) {
-      showNotification("Please enter a search term");
+      showNotification("Enter search term");
       return;
     }
     const query = searchQuery.toLowerCase();
@@ -300,9 +300,9 @@ export const ExportTimeline = ({ onClose }) => {
       }
     });
     if (foundAny) {
-      showNotification(`Found matches for "${searchQuery}"`);
+      showNotification("Matches found");
     } else {
-      showNotification(`No matches found for "${searchQuery}"`);
+      showNotification("No matches");
     }
   };
   const handleGeneratePdf = () => {
@@ -318,7 +318,7 @@ export const ExportTimeline = ({ onClose }) => {
       }
     });
     if (selectedItemCount === 0) {
-      showNotification("Please select at least one evidence item to export.");
+      showNotification("Select items to export");
       return;
     }
     setIsGeneratingPdf(true);
@@ -356,7 +356,7 @@ export const ExportTimeline = ({ onClose }) => {
       });
       return newItems;
     });
-    showNotification("Selected all timeline evidence");
+    showNotification("All selected");
   };
   const handleDeselectAll = () => {
     // Deselect all dates
@@ -373,7 +373,7 @@ export const ExportTimeline = ({ onClose }) => {
       });
       return newItems;
     });
-    showNotification("Deselected all timeline evidence");
+    showNotification("All deselected");
   };
   const showNotification = (message) => {
     const notification = document.createElement("div");
@@ -425,7 +425,7 @@ export const ExportTimeline = ({ onClose }) => {
           {loading ? (
             <div className="loading-container">
               <div className="loading-spinner"></div>
-              <p>Loading timeline data...</p>
+              <p>Loading...</p>
             </div>
           ) : (
             <>
@@ -545,8 +545,8 @@ export const ExportTimeline = ({ onClose }) => {
                 <div className="dates-list">
                   {Object.keys(selectedDates).length === 0 ? (
                     <div className="no-timeline-data">
-                      <p>No timeline data available.</p>
-                      <p className="helper-text">Create timeline evidence first or check your settings.</p>
+                      <p>No evidence available.</p>
+                      <button className="create-evidence-btn">Add Evidence</button>
                     </div>
                   ) : (
                     Object.keys(evidenceItems)
@@ -608,7 +608,7 @@ export const ExportTimeline = ({ onClose }) => {
                             <div className="evidence-items-list">
                               {evidenceItems[date].length === 0 ? (
                                 <div className="no-evidence-items">
-                                  <p>No evidence items found for this date.</p>
+                                  <p>No items</p>
                                 </div>
                               ) : (
                                 evidenceItems[date].map(item => (
@@ -641,8 +641,8 @@ export const ExportTimeline = ({ onClose }) => {
                   )}
                   {countSelectedDates === 0 && Object.keys(selectedDates).length > 0 && (
                     <div className="no-dates-selected">
-                      <p>No dates currently selected</p>
-                      <p className="helper-text">Click on a date row to select it for export</p>
+                      <p>No dates selected</p>
+                      <button className="select-all-btn" onClick={handleSelectAll}>Select All</button>
                     </div>
                   )}
                 </div>

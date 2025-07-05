@@ -4,7 +4,7 @@
  * Core service that orchestrates the daily evidence collection process:
  * 1. Scans for photos and messages
  * 2. Applies AI filtering
- * 3. Packages and encrypts evidence
+ * 3. Packages and encrypts evidence with Bonded metadata (T7.01)
  * 4. Uploads to ICP canisters
  * 
  * Implements the daily midnight upload schedule as per MVP requirements
@@ -13,6 +13,7 @@ import { aiEvidenceFilter } from '../ai/evidenceFilter.js';
 import { encryptionService } from '../crypto/encryption.js';
 import canisterIntegration from './canisterIntegration.js';
 import { mediaAccessService } from './mediaAccess.js';
+import { generateBondedMetadata, updateMetadataOnUpload } from './bondedMetadata.js';
 import { openDB } from 'idb';
 
 // Conditional imports based on environment
@@ -242,22 +243,61 @@ class EvidenceProcessor {
    */
   async collectPhotoForDate(targetDate) {
     try {
-      // Use media access service to scan for photos
-      const photos = await mediaAccessService.scanPhotosForDate(targetDate);
-      if (photos.length === 0) {
+      // Import automated photo library service
+      const { automatedPhotoLibrary } = await import('./automatedPhotoLibrary.js');
+      
+      // Get cached photos from automated scan
+      const cachedPhotos = await automatedPhotoLibrary.getCachedPhotos();
+      
+      // Filter photos for target date
+      const targetDateStr = targetDate.toISOString().split('T')[0];
+      const photosForDate = cachedPhotos.filter(photo => {
+        const photoDate = new Date(photo.metadata.lastModified);
+        const photoDateStr = photoDate.toISOString().split('T')[0];
+        return photoDateStr === targetDateStr;
+      });
+      
+      if (photosForDate.length === 0) {
+        // No cached photos for this date, trigger a scan
+        const scanResult = await automatedPhotoLibrary.performAutomatedScan();
+        if (scanResult.success && scanResult.photos.length > 0) {
+          // Check if any of the newly scanned photos are for target date
+          const newPhotosForDate = scanResult.photos.filter(photo => {
+            const photoDate = new Date(photo.lastModified);
+            const photoDateStr = photoDate.toISOString().split('T')[0];
+            return photoDateStr === targetDateStr;
+          });
+          
+          if (newPhotosForDate.length > 0) {
+            const selectedPhoto = newPhotosForDate[0];
+            return {
+              file: selectedPhoto.file,
+              metadata: {
+                ...selectedPhoto.metadata,
+                selected: true,
+                selectionReason: 'automated_scan_result'
+              }
+            };
+          }
+        }
         return null;
       }
-      // For MVP, take the first photo found
-      const selectedPhoto = photos[0];
+      
+      // For MVP, take the highest quality photo found for this date
+      const selectedPhoto = photosForDate.sort((a, b) => 
+        (b.aiResults?.qualityScore || 0) - (a.aiResults?.qualityScore || 0)
+      )[0];
+      
       return {
         file: selectedPhoto.file,
         metadata: {
           ...selectedPhoto.metadata,
           selected: true,
-          selectionReason: 'first_available'
+          selectionReason: 'cached_best_quality'
         }
       };
     } catch (error) {
+      console.warn('⚠️ Failed to collect photo for date:', error);
       return null;
     }
   }
@@ -316,25 +356,79 @@ class EvidenceProcessor {
    */
   async packageEvidence(evidence, targetDate) {
     try {
+      // Generate comprehensive Bonded metadata (T7.01)
+      const bondedMetadata = generateBondedMetadata(evidence, {
+        targetDate,
+        location: evidence.metadata?.location || null,
+        relationshipId: await this.getCurrentRelationshipId(),
+        collectionMethod: 'daily_scan',
+        aiFiltersPassed: evidence.metadata?.aiFiltersPassed || false,
+        aiResults: evidence.metadata?.aiResults || {},
+        messageSource: 'telegram',
+        uploadSource: 'automated',
+        initiatorDevice: true,
+        photoDimensions: evidence.metadata?.photoMetadata?.dimensions || null
+      });
+
       const packagedEvidence = {
-        version: '1.0',
+        version: bondedMetadata.version,
         type: 'daily_evidence',
         targetDate: targetDate.toISOString(),
         packageTime: Date.now(),
         photo: evidence.photo,
         messages: evidence.messages,
+        bondedMetadata, // Complete T7.01 metadata structure
+        // Legacy metadata for backwards compatibility
         metadata: {
           ...evidence.metadata,
-          packageId: this.generatePackageId(targetDate),
+          packageId: bondedMetadata.packageId,
           deviceInfo: {
             userAgent: navigator.userAgent,
             timestamp: Date.now()
           }
         }
       };
+
+      // Update verification hashes in metadata
+      const contentSize = JSON.stringify({ photo: evidence.photo, messages: evidence.messages }).length;
+      bondedMetadata.content.contentSize = contentSize;
+      
+      // Compute content hashes for integrity
+      if (evidence.photo) {
+        bondedMetadata.verification.contentHashes.photo = await this.computeHash(evidence.photo.name + evidence.photo.size);
+      }
+      if (evidence.messages?.length > 0) {
+        bondedMetadata.verification.contentHashes.messages = await this.computeHash(JSON.stringify(evidence.messages));
+      }
+      bondedMetadata.verification.contentHashes.metadata = await this.computeHash(JSON.stringify(bondedMetadata));
+
       return packagedEvidence;
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Compute SHA-256 hash for integrity verification
+   * @param {string} content - Content to hash
+   * @returns {Promise<string>} Hex-encoded hash
+   */
+  async computeHash(content) {
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(content);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      // Fallback to simple hash if Web Crypto unavailable
+      let hash = 0;
+      for (let i = 0; i < content.length; i++) {
+        const char = content.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(16);
     }
   }
   /**
@@ -356,7 +450,7 @@ class EvidenceProcessor {
         null // For MVP, encryption key would come from relationship setup
       );
       // Step 2: Upload to ICP canister
-      const relationshipId = 'mock-relationship-id'; // Would come from user session
+      const relationshipId = await this.getCurrentRelationshipId();
       const canisterResult = await canisterIntegration.uploadEvidence(
         relationshipId,
         encryptedPackage.ciphertext,
@@ -374,8 +468,28 @@ class EvidenceProcessor {
         uploadResult.success = true;
         uploadResult.evidenceId = canisterResult.evidenceId;
         uploadResult.canisterId = 'evidence-canister';
+        
+        // Update Bonded metadata with upload success (T7.01)
+        if (packagedEvidence.bondedMetadata) {
+          packagedEvidence.bondedMetadata = updateMetadataOnUpload(
+            packagedEvidence.bondedMetadata,
+            {
+              success: true,
+              canisterId: 'evidence-canister',
+              packageHash: encryptedPackage.hash
+            }
+          );
+        }
       } else {
         uploadResult.error = 'Canister upload failed';
+        
+        // Update metadata with failure
+        if (packagedEvidence.bondedMetadata) {
+          packagedEvidence.bondedMetadata = updateMetadataOnUpload(
+            packagedEvidence.bondedMetadata,
+            { success: false }
+          );
+        }
       }
       return uploadResult;
     } catch (error) {
@@ -747,6 +861,27 @@ class EvidenceProcessor {
   /**
    * Get service status
    */
+  /**
+   * Get current active relationship ID
+   */
+  async getCurrentRelationshipId() {
+    try {
+      // Import user service to get relationships
+      const { default: icpUserService } = await import('./icpUserService.js');
+      const relationships = await icpUserService.getUserRelationships();
+      
+      if (relationships && relationships.length > 0) {
+        // Return the first active relationship
+        const activeRelationship = relationships.find(r => r.status === 'Active') || relationships[0];
+        return activeRelationship.id;
+      }
+      
+      throw new Error('No active relationship found. Please create a relationship first.');
+    } catch (error) {
+      throw new Error(`Failed to get relationship ID: ${error.message}`);
+    }
+  }
+
   getStatus() {
     return {
       isProduction: this.isProduction,

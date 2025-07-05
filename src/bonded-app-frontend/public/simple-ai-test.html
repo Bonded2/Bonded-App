@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple AI Import Test</title>
+</head>
+<body>
+    <h1>🧪 Simple AI Import Test</h1>
+    <button onclick="testNSFWImport()">Test NSFWJS Import</button>
+    <div id="result"></div>
+
+    <script type="module">
+        async function testNSFWImport() {
+            const result = document.getElementById('result');
+            result.innerHTML = '🔄 Testing NSFWJS import...';
+            
+            try {
+                console.log('Attempting to import nsfwjs...');
+                const nsfwjs = await import('nsfwjs');
+                console.log('NSFWJS imported:', nsfwjs);
+                
+                result.innerHTML = `
+                    ✅ NSFWJS Import SUCCESS!<br>
+                    Default export: ${typeof nsfwjs.default}<br>
+                    Full module: ${typeof nsfwjs}<br>
+                    Keys: ${Object.keys(nsfwjs).join(', ')}
+                `;
+            } catch (error) {
+                console.error('NSFWJS import failed:', error);
+                result.innerHTML = `❌ NSFWJS Import FAILED: ${error.message}`;
+            }
+        }
+        
+        // Make function globally available
+        window.testNSFWImport = testNSFWImport;
+    </script>
+</body>
+</html> 

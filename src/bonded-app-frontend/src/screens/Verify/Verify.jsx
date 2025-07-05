@@ -28,7 +28,7 @@ export const Verify = () => {
     try {
       setVerificationState({
         status: 'initializing',
-        message: 'Setting up verification...',
+        message: 'Setting up...',
         progress: 10,
         error: null
       });
@@ -53,7 +53,7 @@ export const Verify = () => {
         setBrowserSupported(true);
         setVerificationState({
           status: 'ready',
-          message: 'Ready to start identity verification',
+          message: 'Ready to verify',
           progress: 100,
           error: null
         });
@@ -86,7 +86,7 @@ export const Verify = () => {
     yotiService.on('connected', () => {
       setVerificationState({
         status: 'connecting',
-        message: 'Connecting to verification service...',
+        message: 'Connecting...',
         progress: 20,
         error: null
       });
@@ -95,7 +95,7 @@ export const Verify = () => {
     yotiService.on('started', () => {
       setVerificationState({
         status: 'started',
-        message: 'Please prepare your identity document and follow the instructions',
+        message: 'Prepare ID document',
         progress: 30,
         error: null
       });
@@ -105,7 +105,7 @@ export const Verify = () => {
       const progress = Math.min(30 + (data.progress * 0.6), 90);
       setVerificationState({
         status: 'started',
-        message: 'Verification in progress...',
+        message: 'Verifying...',
         progress: progress,
         error: null
       });
@@ -114,7 +114,7 @@ export const Verify = () => {
     yotiService.on('passed', () => {
       setVerificationState({
         status: 'processing',
-        message: 'Verification successful! Processing results...',
+        message: 'Processing results...',
         progress: 95,
         error: null
       });
@@ -127,22 +127,22 @@ export const Verify = () => {
         // Handle specific Yoti feedback codes
         switch (data.reason_code) {
           case 'DOCUMENT_NOT_READABLE':
-            failureMessage = 'Document could not be read. Please ensure good lighting and try again.';
+            failureMessage = 'Document unclear. Check lighting.';
             break;
           case 'NETWORK_ERROR':
-            failureMessage = 'Network connection issue. Please check your internet and try again.';
+            failureMessage = 'Network error. Retry.';
             break;
           case 'SESSION_TIMEOUT':
-            failureMessage = 'Verification session timed out. Please try again.';
+            failureMessage = 'Session timeout. Retry.';
             break;
           case 'DOCUMENT_NOT_SUPPORTED':
-            failureMessage = 'Document type not supported. Please use a valid ID document.';
+            failureMessage = 'Document not supported. Use valid ID.';
             break;
           case 'LIVENESS_CHECK_FAILED':
-            failureMessage = 'Liveness check failed. Please ensure you are clearly visible and try again.';
+            failureMessage = 'Face not clear. Retry.';
             break;
           default:
-            failureMessage = `Verification failed: ${data.reason || 'Unknown error'}`;
+            failureMessage = 'Verification failed. Retry.';
         }
       }
       
@@ -157,7 +157,7 @@ export const Verify = () => {
     yotiService.on('cancelled', () => {
       setVerificationState({
         status: 'ready',
-        message: 'Verification cancelled. Ready to try again.',
+        message: 'Cancelled. Ready to retry.',
         progress: 0,
         error: null
       });
@@ -195,7 +195,7 @@ export const Verify = () => {
       
       setVerificationState({
         status: 'connecting',
-        message: 'Starting verification...',
+        message: 'Starting...',
         progress: 10,
         error: null
       });
@@ -216,7 +216,7 @@ export const Verify = () => {
     } catch (error) {
       setVerificationState({
         status: 'failed',
-        message: error.message || 'Verification failed. Please try again.',
+        message: error.message || 'Verification failed. Retry.',
         progress: 0,
         error: error.message
       });
@@ -227,7 +227,7 @@ export const Verify = () => {
     try {
       setVerificationState({
         status: 'processing',
-        message: 'Verification successful! Updating your profile...',
+        message: 'Updating profile...',
         progress: 95,
         error: null
       });
@@ -269,7 +269,7 @@ export const Verify = () => {
       
       setVerificationState({
         status: 'completed',
-        message: 'Identity verification completed successfully!',
+        message: 'Verification complete!',
         progress: 100,
         error: null
       });
@@ -282,7 +282,7 @@ export const Verify = () => {
     } catch (error) {
       setVerificationState({
         status: 'failed',
-        message: 'Failed to save verification results. Please contact support.',
+        message: 'Save failed. Contact support.',
         progress: 0,
         error: error.message
       });
@@ -375,8 +375,7 @@ export const Verify = () => {
         </div>
 
         <p className="description">
-          To ensure the security and authenticity of your relationship evidence, 
-          we'll verify your identity using advanced digital identity verification technology.
+          Secure identity verification for trusted evidence collection.
         </p>
 
         {/* Status Display */}
@@ -451,30 +450,26 @@ export const Verify = () => {
             <div className="skip-content">
               <div className="skip-icon">⏭️</div>
               <div className="skip-text">
-                <div className="skip-title">Skip verification for now</div>
-                <div className="skip-subtitle">You can verify your identity later in settings</div>
+                <div className="skip-title">Skip for now</div>
+                <div className="skip-subtitle">Verify later in settings</div>
               </div>
             </div>
           </button>
           <div className="skip-note">
             <span className="note-icon">ℹ️</span>
-            <span>Identity verification can be completed later when you're ready to export official documents</span>
+            <span>Required for official document export</span>
           </div>
         </div>
 
         {/* Help Information */}
         {verificationState.status === 'ready' && (
           <div className="verification-help">
-            <h3>What to expect:</h3>
+            <h3>Requirements:</h3>
             <ul>
-              <li>📱 Have your identity document ready</li>
-              <li>📄 Ensure document is clearly visible</li>
-              <li>💡 Use good lighting for document capture</li>
-              <li>⏱️ The process takes about 1-2 minutes</li>
+              <li>📱 ID document ready</li>
+              <li>💡 Good lighting</li>
+              <li>⏱️ ~2 minutes</li>
             </ul>
-            <p className="privacy-notice">
-              <strong>Privacy:</strong> Your identity data is processed securely and encrypted at all times.
-            </p>
           </div>
         )}
       </div>

@@ -17,6 +17,7 @@ export { default as highAccuracyAI } from './highAccuracyAI.js';
 export { default as icpNetworkHelper } from './icpNetworkHelper.js';
 export { default as icpUserService } from './icpUserService.js';
 export { mediaAccessService } from './mediaAccess.js';
+export { automatedPhotoLibrary } from './automatedPhotoLibrary.js';
 export { default as mobileGalleryService } from './mobileGalleryService.js';
 export { default as realAIProcessor } from './realAIProcessor.js';
 export { schedulerService } from './scheduler.js';

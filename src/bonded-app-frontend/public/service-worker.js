@@ -199,6 +199,16 @@ self.addEventListener('sync', event => {
   if (event.tag === 'relationship-evidence-sync') {
     event.waitUntil(syncRelationshipEvidence());
   }
+  
+  // Handle automated photo library scanning (T4.16)
+  if (event.tag === 'automated-photo-scan') {
+    event.waitUntil(performAutomatedPhotoScan());
+  }
+  
+  // Handle daily evidence processing (photos + uploads)
+  if (event.tag === 'daily-evidence-processing') {
+    event.waitUntil(performDailyEvidenceProcessing());
+  }
 });
 // Handle periodic background sync for daily evidence processing
 self.addEventListener('periodicsync', event => {
@@ -271,21 +281,59 @@ async function removePendingUpload(id) {
   // This would be implemented to remove a successful upload from the pending queue
   return true;
 }
+/**
+ * Perform automated photo library scanning in background (T4.16)
+ */
+async function performAutomatedPhotoScan() {
+  try {
+    console.log('📸 Service Worker: Starting automated photo scan...');
+    
+    // Post message to all clients to trigger photo scanning
+    const clients = await self.clients.matchAll({ includeUncontrolled: true });
+    
+    if (clients.length === 0) {
+      console.log('📸 Service Worker: No active clients - photo scan deferred');
+      return Promise.resolve({ deferred: true });
+    }
+    
+    for (const client of clients) {
+      client.postMessage({
+        type: 'AUTOMATED_PHOTO_SCAN_TRIGGER',
+        timestamp: Date.now(),
+        source: 'service-worker'
+      });
+    }
+    
+    console.log('✅ Service Worker: Photo scan trigger sent to clients');
+    return Promise.resolve({ triggered: true });
+  } catch (error) {
+    console.error('❌ Service Worker: Photo scan failed:', error);
+    return Promise.reject(error);
+  }
+}
+
 // Function to perform daily evidence processing in background
 async function performDailyEvidenceProcessing() {
   try {
+    console.log('🔄 Service Worker: Starting daily evidence processing...');
+    
     // Send message to main app to trigger evidence processing
     const clients = await self.clients.matchAll();
     if (clients.length > 0) {
       // App is open, send message to trigger processing
       clients[0].postMessage({
         type: 'TRIGGER_DAILY_PROCESSING',
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        source: 'service-worker'
       });
+      
+      console.log('✅ Service Worker: Daily processing trigger sent');
     } else {
       // App is closed, we would need to implement background processing
       // For MVP, we'll just log and wait for app to open
+      console.log('🔄 Service Worker: No active clients - processing deferred');
     }
   } catch (error) {
+    console.error('❌ Service Worker: Daily processing failed:', error);
   }
 } 

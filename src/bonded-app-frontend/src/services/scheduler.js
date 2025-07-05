@@ -4,8 +4,10 @@
  * Handles the daily evidence processing schedule and background sync
  * Implements the midnight upload schedule as per MVP requirements
  * Integrates with timeline service for pending uploads
+ * Includes automated photo library scanning (T4.16)
  */
 import { timelineService } from './timelineService.js';
+import { automatedPhotoLibrary } from './automatedPhotoLibrary.js';
 class SchedulerService {
   constructor() {
     this.isScheduled = false;
@@ -71,29 +73,66 @@ class SchedulerService {
    */
   async performScheduledUpload() {
     try {
-      // Upload pending timeline entries to ICP canister
-      const result = await timelineService.uploadPendingEntries();
+      console.log('🔄 Starting scheduled evidence processing...');
       
-      if (result.success) {
+      // STEP 1: Automated Photo Library Scan (T4.16)
+      let photoScanResult = { success: true, evidence: 0 };
+      
+      try {
+        // Check if photo scan is due
+        if (automatedPhotoLibrary.isDailyAutomatedScanDue()) {
+          console.log('📸 Performing automated photo library scan...');
+          photoScanResult = await automatedPhotoLibrary.performAutomatedScan();
+          
+          if (photoScanResult.success && photoScanResult.evidence > 0) {
+            console.log(`✅ Photo scan completed: ${photoScanResult.evidence} evidence photos collected`);
+          } else if (photoScanResult.success && photoScanResult.evidence === 0) {
+            console.log('📸 Photo scan completed: No new evidence photos found');
+          } else {
+            console.warn('⚠️ Photo scan failed:', photoScanResult.error);
+          }
+        } else {
+          console.log('📸 Photo scan not due - skipping');
+        }
+      } catch (photoError) {
+        console.error('❌ Photo scan error:', photoError);
+        photoScanResult = { success: false, error: photoError.message, evidence: 0 };
+      }
+      
+      // STEP 2: Upload pending timeline entries to ICP canister
+      console.log('☁️ Uploading evidence to secure storage...');
+      const uploadResult = await timelineService.uploadPendingEntries();
+      
+      // Combine results
+      const combinedResult = {
+        success: uploadResult.success,
+        uploaded: uploadResult.uploaded || 0,
+        failed: uploadResult.failed || 0,
+        photoScan: photoScanResult,
+        error: uploadResult.error
+      };
+      
+      if (combinedResult.success) {
         // Show success notification
-        await this.showSuccessNotification(result);
+        await this.showSuccessNotification(combinedResult);
         
         // Store last successful upload time
         localStorage.setItem('bonded-last-upload', Date.now().toString());
       } else {
         // Queue for retry
-        await this.scheduleRetry(result);
+        await this.scheduleRetry(combinedResult);
         // Show error notification
-        await this.showErrorNotification(result);
+        await this.showErrorNotification(combinedResult);
       }
       
-      return result;
+      return combinedResult;
     } catch (error) {
       const errorResult = { 
         success: false, 
         error: error.message, 
         uploaded: 0, 
-        failed: 0 
+        failed: 0,
+        photoScan: { success: false, evidence: 0 }
       };
       
       // Schedule retry
@@ -150,13 +189,24 @@ class SchedulerService {
   }
   /**
    * Show success notification
-   * @param {Object} result - Upload result
+   * @param {Object} result - Upload result with photo scan data
    */
   async showSuccessNotification(result) {
     const uploadedCount = result.uploaded || 0;
     const failedCount = result.failed || 0;
+    const photoScanResult = result.photoScan || {};
+    const photosCollected = photoScanResult.evidence || 0;
     
-    let message = `Daily upload complete! `;
+    let message = `Daily processing complete! `;
+    
+    // Photo scan results
+    if (photoScanResult.success && photosCollected > 0) {
+      message += `${photosCollected} photo${photosCollected === 1 ? '' : 's'} collected, `;
+    } else if (photoScanResult.success) {
+      message += `Photos scanned, `;
+    }
+    
+    // Upload results
     if (uploadedCount > 0) {
       message += `${uploadedCount} evidence item${uploadedCount === 1 ? '' : 's'} uploaded to secure storage`;
     }
@@ -164,7 +214,7 @@ class SchedulerService {
       message += ` (${failedCount} failed)`;
     }
     if (uploadedCount === 0 && failedCount === 0) {
-      message += `No new evidence to upload`;
+      message += `no new evidence to upload`;
     }
 
     // Try native notification first

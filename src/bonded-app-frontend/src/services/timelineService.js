@@ -142,73 +142,29 @@ class TimelineService {
       
       // If the item has encrypted data, decrypt it
       if (item.encryptedData) {
-        try {
-          const decryptedContent = await encryptionService.decryptEvidencePackage(
-            item.encryptedData, 
-            testKey
-          );
-          return decryptedContent;
-        } catch (decryptError) {
-// Console statement removed for production
-          return await this.simulateDecryption(item);
-        }
+        const decryptedContent = await encryptionService.decryptEvidencePackage(
+          item.encryptedData, 
+          testKey
+        );
+        return decryptedContent;
       } else {
-        // No encrypted data available, simulate for MVP
-        return await this.simulateDecryption(item);
+        // No encrypted data available - return metadata-only content
+        return {
+          targetDate: item.metadata?.originalDate || item.timestamp,
+          packageTime: item.timestamp,
+          metadata: {
+            packageId: item.id,
+            contentType: item.metadata?.contentType || 'unknown',
+            source: 'timeline',
+            error: 'No encrypted data available'
+          }
+        };
       }
     } catch (error) {
-// Console statement removed for production
-      return await this.simulateDecryption(item);
+      throw new Error(`Failed to decrypt timeline item: ${error.message}`);
     }
   }
 
-  /**
-   * Simulate decryption for MVP (fallback when real decryption fails)
-   * @param {Object} item - Encrypted item
-   * @returns {Promise<Object>} Simulated decrypted content
-   */
-  async simulateDecryption(item) {
-    // Simulate decryption delay
-    await new Promise(resolve => setTimeout(resolve, 100));
-    // Return mock decrypted content based on metadata
-    const content = {
-      targetDate: item.metadata.originalDate,
-      packageTime: item.timestamp,
-      metadata: {
-        packageId: item.id,
-        deviceInfo: {
-          userAgent: 'Mock User Agent',
-          timestamp: item.timestamp
-        }
-      }
-    };
-    if (item.metadata.hasPhoto) {
-      content.photo = {
-        name: `photo-${item.metadata.originalDate}.jpg`,
-        type: 'image/jpeg',
-        size: 1024 * 1024, // 1MB
-        // In real implementation, this would be the actual photo file
-        mockPhotoUrl: '/images/mock-couple-photo.jpg'
-      };
-      content.metadata.photoMetadata = {
-        originalDate: item.metadata.originalDate,
-        location: 'London, UK',
-        source: 'device_camera'
-      };
-    }
-    if (item.metadata.messageCount > 0) {
-      content.messages = [];
-      for (let i = 0; i < item.metadata.messageCount; i++) {
-        content.messages.push(`Mock message ${i + 1} from ${item.metadata.originalDate}`);
-      }
-      content.metadata.messagesMetadata = {
-        totalFound: item.metadata.messageCount,
-        selected: item.metadata.messageCount,
-        source: 'telegram'
-      };
-    }
-    return content;
-  }
   /**
    * Prepare display data for timeline UI
    * @param {Object} content - Decrypted content

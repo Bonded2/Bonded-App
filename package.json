@@ -11,6 +11,7 @@
     "build": "dfx build",
     "deploy": "dfx deploy",
     "deploy:local": "dfx deploy --network local",
+    "deploy:playground": "dfx deploy --network playground",
     "deploy:ic": "dfx deploy --network ic",
     "start:local": "dfx start --background",
     "stop:local": "dfx stop",
@@ -21,7 +22,7 @@
     "test:whoami": "dfx canister call bonded-app-backend whoami",
     "test:stats": "dfx canister call bonded-app-backend get_canister_stats",
     "dev": "npm run start:local && npm run deploy:local && cd src/bonded-app-frontend && npm run start",
-    "frontend:dev": "cd src/bonded-app-frontend && npm run start",
+    "frontend:dev": "cd src/bonded-app-frontend && npm run dev",
     "frontend:build": "cd src/bonded-app-frontend && npm run build:laptop",
     "clean": "dfx stop && rm -rf .dfx && rm -rf src/bonded-app-frontend/dist && rm -rf target",
     "build:emergency": "bash scripts/emergency-build.sh"
@@ -41,5 +42,8 @@
     "privacy"
   ],
   "author": "Bonded Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "process": "^0.11.10"
+  }
 }

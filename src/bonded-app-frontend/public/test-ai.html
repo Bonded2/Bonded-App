@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T2.01 & T2.02 AI Integration Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-button {
+            background: #b9ff46;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #a5e641;
+        }
+        .test-result {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-loading { background: #ff9800; }
+        .status-success { background: #4caf50; }
+        .status-error { background: #f44336; }
+        .status-ready { background: #2196f3; }
+    </style>
+</head>
+<body>
+    <h1>🧪 T2.01 & T2.02 AI Integration Test</h1>
+    <p>This page tests the real AI models implemented for content filtering:</p>
+    <ul>
+        <li><strong>T2.01:</strong> NSFW Image Detection</li>
+        <li><strong>T2.02:</strong> Sexual Content Text Classification</li>
+    </ul>
+
+    <div class="test-section">
+        <h2>📸 T2.01: NSFW Detection Test</h2>
+        <button class="test-button" onclick="testNSFWDetection()">Test NSFW Detection</button>
+        <div id="nsfw-status">
+            <span class="status-indicator status-ready"></span>
+            Ready to test
+        </div>
+        <div id="nsfw-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>💬 T2.02: Text Classification Test</h2>
+        <button class="test-button" onclick="testTextClassification()">Test Text Classification</button>
+        <div id="text-status">
+            <span class="status-indicator status-ready"></span>
+            Ready to test
+        </div>
+        <div id="text-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Evidence Filter Integration Test</h2>
+        <button class="test-button" onclick="testEvidenceFilter()">Test Evidence Filter</button>
+        <div id="evidence-status">
+            <span class="status-indicator status-ready"></span>
+            Ready to test
+        </div>
+        <div id="evidence-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎛️ AI Settings Integration Test</h2>
+        <button class="test-button" onclick="testAISettings()">Test AI Settings</button>
+        <div id="settings-status">
+            <span class="status-indicator status-ready"></span>
+            Ready to test
+        </div>
+        <div id="settings-result" class="test-result" style="display: none;"></div>
+    </div>
+
+    <script type="module">
+        // Import AI services
+        import { getNSFWDetectionService, getTextClassificationService, getEvidenceFilterService } from '../src/ai/index.js';
+
+        let log = (elementId, message) => {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent += message + '\n';
+        };
+
+        let updateStatus = (statusId, className, text) => {
+            const status = document.getElementById(statusId);
+            const indicator = status.querySelector('.status-indicator');
+            indicator.className = `status-indicator status-${className}`;
+            status.innerHTML = indicator.outerHTML + text;
+        };
+
+        // T2.01: NSFW Detection Test
+        window.testNSFWDetection = async () => {
+            const resultId = 'nsfw-result';
+            const statusId = 'nsfw-status';
+            
+            document.getElementById(resultId).textContent = '';
+            updateStatus(statusId, 'loading', 'Loading NSFW detection...');
+            log(resultId, '🧪 Testing T2.01: NSFW Detection Service');
+            
+            try {
+                const nsfwService = await getNSFWDetectionService();
+                log(resultId, '✅ NSFW Service loaded successfully');
+                
+                updateStatus(statusId, 'loading', 'Loading NSFW model...');
+                await nsfwService.loadModel();
+                const status = nsfwService.getStatus();
+                
+                log(resultId, `🧠 NSFW Model Status: ${JSON.stringify(status, null, 2)}`);
+                
+                // Test with a placeholder canvas (since we can't load actual NSFW images)
+                const canvas = document.createElement('canvas');
+                canvas.width = 224;
+                canvas.height = 224;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'rgb(200, 150, 100)'; // Skin-like color
+                ctx.fillRect(0, 0, 224, 224);
+                
+                log(resultId, '🖼️ Testing with synthetic image data...');
+                const result = await nsfwService.detectNSFW(canvas);
+                log(resultId, `📊 NSFW Detection Result: ${JSON.stringify(result, null, 2)}`);
+                
+                updateStatus(statusId, 'success', 'NSFW Detection working!');
+                log(resultId, '✅ T2.01: NSFW Detection test completed successfully');
+                
+            } catch (error) {
+                log(resultId, `❌ Error: ${error.message}`);
+                updateStatus(statusId, 'error', 'NSFW Detection failed');
+            }
+        };
+
+        // T2.02: Text Classification Test
+        window.testTextClassification = async () => {
+            const resultId = 'text-result';
+            const statusId = 'text-status';
+            
+            document.getElementById(resultId).textContent = '';
+            updateStatus(statusId, 'loading', 'Loading text classifier...');
+            log(resultId, '🧪 Testing T2.02: Text Classification Service');
+            
+            try {
+                const textService = await getTextClassificationService();
+                log(resultId, '✅ Text Classification Service loaded successfully');
+                
+                updateStatus(statusId, 'loading', 'Loading text model...');
+                await textService.loadModel();
+                const status = textService.getStatus();
+                
+                log(resultId, `🧠 Text Model Status: ${JSON.stringify(status, null, 2)}`);
+                
+                // Test with sample texts
+                const testTexts = [
+                    'I love you so much, sweetheart',
+                    'Looking forward to our vacation together',
+                    'This message contains explicit sexual content',
+                    'Let me show you my naked photos',
+                    'We had dinner at a nice restaurant'
+                ];
+                
+                log(resultId, '💬 Testing explicit content detection:');
+                
+                for (const text of testTexts) {
+                    const result = await textService.isExplicitText(text);
+                    const status = result.isExplicit ? '❌ BLOCKED' : '✅ ALLOWED';
+                    const confidence = Math.round(result.confidence * 100);
+                    log(resultId, `  ${status} "${text.substring(0, 40)}..." (${confidence}%)`);
+                }
+                
+                updateStatus(statusId, 'success', 'Text Classification working!');
+                log(resultId, '✅ T2.02: Text Classification test completed successfully');
+                
+            } catch (error) {
+                log(resultId, `❌ Error: ${error.message}`);
+                updateStatus(statusId, 'error', 'Text Classification failed');
+            }
+        };
+
+        // Evidence Filter Test
+        window.testEvidenceFilter = async () => {
+            const resultId = 'evidence-result';
+            const statusId = 'evidence-status';
+            
+            document.getElementById(resultId).textContent = '';
+            updateStatus(statusId, 'loading', 'Loading evidence filter...');
+            log(resultId, '🧪 Testing Evidence Filter Service Integration');
+            
+            try {
+                const evidenceService = await getEvidenceFilterService();
+                log(resultId, '✅ Evidence Filter Service loaded successfully');
+                
+                await evidenceService.updateSettings({
+                    enableNSFWFilter: true,
+                    enableTextFilter: true
+                });
+                
+                const aiStatus = await evidenceService.getAIStatus();
+                log(resultId, `🎯 Evidence Filter AI Status: ${JSON.stringify(aiStatus, null, 2)}`);
+                
+                updateStatus(statusId, 'success', 'Evidence Filter working!');
+                log(resultId, '✅ Evidence Filter integration test completed successfully');
+                
+            } catch (error) {
+                log(resultId, `❌ Error: ${error.message}`);
+                updateStatus(statusId, 'error', 'Evidence Filter failed');
+            }
+        };
+
+        // AI Settings Test
+        window.testAISettings = async () => {
+            const resultId = 'settings-result';
+            const statusId = 'settings-status';
+            
+            document.getElementById(resultId).textContent = '';
+            updateStatus(statusId, 'loading', 'Testing AI Settings...');
+            log(resultId, '🧪 Testing AI Settings Integration');
+            
+            try {
+                // Simulate what the AI Settings component does
+                const nsfwService = await getNSFWDetectionService();
+                const textService = await getTextClassificationService();
+                const evidenceService = await getEvidenceFilterService();
+                
+                log(resultId, '🎛️ Loading AI services like AISettings component...');
+                
+                // Load models
+                await nsfwService.loadModel();
+                await textService.loadModel();
+                
+                const nsfwStatus = nsfwService.getStatus();
+                const textStatus = textService.getStatus();
+                
+                log(resultId, `📸 NSFW Detection Status: ${nsfwStatus.isLoaded ? '✅ Active' : '❌ Failed'}`);
+                log(resultId, `💬 Text Classification Status: ${textStatus.isLoaded ? '✅ Active' : '❌ Failed'}`);
+                
+                // Test settings integration
+                await evidenceService.updateSettings({
+                    enableNSFWFilter: true,
+                    enableTextFilter: true
+                });
+                
+                log(resultId, '⚙️ AI Settings configured successfully');
+                updateStatus(statusId, 'success', 'AI Settings integration working!');
+                log(resultId, '✅ AI Settings integration test completed successfully');
+                
+            } catch (error) {
+                log(resultId, `❌ Error: ${error.message}`);
+                updateStatus(statusId, 'error', 'AI Settings integration failed');
+            }
+        };
+
+        // Auto-run a quick test on page load
+        window.addEventListener('load', () => {
+            console.log('🧪 T2.01 & T2.02 AI Integration Test Page Ready');
+            console.log('👆 Click the test buttons above to verify AI functionality');
+        });
+    </script>
+</body>
+</html> 

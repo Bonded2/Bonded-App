@@ -204,9 +204,21 @@ class APIService {
     return this.handleResult(result);
   }
 
+  async acceptRelationship(relationshipId) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.accept_relationship(relationshipId);
+    return this.handleResult(result);
+  }
+
   async terminateRelationship(relationshipId) {
     if (!this.actor) throw new Error('API not initialized');
     const result = await this.actor.terminate_relationship(relationshipId);
+    return this.handleResult(result);
+  }
+
+  async updateFaceEmbedding(embedding) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.update_face_embedding(embedding);
     return this.handleResult(result);
   }
 

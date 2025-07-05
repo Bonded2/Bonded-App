@@ -120,13 +120,24 @@ class FontLoader {
 }
 // Export singleton instance
 export const fontLoader = new FontLoader();
-// Auto-load fonts when module is imported
-fontLoader.loadFonts().then(success => {
-  if (success) {
-    document.documentElement.classList.add('fonts-loaded');
-  } else {
+
+// Export initialization function for main.jsx compatibility
+export const initializeFonts = () => {
+  return fontLoader.loadFonts().then(success => {
+    if (success) {
+      document.documentElement.classList.add('fonts-loaded');
+      console.log('✅ Fonts loaded successfully');
+    } else {
+      document.documentElement.classList.add('fonts-failed');
+      console.warn('⚠️ Fonts failed to load, using fallbacks');
+    }
+    return success;
+  }).catch(error => {
     document.documentElement.classList.add('fonts-failed');
-  }
-}).catch(error => {
-  document.documentElement.classList.add('fonts-failed');
-}); 
+    console.warn('⚠️ Font loading error:', error);
+    return false;
+  });
+};
+
+// Auto-load fonts when module is imported
+initializeFonts(); 

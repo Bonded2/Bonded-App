@@ -10,6 +10,12 @@
       }
     }
   },
+  "networks": {
+    "ic": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent" 
+    }
+  },
   "defaults": {
     "build": {
       "args": "",

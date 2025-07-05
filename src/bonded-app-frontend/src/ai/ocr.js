@@ -37,10 +37,17 @@ class OCRService {
     if (Tesseract) return Tesseract;
 
     try {
+      // Always try bundled version first (works in both dev and production)
+      try {
+        Tesseract = await import('tesseract.js');
+        console.log('✅ Tesseract.js loaded from bundled package');
+        return Tesseract;
+      } catch (bundleError) {
+        console.warn('⚠️ Bundled Tesseract.js failed, trying CDN:', bundleError.message);
+      }
+
+      // Fallback to CDN only if bundled fails and in production
       if (this.isProduction) {
-        // Use ESM CDN in production for better performance
-        
-        // Try multiple ESM CDN providers for redundancy
         const esmUrls = [
           TESSERACT_JSDELIVR_ESM_URL, // jsDelivr ESM (fastest)
           TESSERACT_SKYPACK_URL,      // Skypack (optimized ESM)
@@ -49,7 +56,8 @@ class OCRService {
         
         for (const url of esmUrls) {
           try {
-            Tesseract = await import(url);
+            Tesseract = await import(/* @vite-ignore */ url);
+            console.log(`✅ Tesseract.js loaded from CDN: ${url}`);
             break;
           } catch (urlError) {
             console.warn(`❌ Failed to load from ${url}:`, urlError.message);
@@ -58,13 +66,9 @@ class OCRService {
             }
           }
         }
-        
-      } else {
-        // Use bundled version in development
-        Tesseract = await import('tesseract.js');
       }
     } catch (error) {
-      console.warn('⚠️ Failed to load Tesseract.js:', error.message);
+      console.warn('⚠️ Failed to load Tesseract.js from all sources:', error.message);
       this.loadError = error.message;
       Tesseract = null;
     }

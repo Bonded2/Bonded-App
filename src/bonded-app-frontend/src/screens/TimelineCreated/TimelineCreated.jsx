@@ -10,12 +10,9 @@ import { ExportModal } from "../../components/ExportModal";
 import { MediaScanner } from "../../components/MediaScanner";
 import { autoAIScanner } from "../../utils/autoAIScanner";
 import { useBondedServices } from "../../hooks/useBondedServices";
+import { localVault } from "../../services/localVault.js";
 import "./style.css";
-// LocalStorage keys for storing timeline data
-const TIMELINE_DATA_KEY = 'bonded_timeline_data';
-const TIMELINE_LAST_UPDATE_KEY = 'bonded_timeline_last_update';
-const TIMESTAMP_CONTENT_KEY = 'bonded_timestamp_content';
-const AI_TIMELINE_DATA_KEY = 'aiProcessedTimeline';
+
 export const TimelineCreated = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,9 +32,6 @@ export const TimelineCreated = () => {
   const {
     isInitialized,
     isLoading: servicesLoading,
-    timeline: bondedTimeline,
-    statistics,
-    refreshTimeline,
     processEvidence,
     exportToPDF,
     isUploadDue,
@@ -45,10 +39,8 @@ export const TimelineCreated = () => {
     canisterIntegration,
     encryptionService
   } = useBondedServices();
-  // Timeline state management
+  // Local Vault state (primary data source)
   const [timelineData, setTimelineData] = useState([]);
-  const [aiTimelineData, setAiTimelineData] = useState([]);
-  const [combinedTimelineData, setCombinedTimelineData] = useState([]);
   const [evidenceStats, setEvidenceStats] = useState({
     totalEntries: 0,
     photoEntries: 0,
@@ -56,396 +48,196 @@ export const TimelineCreated = () => {
     documentEntries: 0,
     lastUpdate: null
   });
-  // Enhanced evidence processing with encryption
-  const processEvidenceWithEncryption = useCallback(async (evidence) => {
-    if (!encryptionService || !canisterIntegration) {
-      return { success: false, reason: 'Services not initialized' };
+  // Timeline filters and pagination
+  const [filters, setFilters] = useState({
+    contentType: 'all',
+    uploadStatus: 'all',
+    dateRange: null
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreData, setHasMoreData] = useState(false);
+  /**
+   * Load timeline data from Local Vault (offline-first)
+   */
+  const loadTimelineFromVault = useCallback(async (options = {}) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const {
+        page = 1,
+        append = false,
+        filters: filterOverrides = null
+      } = options;
+      // Use Local Vault as primary data source
+      const result = await localVault.getTimelineData({
+        page,
+        limit: 20,
+        ...filters,
+        ...filterOverrides
+      });
+      if (append) {
+        setTimelineData(prev => [...prev, ...result.entries]);
+      } else {
+        setTimelineData(result.entries);
+      }
+      setHasMoreData(result.hasMore);
+      setCurrentPage(page);
+      // Update statistics from Local Vault
+      const stats = await localVault.getStatistics();
+      setEvidenceStats(stats);
+      console.log(`📄 Loaded ${result.entries.length} timeline entries from Local Vault (page ${page})`);
+    } catch (error) {
+      console.error('❌ Failed to load timeline from Local Vault:', error);
+      setError(`Failed to load timeline: ${error.message}`);
+      // Fallback to empty state instead of multiple sources
+      setTimelineData([]);
+      setEvidenceStats({
+        totalEntries: 0,
+        photoEntries: 0,
+        messageEntries: 0,
+        documentEntries: 0,
+        lastUpdate: null
+      });
+    } finally {
+      setLoading(false);
     }
+  }, [filters]);
+  /**
+   * Handle evidence processing and add to Local Vault
+   */
+  const processEvidenceWithVault = useCallback(async (evidenceData) => {
     try {
       setProcessingEvidence(true);
-      setUploadProgress({ stage: 'encrypting', progress: 25 });
-      // Encrypt evidence data using AES-256-GCM
-      const encryptedData = await encryptionService.encryptEvidence(evidence);
-      setUploadProgress({ stage: 'hashing', progress: 50 });
-      // Compute SHA-256 hash for integrity
-      const evidenceHash = await encryptionService.computeHash(evidence);
-      setUploadProgress({ stage: 'uploading', progress: 75 });
-      // Upload to Evidence Canister
-      // Get relationship ID from user profile
-      let relationshipId = 'mock-relationship-id'; // fallback
-      try {
-        const { api } = await import('../../services/api.js');
-        if (api.isAuthenticated) {
-          const userProfile = await api.getUserProfile();
-          if (userProfile.relationships && userProfile.relationships.length > 0) {
-            relationshipId = userProfile.relationships[0]; // Use first relationship
-          }
-        }
-      } catch (error) {
-// Console statement removed for production
-      }
-      
-      const uploadResult = await canisterIntegration.uploadEvidence(
-        relationshipId,
-        encryptedData,
-        {
-          timestamp: Date.now(),
-          contentType: evidence.type,
-          hash: evidenceHash,
-          category: evidence.category || 'relationship'
-        }
-      );
+      setUploadProgress({ stage: 'processing', progress: 25 });
+      // Add evidence to Local Vault with T7.01 metadata
+      const evidenceEntry = await localVault.addEvidence(evidenceData, {
+        collectionMethod: 'manual_upload',
+        initiatorDevice: true,
+        location: evidenceData.location || null,
+        category: evidenceData.category || 'relationship'
+      });
+      setUploadProgress({ stage: 'vault_stored', progress: 50 });
+      // Queue for ICP upload (handled by Local Vault)
+      setUploadProgress({ stage: 'queued_upload', progress: 75 });
+      // Refresh timeline to show new evidence
+      await loadTimelineFromVault();
       setUploadProgress({ stage: 'completed', progress: 100 });
-      return uploadResult;
+      console.log(`✅ Evidence processed and added to Local Vault: ${evidenceEntry.id}`);
+      return { success: true, evidenceId: evidenceEntry.id };
     } catch (error) {
-      throw error;
+      console.error('❌ Failed to process evidence:', error);
+      setError(`Failed to process evidence: ${error.message}`);
+      return { success: false, error: error.message };
     } finally {
       setProcessingEvidence(false);
       setTimeout(() => setUploadProgress(null), 2000);
     }
-  }, [encryptionService, canisterIntegration]);
-  // Load encrypted timeline data from ICP canister
-  const loadEncryptedTimeline = useCallback(async () => {
-    if (!canisterIntegration || !encryptionService) {
-      return;
-    }
-    try {
-      setLoading(true);
-      setError(null);
-      // Fetch encrypted timeline from Evidence Canister
-      const encryptedTimeline = await canisterIntegration.fetchTimeline({
-        page: 0,
-        limit: 50 // Load first 50 entries
-      });
-      if (!encryptedTimeline || !encryptedTimeline.entries) {
-        setTimelineData([]);
-        return;
-      }
-      // Decrypt each timeline entry
-      const decryptedEntries = [];
-      for (const entry of encryptedTimeline.entries) {
-        try {
-          const decryptedData = await encryptionService.decryptEvidence(entry.encryptedData);
-          decryptedEntries.push({
-            id: entry.id,
-            ...decryptedData,
-            timestamp: entry.metadata?.timestamp || Date.now(),
-            uploadStatus: 'completed',
-            source: 'encrypted_vault',
-            blockchainTimestamp: entry.created_at,
-            hash: entry.metadata?.hash,
-            category: entry.metadata?.category || 'relationship'
-          });
-        } catch (decryptError) {
-          // Add placeholder for failed decryption
-          decryptedEntries.push({
-            id: entry.id,
-            date: new Date(entry.created_at).toLocaleDateString('en-GB', { 
-              day: 'numeric', month: 'short', year: 'numeric' 
-            }),
-            photos: 0,
-            messages: 0,
-            location: 'Encrypted Entry',
-            uploadStatus: 'decryption_failed',
-            source: 'encrypted_vault',
-            error: 'Failed to decrypt'
-          });
-        }
-      }
-      // Sort by timestamp (newest first)
-      decryptedEntries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      setTimelineData(decryptedEntries);
-      // Update evidence statistics
-      setEvidenceStats({
-        totalEntries: decryptedEntries.length,
-        photoEntries: decryptedEntries.filter(e => e.photos > 0).length,
-        messageEntries: decryptedEntries.filter(e => e.messages > 0).length,
-        documentEntries: decryptedEntries.filter(e => e.category === 'document').length,
-        lastUpdate: new Date().toISOString()
-      });
-    } catch (error) {
-      setError(`Failed to load timeline: ${error.message}`);
-              // Fallback to local data if available
-        try {
-          // Replace localStorage with canister storage
-          const canisterLocalStorage = (await import('../../services/canisterStorage.js')).default;
-          const localData = await canisterLocalStorage.getItem(TIMELINE_DATA_KEY);
-        if (localData) {
-          const parsedData = JSON.parse(localData);
-          if (Array.isArray(parsedData)) {
-            setTimelineData(parsedData);
-          }
-        }
-      } catch (fallbackError) {
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [canisterIntegration, encryptionService]);
-  // Function to load AI timeline data from timeline service and storage
-    const loadAITimelineData = useCallback(async () => {
-    try {
-      let allAIData = [];
-      
-      // 1. Load from timeline service (where AI scanner stores data)
-      try {
-        const { timelineService } = await import('../../services/timelineService.js');
-        const clusteredTimeline = await timelineService.getClusteredTimeline();
-        
-        // Extract all entries from clustered timeline
-        if (clusteredTimeline && typeof clusteredTimeline === 'object') {
-          Object.values(clusteredTimeline).forEach(cluster => {
-            if (cluster && cluster.entries && Array.isArray(cluster.entries)) {
-              allAIData.push(...cluster.entries);
-            }
-          });
-        }
-      } catch (timelineError) {
-      }
-      
-      // 2. Also load from canister storage as fallback
-      try {
-        const canisterLocalStorage = (await import('../../services/canisterStorage.js')).default;
-        const savedAIData = await canisterLocalStorage.getItem(AI_TIMELINE_DATA_KEY);
-        if (savedAIData) {
-          const parsedAIData = JSON.parse(savedAIData);
-          if (Array.isArray(parsedAIData)) {
-            // Merge with timeline service data, avoiding duplicates
-            parsedAIData.forEach(item => {
-              if (!allAIData.find(existing => existing.id === item.id)) {
-                allAIData.push(item);
-              }
-            });
-          }
-        }
-      } catch (storageError) {
-      }
-      
-      // Sort by timestamp, newest first
-      allAIData.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      
-      setAiTimelineData(allAIData);
-    } catch (error) {
-      console.error('Failed to load AI timeline data:', error);
-      setAiTimelineData([]);
-    }
-  }, []);
-  // Combine timeline data from multiple sources
-  const combineTimelineData = useCallback(() => {
-    const combined = [];
-    // Add regular timeline entries (encrypted vault)
-    timelineData.forEach(item => {
-      combined.push({
-        ...item,
-        type: 'encrypted_evidence',
-        sortTimestamp: item.timestamp || Date.now()
-      });
-    });
-    // Add AI timeline entries (local processing)
-    aiTimelineData.forEach(item => {
-      combined.push({
-        ...item,
-        type: 'ai_processed',
-        sortTimestamp: new Date(item.createdAt).getTime()
-      });
-    });
-    // Add Bonded services timeline entries (real-time)
-    if (Array.isArray(bondedTimeline)) {
-      bondedTimeline.forEach(item => {
-        combined.push({
-          ...item,
-          type: 'bonded_evidence',
-          sortTimestamp: item.timestamp || Date.now()
-        });
-      });
-    }
-    // Sort by timestamp, newest first
-    combined.sort((a, b) => b.sortTimestamp - a.sortTimestamp);
-    setCombinedTimelineData(combined);
-  }, [timelineData, aiTimelineData, bondedTimeline]);
-  // Load timeline data when services are initialized
-  useEffect(() => {
-    if (isInitialized && !servicesLoading) {
-      loadEncryptedTimeline();
-    loadAITimelineData();
-    }
-  }, [isInitialized, servicesLoading, loadEncryptedTimeline, loadAITimelineData]);
-  // Combine data when any timeline changes
-  useEffect(() => {
-    combineTimelineData();
-  }, [combineTimelineData]);
-  // Set up auto AI scanner observer
-  useEffect(() => {
-    const aiScannerObserver = (event, data) => {
-      if (event === 'timelineUpdated') {
-        // Force refresh of all timeline data sources
-        loadAITimelineData();
-        if (isInitialized) {
-          loadEncryptedTimeline();
-        }
-        // Also refresh bonded services timeline
-        if (refreshTimeline) {
-          refreshTimeline();
-        }
-      }
-    };
-    autoAIScanner.addObserver(aiScannerObserver);
-    return () => {
-      autoAIScanner.removeObserver(aiScannerObserver);
-    };
-  }, [loadAITimelineData, loadEncryptedTimeline, isInitialized, refreshTimeline]);
-  // Enhanced evidence processing for media selection with AI filtering
+  }, [loadTimelineFromVault]);
+  /**
+   * Handle media selection from scanner
+   */
   const handleMediaSelected = async (selectedFiles, groupedByDate) => {
     try {
       setProcessingEvidence(true);
       setIsMediaScannerOpen(false);
-      
-      // Import AI filtering service and timeline service
-      const { aiEvidenceFilter } = await import('../../services/index.js');
-      const { timelineService } = await import('../../services/timelineService.js');
-      
       let processedCount = 0;
       let approvedCount = 0;
-      let rejectedCount = 0;
-      
-      // Process each file through AI filtering pipeline
       for (const fileData of selectedFiles) {
         try {
           processedCount++;
-          
-          // Create proper image element for AI processing
-          const imageElement = await createImageFromFile(fileData.file);
-          
-          // Run through AI filtering (NSFW + OCR + Text classification)
-          const filterResult = await aiEvidenceFilter.filterImage(imageElement, fileData.metadata);
-          
-          if (filterResult.approved) {
+          // Process each file through Local Vault
+          const evidenceData = {
+            photo: fileData.file,
+            metadata: fileData.metadata,
+            location: fileData.metadata?.resolvedLocation || null,
+            category: 'photo'
+          };
+          await localVault.addEvidence(evidenceData, {
+            collectionMethod: 'media_scan',
+            targetDate: new Date(fileData.timestamp || fileData.file.lastModified),
+            photoDimensions: fileData.metadata?.dimensions,
+            source: 'device_gallery'
+          });
             approvedCount++;
-            
-            // Create timeline entry for approved content
-            const timelineEntry = {
-              id: `timeline_scan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              type: filterResult.details.ocrExtraction?.text ? 'photo_with_text' : 'photo',
-              content: {
-                file: fileData.file,
-                filename: fileData.file.name,
-                fileType: fileData.file.type,
-                fileSize: fileData.file.size,
-                extractedText: filterResult.details.ocrExtraction?.text || null
-              },
-              metadata: {
-                ...fileData.metadata,
-                source: 'timeline_scan',
-                aiProcessed: true,
-                aiResult: filterResult,
-                nsfwFiltered: true,
-                processingTime: filterResult.processing_time || 0
-              },
-              timestamp: new Date(fileData.timestamp || fileData.file.lastModified).toISOString(),
-              uploadStatus: 'pending'
-            };
-            
-            // Add to timeline service
-            await timelineService.addTimelineEntry(timelineEntry);
-            
-          } else {
-            rejectedCount++;
-          }
-          
         } catch (error) {
-          rejectedCount++;
           console.error(`Error processing file ${fileData.file.name}:`, error);
         }
       }
-      
       // Show results
       setImportedMediaInfo({
         mediaCount: approvedCount,
         processedCount,
-        rejectedCount,
         dateRange: formatDateRangeForDisplay(groupedByDate)
       });
       setShowImportSuccess(true);
-      
-      // Refresh all timeline sources to show new entries
-      await loadEncryptedTimeline();
-      await loadAITimelineData();
-      if (refreshTimeline) {
-        await refreshTimeline();
-      }
-      
+      // Refresh timeline
+      await loadTimelineFromVault();
       // Auto-hide success message
       setTimeout(() => setShowImportSuccess(false), 5000);
-      
     } catch (error) {
+      console.error('Error handling media selection:', error);
       setError(`Failed to process media: ${error.message}`);
     } finally {
       setProcessingEvidence(false);
     }
   };
-
-  // Helper function to create image element from file
-  const createImageFromFile = (file) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(img.src);
-        resolve(img);
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(img.src);
-        reject(new Error('Failed to load image'));
-      };
-      img.src = URL.createObjectURL(file);
-    });
-  };
-  // Enhanced evidence processing with AI and encryption
   const handleProcessEvidenceClick = async () => {
+    if (processEvidence) {
     try {
       setProcessingEvidence(true);
-      setError(null);
-      // Use the processEvidence from useBondedServices
       const result = await processEvidence();
       if (result.success) {
-        // Encrypt and upload the processed evidence
-        if (result.evidence) {
-          await processEvidenceWithEncryption(result.evidence);
+          // Add result to Local Vault
+          await processEvidenceWithVault(result.evidence);
         }
-        setShowImportSuccess(true);
-        setImportedMediaInfo({
-          count: (result.evidence?.photo ? 1 : 0) + (result.evidence?.messages?.length || 0),
-          type: result.evidence?.photo ? 'photo and messages' : 'messages'
-        });
-        // Refresh timeline
-        await loadEncryptedTimeline();
-        // Hide success message after 3 seconds
-        setTimeout(() => setShowImportSuccess(false), 3000);
-      } else {
-        setError(`Evidence processing failed: ${result.errors?.join(', ') || 'Unknown error'}`);
-      }
-    } catch (err) {
-      setError(`Failed to process evidence: ${err.message}`);
+      } catch (error) {
+        console.error('Evidence processing failed:', error);
+        setError(`Evidence processing failed: ${error.message}`);
     } finally {
       setProcessingEvidence(false);
+      }
     }
   };
-  // Enhanced timeline refresh with error handling
   const handleRefreshTimeline = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      // Refresh from multiple sources
-      await Promise.all([
-        loadEncryptedTimeline(),
-        refreshTimeline && refreshTimeline(true),
-        loadAITimelineData()
-      ]);
-    } catch (err) {
-      setError(`Failed to refresh timeline: ${err.message}`);
-    } finally {
-      setLoading(false);
+    await loadTimelineFromVault({ page: 1 });
+  };
+  const handleLoadMore = () => {
+    if (hasMoreData && !loading) {
+      loadTimelineFromVault({ page: currentPage + 1, append: true });
     }
   };
+  const handleFilterChange = (newFilters) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setCurrentPage(1);
+    loadTimelineFromVault({ page: 1, filters: newFilters });
+  };
+  // Initialize Local Vault and load timeline
+  useEffect(() => {
+    const initializeTimeline = async () => {
+      try {
+        await localVault.initialize();
+        await loadTimelineFromVault();
+      } catch (error) {
+        console.error('Failed to initialize timeline:', error);
+        setError('Failed to initialize timeline');
+      }
+    };
+    initializeTimeline();
+  }, [loadTimelineFromVault]);
+  // Set up Local Vault observer for real-time updates
+  useEffect(() => {
+    const vaultObserver = (event, data) => {
+      console.log(`🔄 Local Vault event: ${event}`, data);
+      if (event === 'evidenceAdded' || event === 'evidenceUpdated') {
+        // Refresh timeline when evidence is added/updated
+        loadTimelineFromVault();
+      }
+    };
+    localVault.addObserver(vaultObserver);
+    return () => {
+      localVault.removeObserver(vaultObserver);
+    };
+  }, [loadTimelineFromVault]);
   // Handle services errors
   useEffect(() => {
     if (servicesError) {
@@ -459,13 +251,7 @@ export const TimelineCreated = () => {
       setImportedMediaInfo({ mediaCount, dateRange });
       setShowImportSuccess(true);
       // Reload timeline data to reflect newly imported media
-      if (isInitialized) {
-        loadEncryptedTimeline();
-      }
-      // Scroll to top if we have new media
-      if (timelineRef.current) {
-        timelineRef.current.scrollTo(0, 0);
-      }
+      loadTimelineFromVault();
       // Auto-hide success message after 5 seconds
       const timer = setTimeout(() => {
         setShowImportSuccess(false);
@@ -474,10 +260,10 @@ export const TimelineCreated = () => {
       window.history.replaceState({}, document.title);
       return () => clearTimeout(timer);
     }
-  }, [location, isInitialized, loadEncryptedTimeline]);
+  }, [location, loadTimelineFromVault]);
   // Enhanced scroll animations
   useEffect(() => {
-    if (!combinedTimelineData.length) return;
+    if (!timelineData.length) return;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach(entry => {
@@ -491,18 +277,18 @@ export const TimelineCreated = () => {
     const elements = document.querySelectorAll('.timeline-item');
     elements.forEach(element => observer.observe(element));
     return () => elements.forEach(element => observer.unobserve(element));
-  }, [combinedTimelineData]);
+  }, [timelineData]);
   // Handle initial animation on mount
   useEffect(() => {
-    if (!combinedTimelineData.length) return;
+    if (!timelineData.length) return;
     const timer = setTimeout(() => {
       // Animate first 3 items or all items if less than 3
-      const itemsToAnimate = Math.min(combinedTimelineData.length, 3);
-      const itemIds = combinedTimelineData.slice(0, itemsToAnimate).map(item => item.id);
+      const itemsToAnimate = Math.min(timelineData.length, 3);
+      const itemIds = timelineData.slice(0, itemsToAnimate).map(item => item.id);
       setAnimatedItems(itemIds);
     }, 500);
     return () => clearTimeout(timer);
-  }, [combinedTimelineData]);
+  }, [timelineData]);
   // Utility functions
   const updateContentForDate = (date, files) => {
     try {
@@ -532,15 +318,11 @@ export const TimelineCreated = () => {
     return 'file';
   };
   const formatDateForDisplay = (date) => {
-    try {
-      if (!(date instanceof Date) || isNaN(date.getTime())) {
-        date = new Date();
-      }
-      const options = { day: 'numeric', month: 'short', year: 'numeric' };
-      return date.toLocaleDateString('en-GB', options);
-    } catch (error) {
-      return new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    }
+    return date.toLocaleDateString('en-GB', { 
+      day: 'numeric', 
+      month: 'short', 
+      year: 'numeric' 
+    });
   };
   const determineEvidenceCategory = (item) => {
     if (item.messages > 0 && item.photos > 0) return "relationship";
@@ -587,7 +369,7 @@ export const TimelineCreated = () => {
   const handleTimelineTileClick = (date) => navigate(`/timestamp-folder?date=${encodeURIComponent(date)}`);
   const handleScanMediaClick = () => setIsMediaScannerOpen(true);
   const handleCloseMediaScanner = () => setIsMediaScannerOpen(false);
-  // Enhanced timeline content rendering
+  // Enhanced timeline content rendering with T7.01 metadata
   const renderTimelineContent = () => {
     if (loading || servicesLoading) {
       return (
@@ -650,7 +432,7 @@ export const TimelineCreated = () => {
         </div>
       );
     }
-    if (combinedTimelineData.length === 0) {
+    if (timelineData.length === 0) {
       return (
         <div className="empty-timeline">
           <div className="empty-timeline-icon">📅</div>
@@ -712,7 +494,7 @@ export const TimelineCreated = () => {
         {/* Timeline Visualization */}
         <div className="timeline-line">
           <div className="timeline-vertical-line">
-            {combinedTimelineData.map((item, index) => (
+            {timelineData.map((item, index) => (
               <div 
                 key={`dot-${item.id}`} 
                 className={`timeline-dot ${animatedItems.includes(item.id) ? 'timeline-dot-animated' : ''} ${item.type === 'ai_processed' ? 'ai-dot' : ''} ${item.type === 'encrypted_evidence' ? 'encrypted-dot' : ''}`}
@@ -721,8 +503,9 @@ export const TimelineCreated = () => {
             ))}
           </div>
         </div>
-        {/* Timeline Entries */}
-        {combinedTimelineData.map((item, index) => {
+        {/* Timeline Entries with T7.01 Metadata */}
+        {timelineData.map((item, index) => {
+          // Handle both new Local Vault entries and legacy AI entries
           if (item.type === 'ai_processed') {
             return (
               <AITimelineEntry
@@ -734,6 +517,15 @@ export const TimelineCreated = () => {
               />
             );
           } else {
+            // Local Vault entries with T7.01 metadata structure
+            const locationDisplay = item.location ? 
+              `${item.location.city}, ${item.location.country}` : 
+              'Location not available';
+            
+            const statusIcon = item.uploadStatus === 'completed' ? '✅' : 
+                             item.uploadStatus === 'pending' ? '⏳' : 
+                             item.uploadStatus === 'failed' ? '❌' : '📄';
+            
             return (
           <div 
             className={`timeline-item ${animatedItems.includes(item.id) ? 'timeline-item-animated' : ''}`}
@@ -741,37 +533,76 @@ export const TimelineCreated = () => {
             data-id={item.id}
           >
             <div className={`date-badge date-badge-${Math.min(index + 1, 3)}`}>
-                  <div className="date-text">{item.date || formatDateForDisplay(new Date(item.timestamp))}</div>
-                  {item.type === 'encrypted_evidence' && (
-                    <div className="encryption-badge" title="End-to-end encrypted">🔒</div>
-                  )}
+                  <div className="date-text">{item.date}</div>
+                  <div className="vault-badge" title="Stored in Local Vault with T7.01 metadata">
+                    🔐 {statusIcon}
+                  </div>
             </div>
+                
             <TimelineTileWrapper 
               className={`timeline-tile-${Math.min(index + 1, 3)}`}
-                  timelineTileText={`${item.messages || 0} Messages`}
-                  timelineTileText1={`${item.photos || 0} Photos`}
-                  timelineTileText2={item.location || 'Unknown Location'}
-                  timelineTileIcon={item.icon || (item.messages > 0 ? <Chat4 className="chat-icon-svg" /> : null)}
-              timelineTileMaskGroup={item.image}
+                  // Display T7.01 metadata
+                  timelineTileText={`${item.messageCount} Messages`}
+                  timelineTileText1={item.hasPhoto ? "1 Photo" : "No Photos"}
+                  timelineTileText2={locationDisplay}
+                  timelineTileIcon={
+                    item.hasPhoto ? (
+                      <div className="photo-icon">📸</div>
+                    ) : item.messageCount > 0 ? (
+                      <Chat4 className="chat-icon-svg" />
+                    ) : (
+                      <div className="document-icon">📄</div>
+                    )
+                  }
+                  timelineTileMaskGroup={item.thumbnail}
               timelineTileMaskGroupClassName="timeline-brand-image"
-              onClick={handleTimelineTileClick}
-                  date={item.date || formatDateForDisplay(new Date(item.timestamp))}
-                  source={item.source || 'unknown'}
-                  uploadStatus={item.uploadStatus || 'completed'}
-              evidenceCategory={determineEvidenceCategory(item)}
-              evidenceType={determineEvidenceType(item)}
-                  aiVerified={item.type === 'ai_processed' || item.type === 'encrypted_evidence'}
-              processTimestamp={`Processed: ${new Date(item.timestamp).toLocaleString()}`}
-              blockchainTimestamp={item.blockchainTimestamp}
-                  encryptionHash={item.hash}
+                  onClick={() => handleTimelineTileClick(item.date)}
+                  date={item.date}
+                  source="local_vault"
+                  uploadStatus={item.uploadStatus}
+                  evidenceCategory={item.category}
+                  evidenceType={item.contentType}
+                  aiVerified={true}
+                  processTimestamp={`Added: ${new Date(item.timestamp).toLocaleString()}`}
+                  blockchainTimestamp={item.uploadTime ? `Uploaded: ${new Date(item.uploadTime).toLocaleString()}` : 'Not uploaded yet'}
+                  encryptionHash={item.packageId}
+                  // Additional T7.01 metadata display
+                  bondedMetadata={{
+                    title: item.title,
+                    subtitle: item.subtitle,
+                    tags: item.tags,
+                    priority: item.priority,
+                    verified: item.verified,
+                    syncStatus: item.syncStatus
+                  }}
             />
           </div>
             );
           }
         })}
+        {/* Load More / Timeline End */}
+        {hasMoreData ? (
+          <div className="load-more-section">
+            <button 
+              className="load-more-button" 
+              onClick={handleLoadMore}
+              disabled={loading}
+            >
+              {loading ? '⏳ Loading...' : '📄 Load More Evidence'}
+            </button>
+            <p className="load-more-hint">
+              Showing {timelineData.length} of {evidenceStats.totalEntries} entries
+            </p>
+          </div>
+        ) : (
         <div className="timeline-end">
           <div className="timeline-end-dot" />
-          <p className="timeline-end-text">Keep building your evidence timeline</p>
+            <p className="timeline-end-text">
+              {timelineData.length > 0 ? 
+                "You've reached the beginning of your timeline" : 
+                "Keep building your evidence timeline"
+              }
+            </p>
           <div className="timeline-end-actions">
           <button className="scan-media-button" onClick={handleScanMediaClick}>
             Scan Device Media
@@ -781,6 +612,7 @@ export const TimelineCreated = () => {
             </button>
           </div>
         </div>
+        )}
       </>
     );
   };

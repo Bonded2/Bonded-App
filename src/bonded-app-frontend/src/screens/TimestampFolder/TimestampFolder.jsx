@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { MediaScanner } from "../../components/MediaScanner";
 import { InfoModal } from "../../components/InfoModal";
 import { DeleteModal } from "../../components/DeleteModal";
+import { localVault } from "../../services/localVault.js";
 import "./style.css";
 // LocalStorage keys - same as in TimelineCreated
 const TIMELINE_DATA_KEY = 'bonded_timeline_data';
@@ -24,54 +25,153 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [contentItems, setContentItems] = useState([]);
+  const [evidenceDetails, setEvidenceDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showImportSuccess, setShowImportSuccess] = useState(false);
   const [importedCount, setImportedCount] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState('all');
   // Use date from props or URL params, make sure to decode URL encoded date
   const date = propDate || (paramDate ? decodeURIComponent(paramDate) : null);
-  // Load content items for this date from localStorage
+  /**
+   * Load evidence details from Local Vault for this date
+   */
   useEffect(() => {
-    const loadContentItems = () => {
+    const loadEvidenceForDate = async () => {
+      if (!date) return;
+
       setLoading(true);
+      setError(null);
+
       try {
-        // Get all content from localStorage
-        const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
-        // Get content specifically for this date
-        if (allContent[date]) {
-          setContentItems(allContent[date]);
+        // Get timeline entries for this specific date from Local Vault
+        const result = await localVault.getTimelineData({
+          page: 1,
+          limit: 100,
+          dateRange: {
+            start: date,
+            end: date
+          }
+        });
+
+        if (result.entries.length > 0) {
+          // Get the first (and likely only) entry for this date
+          const timelineEntry = result.entries[0];
+          
+          // Get full evidence details
+          const fullEvidence = await localVault.getEvidenceById(timelineEntry.evidenceId);
+          setEvidenceDetails(fullEvidence);
+
+          // Extract content items from evidence for display
+          const items = extractContentItems(fullEvidence);
+          setContentItems(items);
         } else {
-          // If no existing content for this date, create an empty array
+          // No evidence found for this date
           setContentItems([]);
+          setEvidenceDetails(null);
         }
+
       } catch (err) {
+        console.error('Failed to load evidence for date:', err);
+        setError(`Failed to load evidence: ${err.message}`);
         setContentItems([]);
       } finally {
         setLoading(false);
       }
     };
-    if (date) {
-      loadContentItems();
-    }
+
+    loadEvidenceForDate();
   }, [date]);
-  // Save content items whenever they change
-  useEffect(() => {
-    const saveContentItems = () => {
-      if (!date || contentItems.length === 0) return;
-      try {
-        // Get all existing content
-        const allContent = JSON.parse(localStorage.getItem(TIMESTAMP_CONTENT_KEY) || '{}');
-        // Update content for this date
-        allContent[date] = contentItems;
-        // Save back to localStorage
-        localStorage.setItem(TIMESTAMP_CONTENT_KEY, JSON.stringify(allContent));
-        // Update timeline counts after saving
-        updateTimelineItemCount();
-      } catch (err) {
-      }
-    };
-    saveContentItems();
-  }, [contentItems, date]);
+  /**
+   * Extract displayable content items from Local Vault evidence
+   */
+  const extractContentItems = (evidence) => {
+    const items = [];
+    let itemCounter = 1;
+
+    // Add photo if present
+    if (evidence.content.photo) {
+      items.push({
+        id: `photo_${evidence.id}_${itemCounter++}`,
+        type: 'photo',
+        name: `Photo from ${evidence.bondedMetadata.timestamps.targetDate.split('T')[0]}`,
+        source: "Local Vault",
+        location: evidence.bondedMetadata.location ? 
+          `${evidence.bondedMetadata.location.city}, ${evidence.bondedMetadata.location.country}` : 
+          "Location not recorded",
+        date: evidence.bondedMetadata.timestamps.targetDate.split('T')[0],
+        imageUrl: evidence.content.photo instanceof Blob ? 
+          URL.createObjectURL(evidence.content.photo) : evidence.content.photo,
+        timestamp: new Date(evidence.bondedMetadata.timestamps.targetDate).getTime(),
+        size: evidence.content.photo.size || 0,
+        evidenceCategory: evidence.bondedMetadata.display.category,
+        verified: evidence.bondedMetadata.verification.packageIntegrity,
+        officialDocument: false,
+        metadata: {
+          packageId: evidence.bondedMetadata.packageId,
+          uploadStatus: evidence.bondedMetadata.upload.status,
+          bondedMetadata: evidence.bondedMetadata
+        }
+      });
+    }
+
+    // Add messages if present
+    if (evidence.content.messages && evidence.content.messages.length > 0) {
+      evidence.content.messages.forEach((message, index) => {
+        items.push({
+          id: `message_${evidence.id}_${itemCounter++}`,
+          type: 'message',
+          name: `Message ${index + 1}`,
+          source: "Local Vault",
+          location: evidence.bondedMetadata.location ? 
+            `${evidence.bondedMetadata.location.city}, ${evidence.bondedMetadata.location.country}` : 
+            "Location not recorded",
+          date: evidence.bondedMetadata.timestamps.targetDate.split('T')[0],
+          content: message.text || message.content || message,
+          timestamp: new Date(message.timestamp || evidence.bondedMetadata.timestamps.targetDate).getTime(),
+          evidenceCategory: EVIDENCE_CATEGORIES.LANGUAGE,
+          verified: evidence.bondedMetadata.verification.packageIntegrity,
+          officialDocument: false,
+          metadata: {
+            packageId: evidence.bondedMetadata.packageId,
+            uploadStatus: evidence.bondedMetadata.upload.status,
+            sender: message.sender || 'Unknown',
+            bondedMetadata: evidence.bondedMetadata
+          }
+        });
+      });
+    }
+
+    // Add documents if present
+    if (evidence.content.documents && evidence.content.documents.length > 0) {
+      evidence.content.documents.forEach((document, index) => {
+        items.push({
+          id: `document_${evidence.id}_${itemCounter++}`,
+          type: 'document',
+          name: document.filename || `Document ${index + 1}`,
+          source: "Local Vault",
+          location: evidence.bondedMetadata.location ? 
+            `${evidence.bondedMetadata.location.city}, ${evidence.bondedMetadata.location.country}` : 
+            "Location not recorded",
+          date: evidence.bondedMetadata.timestamps.targetDate.split('T')[0],
+          content: document.content || document,
+          timestamp: new Date(evidence.bondedMetadata.timestamps.targetDate).getTime(),
+          size: document.size || 0,
+          evidenceCategory: evidence.bondedMetadata.display.category,
+          verified: evidence.bondedMetadata.verification.packageIntegrity,
+          officialDocument: isLikelyOfficialDocument(document.filename || ''),
+          metadata: {
+            packageId: evidence.bondedMetadata.packageId,
+            uploadStatus: evidence.bondedMetadata.upload.status,
+            fileType: document.type || 'unknown',
+            bondedMetadata: evidence.bondedMetadata
+          }
+        });
+      });
+    }
+
+    return items;
+  };
   const handleBack = () => {
     if (onClose) {
       onClose();
@@ -81,7 +181,13 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
   };
   const handlePreviewClick = (item) => {
     // Navigate to ImagePreview screen with the selected item ID
-    navigate(`/image-preview/${item.id}`);
+    navigate(`/image-preview/${item.id}`, { 
+      state: { 
+        evidenceDetails,
+        item,
+        packageId: item.metadata?.packageId 
+      } 
+    });
   };
   const handleInfoClick = (item) => {
     setSelectedItem(item);
@@ -91,52 +197,30 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
     setSelectedItem(item);
     setShowDeleteModal(true);
   };
-  const handleConfirmDelete = (item) => {
-    // Remove the item from contentItems
-    setContentItems(contentItems.filter(i => i.id !== item.id));
-    setShowDeleteModal(false);
-  };
-  const updateTimelineItemCount = () => {
+  const handleConfirmDelete = async (item) => {
+    // For Local Vault, we would need to implement evidence deletion
+    // This is a more complex operation involving the entire evidence package
     try {
-      // Get timeline data
-      const timelineData = JSON.parse(localStorage.getItem(TIMELINE_DATA_KEY) || '[]');
-      // Find the entry for this date
-      const entry = timelineData.find(item => item.date === date);
-      if (entry) {
-        // Update the counts based on content types
-        const photoCount = contentItems.filter(item => item.type === 'photo' || item.type === 'image').length;
-        const messageCount = contentItems.filter(item => item.type === 'message').length;
-        const videoCount = contentItems.filter(item => item.type === 'video').length;
-        const documentCount = contentItems.filter(item => item.type === 'document').length;
-        // Update the counts
-        entry.photos = photoCount;
-        entry.messages = messageCount;
-        // Update the evidence category based on majority content type
-        if (documentCount > messageCount && documentCount > photoCount) {
-          entry.evidenceCategory = EVIDENCE_CATEGORIES.DOCUMENT;
-        } else if (messageCount > documentCount && messageCount > photoCount) {
-          entry.evidenceCategory = EVIDENCE_CATEGORIES.LANGUAGE;
-        } else {
-          entry.evidenceCategory = EVIDENCE_CATEGORIES.RELATIONSHIP;
+      if (evidenceDetails && item.metadata?.packageId) {
+        // Note: This would be a destructive operation requiring careful consideration
+        // For now, we'll just remove from the local display
+        setContentItems(contentItems.filter(i => i.id !== item.id));
+        setShowDeleteModal(false);
+        
+        // TODO: Implement actual evidence deletion from Local Vault
+        console.warn('Evidence deletion from Local Vault not yet implemented');
         }
-        // Update the image if we have at least one photo
-        if (photoCount > 0 && !entry.image) {
-          const firstPhoto = contentItems.find(item => item.type === 'photo' || item.type === 'image');
-          if (firstPhoto && firstPhoto.imageUrl) {
-            entry.image = firstPhoto.imageUrl;
-          }
-        }
-        // Save back to localStorage
-        localStorage.setItem(TIMELINE_DATA_KEY, JSON.stringify(timelineData));
-      }
-    } catch (err) {
+    } catch (error) {
+      console.error('Failed to delete evidence:', error);
+      setError('Failed to delete evidence');
     }
   };
   const handleScanMedia = () => {
     setShowMediaScannerModal(true);
   };
-  const handleMediaSelected = (selectedFiles, groupedByDate) => {
-    // We're only interested in files for this specific date
+  const handleMediaSelected = async (selectedFiles, groupedByDate) => {
+    try {
+      // Filter files for this specific date
     const filesForThisDate = selectedFiles.filter(file => {
       const fileDate = new Date(file.timestamp).toLocaleDateString('en-GB', {
         day: 'numeric',
@@ -145,55 +229,56 @@ export const TimestampFolder = ({ onClose, date: propDate }) => {
       });
       return fileDate === date;
     });
+
     if (filesForThisDate.length === 0) {
       alert(`No files found for date: ${date}. Please select files from this exact date.`);
       return;
     }
-    // Create content items from the selected files
-    const newContentItems = filesForThisDate.map(file => {
-      // Create object URL safely
-      let fileImageUrl = null;
-      try {
-        if (file.file instanceof Blob) {
-          fileImageUrl = URL.createObjectURL(file.file);
-        } else {
-        }
-      } catch (err) {
+
+      // Add evidence to Local Vault for this date
+      for (const fileData of filesForThisDate) {
+        const evidenceData = {
+          photo: fileData.file,
+          metadata: fileData.metadata,
+          location: fileData.metadata?.resolvedLocation || null,
+          category: determineEvidenceCategory(fileData.file?.type || "", fileData.name || "")
+        };
+
+        await localVault.addEvidence(evidenceData, {
+          collectionMethod: 'manual_add_to_date',
+          targetDate: new Date(date), // Force specific date
+          source: 'timestamp_folder_scan'
+        });
       }
-      return {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: getFileType(file.file?.type || "unknown"),
-        name: file.name || "Unknown File",
-        source: "Device Media",
-        location: "Imported",
-        date: date,
-        imageUrl: fileImageUrl,
-        timestamp: file.timestamp || Date.now(),
-        size: file.size || 0,
-        path: file.path || "Unknown",
-        // Immigration verification specific fields
-        evidenceCategory: determineEvidenceCategory(file.file?.type || "", file.name || ""),
-        verified: false, // Default to unverified until processed
-        officialDocument: isLikelyOfficialDocument(file.name || ""),
-        metadata: {
-          importDate: new Date().toISOString(),
-          fileType: file.file?.type || "unknown"
-        }
-      };
-    }).filter(item => item.imageUrl !== null); // Filter out items with failed URLs
-    // Add new content items to the existing ones
-    setContentItems(prevItems => [...prevItems, ...newContentItems]);
-    // Close the scanner modal
+
+      // Close scanner and show success
     setShowMediaScannerModal(false);
-    // Show success message
-    setImportedCount(newContentItems.length);
+      setImportedCount(filesForThisDate.length);
     setShowImportSuccess(true);
+
+      // Reload evidence for this date
+      const result = await localVault.getTimelineData({
+        page: 1,
+        limit: 100,
+        dateRange: { start: date, end: date }
+      });
+
+      if (result.entries.length > 0) {
+        const fullEvidence = await localVault.getEvidenceById(result.entries[0].evidenceId);
+        setEvidenceDetails(fullEvidence);
+        const items = extractContentItems(fullEvidence);
+        setContentItems(items);
+      }
+
     // Hide success message after 3 seconds
     setTimeout(() => {
       setShowImportSuccess(false);
     }, 3000);
-    // Also update the timeline item count
-    updateTimelineItemCount(newContentItems.length);
+
+    } catch (error) {
+      console.error('Failed to add media to Local Vault:', error);
+      setError(`Failed to add media: ${error.message}`);
+    }
   };
   // Determine evidence category based on file type and name
   const determineEvidenceCategory = (mimeType, fileName) => {

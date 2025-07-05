@@ -33,11 +33,25 @@ export class ComputerVisionClassifier {
    */
   async initialize() {
     try {
-      // In production, this would initialize the actual YOLO v5 nano model
-      // For MVP, we'll use a mock implementation
+      if (this.isInitialized) return true;
+      
+      // Load NSFWJS model for content filtering
+      if (typeof window !== 'undefined' && window.nsfwjs) {
+        this.nsfwModel = await window.nsfwjs.load();
+      }
+      
+      // Initialize face detection if available
+      try {
+        const { initializeFaceDetection } = await import('../ai/faceDetection.js');
+        this.faceDetector = await initializeFaceDetection();
+      } catch (faceError) {
+        console.warn('Face detection not available:', faceError.message);
+      }
+      
       this.isInitialized = true;
       return true;
     } catch (error) {
+      console.error('AI model initialization failed:', error);
       return false;
     }
   }
@@ -50,14 +64,61 @@ export class ComputerVisionClassifier {
     if (!this.isInitialized) {
       await this.initialize();
     }
+    
     // Validate file
     if (!this.validateImageFile(imageFile)) {
       throw new Error('Invalid image file');
     }
+    
     try {
-      // In production, this would send the image to the YOLO v5 nano model
-      // For MVP demo, we'll use mock classification
-      const results = await this.mockImageClassification(imageFile);
+      const results = {
+        confidence: 0,
+        isAppropriate: true,
+        categories: [],
+        faces: { count: 0, detected: [] },
+        timestamp: new Date().toISOString()
+      };
+      
+      // Create image element for processing
+      const img = await this.createImageElement(imageFile);
+      
+      // NSFW content detection
+      if (this.nsfwModel) {
+        const nsfwPredictions = await this.nsfwModel.classify(img);
+        const nsfwScore = nsfwPredictions.find(p => 
+          ['Porn', 'Hentai', 'Sexy'].includes(p.className)
+        )?.probability || 0;
+        
+        results.nsfwScore = nsfwScore;
+        results.isAppropriate = nsfwScore < 0.3;
+        results.categories.push({
+          name: 'content_safety',
+          confidence: 1 - nsfwScore,
+          safe: results.isAppropriate
+        });
+      }
+      
+      // Face detection
+      if (this.faceDetector) {
+        try {
+          const faces = await this.faceDetector.detectFaces(img);
+          results.faces = {
+            count: faces.length,
+            detected: faces.map(face => ({
+              confidence: face.confidence || 0.8,
+              bbox: face.bbox || null
+            }))
+          };
+        } catch (faceError) {
+          console.warn('Face detection failed:', faceError);
+        }
+      }
+      
+      // Calculate overall confidence
+      results.confidence = results.categories.length > 0 
+        ? results.categories.reduce((sum, cat) => sum + cat.confidence, 0) / results.categories.length
+        : 0.5;
+      
       return {
         success: true,
         data: results,
@@ -67,6 +128,18 @@ export class ComputerVisionClassifier {
     } catch (error) {
       throw new Error(`Classification failed: ${error.message}`);
     }
+  }
+  
+  /**
+   * Create image element from file for AI processing
+   */
+  async createImageElement(file) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
   }
   /**
    * Validate image file for processing
@@ -84,51 +157,23 @@ export class ComputerVisionClassifier {
     return true;
   }
   /**
-   * Mock image classification for MVP demo
-   * In production, this would be replaced with actual YOLO v5 nano inference
-   */
-  async mockImageClassification(file) {
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
-    const fileName = file.name.toLowerCase();
-    // Mock detection based on filename for demo
-    const hasHumans = !fileName.includes('landscape') && !fileName.includes('object');
-    const hasNudity = fileName.includes('nude') || fileName.includes('explicit') || 
-                     fileName.includes('nsfw') || Math.random() > 0.95;
-    return {
-      // COMMENTED OUT: Human detection not needed for MVP NSFW filtering
-      // humans_detected: hasHumans,
-      // human_count: hasHumans ? Math.floor(Math.random() * 3) + 1 : 0,
-      nudity_detected: hasNudity,
-      explicit_content: hasNudity,
-      content_appropriate: !hasNudity, // Only check for nudity, not humans
-      // COMMENTED OUT: Face recognition not needed for MVP NSFW filtering
-      // face_recognition: {
-      //   faces_detected: hasHumans && Math.random() > 0.3,
-      //   known_faces: Math.floor(Math.random() * 2),
-      //   confidence: Math.random() * 0.4 + 0.6
-      // },
-      confidence_score: Math.random() * 0.3 + 0.7,
-      processing_time: Math.random() * 1000 + 500,
-      exclusion_reason: hasNudity ? 'Nudity detected' : null
-    };
-  }
-  /**
    * Check if an image should be excluded from uploads
    */
   shouldExcludeImage(classificationResult) {
     if (!classificationResult.success) {
       return { exclude: true, reason: 'Classification failed' };
     }
+    
     const data = classificationResult.data;
-    // Exclude if nudity detected
-    if (data.nudity_detected) {
-      return { exclude: true, reason: 'Contains nudity or explicit content' };
+    
+    // Exclude if content is inappropriate (NSFW)
+    if (!data.isAppropriate) {
+      return { 
+        exclude: true, 
+        reason: `Inappropriate content detected (score: ${(data.nsfwScore * 100).toFixed(1)}%)` 
+      };
     }
-    // COMMENTED OUT: Human detection not needed for MVP NSFW filtering
-    // if (!data.humans_detected) {
-    //   return { exclude: true, reason: 'No humans detected in image' };
-    // }
+    
     // Include if appropriate
     return { exclude: false, reason: null };
   }
@@ -146,10 +191,23 @@ export class TextualAnalysisClassifier {
    */
   async initialize() {
     try {
-      // In production, this would initialize the actual TinyBert model
+      if (this.isInitialized) return true;
+      
+      // Load transformers pipeline for text classification
+      try {
+        const { pipeline } = await import('@xenova/transformers');
+        this.textClassifier = await pipeline('text-classification', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
+      } catch (transformerError) {
+        console.warn('Transformers model not available, using keyword-based classification');
+        this.useKeywordFallback = true;
+      }
+      
       this.isInitialized = true;
       return true;
     } catch (error) {
+      console.error('Text classification initialization failed:', error);
+      this.useKeywordFallback = true;
+      this.isInitialized = true;
       return false;
     }
   }
@@ -162,13 +220,32 @@ export class TextualAnalysisClassifier {
     if (!this.isInitialized) {
       await this.initialize();
     }
+    
     // Validate text
     if (!this.validateText(text)) {
       throw new Error('Invalid text input');
     }
+    
     try {
-      // In production, this would send the text to the TinyBert model
-      const results = await this.mockTextClassification(text);
+      let results;
+      
+      if (this.textClassifier && !this.useKeywordFallback) {
+        // Use real transformer model
+        const predictions = await this.textClassifier(text);
+        const negativeScore = predictions.find(p => p.label === 'NEGATIVE')?.score || 0;
+        
+        results = {
+          sexually_explicit: negativeScore > 0.7,
+          explicit_score: negativeScore,
+          content_appropriate: negativeScore <= 0.7,
+          confidence_score: Math.max(...predictions.map(p => p.score)),
+          method: 'transformer_model'
+        };
+      } else {
+        // Fallback to keyword-based detection
+        results = await this.keywordBasedClassification(text);
+      }
+      
       return {
         success: true,
         data: results,
@@ -178,6 +255,33 @@ export class TextualAnalysisClassifier {
     } catch (error) {
       throw new Error(`Classification failed: ${error.message}`);
     }
+  }
+  
+  /**
+   * Keyword-based classification fallback
+   */
+  async keywordBasedClassification(text) {
+    const explicitKeywords = [
+      'sex', 'sexual', 'nude', 'naked', 'explicit', 'adult', 'intimate', 
+      'erotic', 'porn', 'xxx', 'nsfw'
+    ];
+    
+    const lowerText = text.toLowerCase();
+    const flaggedTerms = explicitKeywords.filter(keyword => 
+      lowerText.includes(keyword)
+    );
+    
+    const hasExplicitContent = flaggedTerms.length > 0;
+    const explicitScore = flaggedTerms.length / explicitKeywords.length;
+    
+    return {
+      sexually_explicit: hasExplicitContent,
+      explicit_score: explicitScore,
+      content_appropriate: !hasExplicitContent,
+      confidence_score: hasExplicitContent ? 0.8 : 0.6,
+      flagged_terms: flaggedTerms,
+      method: 'keyword_based'
+    };
   }
   /**
    * Validate text for processing
@@ -192,60 +296,29 @@ export class TextualAnalysisClassifier {
     return true;
   }
   /**
-   * Mock text classification for MVP demo
-   * In production, this would be replaced with actual TinyBert inference
-   */
-  async mockTextClassification(text) {
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-    // Simple keyword-based detection for demo
-    const explicitKeywords = [
-      'sex', 'sexual', 'nude', 'naked', 'explicit', 'adult', 'intimate', 
-      'erotic', 'porn', 'xxx', 'nsfw', 'orgasm', 'masturbat', 'penis', 
-      'vagina', 'breast', 'nipple', 'genitals'
-    ];
-    const lowerText = text.toLowerCase();
-    const flaggedTerms = explicitKeywords.filter(keyword => 
-      lowerText.includes(keyword)
-    );
-    const hasExplicitContent = flaggedTerms.length > 0;
-    const explicitScore = flaggedTerms.length / explicitKeywords.length;
-    return {
-      sexually_explicit: hasExplicitContent,
-      explicit_score: explicitScore,
-      content_appropriate: !hasExplicitContent,
-      sentiment: this.analyzeSentiment(text),
-      confidence_score: Math.random() * 0.3 + 0.7,
-      flagged_terms: flaggedTerms,
-      processing_time: Math.random() * 800 + 300,
-      exclusion_reason: hasExplicitContent ? 'Sexually explicit content detected' : null
-    };
-  }
-  /**
-   * Simple sentiment analysis
-   */
-  analyzeSentiment(text) {
-    const positiveWords = ['love', 'happy', 'good', 'great', 'wonderful', 'amazing', 'beautiful'];
-    const negativeWords = ['hate', 'sad', 'bad', 'terrible', 'awful', 'horrible', 'ugly'];
-    const lowerText = text.toLowerCase();
-    const positiveCount = positiveWords.filter(word => lowerText.includes(word)).length;
-    const negativeCount = negativeWords.filter(word => lowerText.includes(word)).length;
-    if (positiveCount > negativeCount) return 'positive';
-    if (negativeCount > positiveCount) return 'negative';
-    return 'neutral';
-  }
-  /**
    * Check if text should be excluded from uploads
+   * @param {Object} classificationResult - The classification result
+   * @param {Object} userSettings - User's filtering preferences (optional)
    */
-  shouldExcludeText(classificationResult) {
+  shouldExcludeText(classificationResult, userSettings = null) {
     if (!classificationResult.success) {
       return { exclude: true, reason: 'Classification failed' };
     }
     const data = classificationResult.data;
-    // Exclude if sexually explicit content detected
-    if (data.sexually_explicit) {
-      return { exclude: true, reason: 'Contains sexually explicit content' };
+    
+    // Check user's explicit text filter setting
+    const explicitTextFilterEnabled = userSettings?.explicit_text_filter !== false; // Default to true
+    
+    // Only exclude if sexually explicit content detected AND user has filter enabled
+    if (data.sexually_explicit && explicitTextFilterEnabled) {
+      return { exclude: true, reason: 'Contains sexually explicit content (filtered by user settings)' };
     }
+    
+    // If user has disabled explicit text filter, allow explicit content
+    if (data.sexually_explicit && !explicitTextFilterEnabled) {
+      return { exclude: false, reason: 'Contains explicit content but user filter is disabled' };
+    }
+    
     // Include if appropriate
     return { exclude: false, reason: null };
   }
@@ -292,29 +365,67 @@ export class AIClassificationService {
   }
   /**
    * Check if content should be excluded from uploads
+   * @param {Object} classificationResult - The classification result
+   * @param {string} contentType - 'image' or 'text'
+   * @param {Object} userSettings - User's filtering preferences (optional)
    */
-  shouldExcludeContent(classificationResult, contentType) {
+  shouldExcludeContent(classificationResult, contentType, userSettings = null) {
     if (contentType === 'image') {
-      return this.visionClassifier.shouldExcludeImage(classificationResult);
+      // For images, check both NSFW filter and user settings
+      const imageResult = this.visionClassifier.shouldExcludeImage(classificationResult);
+      const nsfwFilterEnabled = userSettings?.nsfw_filter !== false; // Default to true
+      
+      if (imageResult.exclude && !nsfwFilterEnabled) {
+        return { exclude: false, reason: 'NSFW content detected but user filter is disabled' };
+      }
+      return imageResult;
+      
     } else if (contentType === 'text') {
-      return this.textClassifier.shouldExcludeText(classificationResult);
+      return this.textClassifier.shouldExcludeText(classificationResult, userSettings);
     }
     return { exclude: true, reason: 'Unknown content type' };
   }
   /**
-   * Batch classify multiple files
+   * Classify content with user settings applied
+   * @param {string} content - Text content or File object for images
+   * @param {string} contentType - 'image' or 'text'
+   * @param {Object} userSettings - User's filtering preferences
    */
-  async batchClassify(items) {
+  async classifyWithUserSettings(content, contentType, userSettings = null) {
+    let classificationResult;
+    
+    if (contentType === 'image') {
+      classificationResult = await this.classifyImage(content);
+    } else if (contentType === 'text') {
+      classificationResult = await this.classifyText(content);
+    } else {
+      throw new Error('Invalid content type. Must be "image" or "text"');
+    }
+    
+    // Add exclusion decision based on user settings
+    classificationResult.exclusion = this.shouldExcludeContent(
+      classificationResult, 
+      contentType, 
+      userSettings
+    );
+    
+    return classificationResult;
+  }
+
+  /**
+   * Batch classify multiple files
+   * @param {Array} items - Array of items to classify
+   * @param {Object} userSettings - User's filtering preferences (optional)
+   */
+  async batchClassify(items, userSettings = null) {
     const results = [];
     for (const item of items) {
       try {
         let result;
         if (item.type === 'image' && item.file) {
-          result = await this.classifyImage(item.file);
-          result.exclusion = this.shouldExcludeContent(result, 'image');
+          result = await this.classifyWithUserSettings(item.file, 'image', userSettings);
         } else if (item.type === 'text' && item.text) {
-          result = await this.classifyText(item.text);
-          result.exclusion = this.shouldExcludeContent(result, 'text');
+          result = await this.classifyWithUserSettings(item.text, 'text', userSettings);
         }
         results.push({
           id: item.id,
@@ -332,5 +443,62 @@ export class AIClassificationService {
     return results;
   }
 }
+
 // Create singleton instance
-export const aiClassificationService = new AIClassificationService(); 
+export const aiClassificationService = new AIClassificationService();
+
+/**
+ * Helper function to get user settings and apply text filtering
+ * @param {string} text - Text to classify
+ * @returns {Promise<Object>} Classification result with exclusion decision
+ */
+export async function classifyTextWithUserSettings(text) {
+  try {
+    // Import API service dynamically to avoid circular dependencies
+    const { api } = await import('../services/api.js');
+    
+    // Get user settings
+    let userSettings = null;
+    try {
+      userSettings = await api.getUserSettings();
+    } catch (settingsError) {
+      console.warn('Could not retrieve user settings, using defaults:', settingsError.message);
+      // Use safe defaults
+      userSettings = { explicit_text_filter: true, nsfw_filter: true };
+    }
+    
+    // Classify text with user settings
+    return await aiClassificationService.classifyWithUserSettings(text, 'text', userSettings);
+  } catch (error) {
+    console.error('Text classification with user settings failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Helper function to get user settings and apply image filtering
+ * @param {File} imageFile - Image file to classify
+ * @returns {Promise<Object>} Classification result with exclusion decision
+ */
+export async function classifyImageWithUserSettings(imageFile) {
+  try {
+    // Import API service dynamically to avoid circular dependencies
+    const { api } = await import('../services/api.js');
+    
+    // Get user settings
+    let userSettings = null;
+    try {
+      userSettings = await api.getUserSettings();
+    } catch (settingsError) {
+      console.warn('Could not retrieve user settings, using defaults:', settingsError.message);
+      // Use safe defaults
+      userSettings = { explicit_text_filter: true, nsfw_filter: true };
+    }
+    
+    // Classify image with user settings
+    return await aiClassificationService.classifyWithUserSettings(imageFile, 'image', userSettings);
+  } catch (error) {
+    console.error('Image classification with user settings failed:', error);
+    throw error;
+  }
+} 

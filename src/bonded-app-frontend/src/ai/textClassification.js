@@ -154,10 +154,17 @@ class TextClassificationService {
     if (transformers) return transformers;
 
     try {
+      // Always try bundled version first (works in both dev and production)
+      try {
+        transformers = await import('@xenova/transformers');
+        console.log('✅ Transformers.js loaded from bundled package');
+        return transformers;
+      } catch (bundleError) {
+        console.warn('⚠️ Bundled Transformers.js failed, trying CDN:', bundleError.message);
+      }
+
+      // Fallback to CDN only if bundled fails and in production
       if (this.isProduction) {
-        // Use ESM CDN in production for better performance
-        
-        // Try multiple ESM CDN providers for redundancy
         const esmUrls = [
           TRANSFORMERS_JSDELIVR_ESM_URL, // jsDelivr ESM (fastest)
           TRANSFORMERS_SKYPACK_URL,      // Skypack (optimized ESM)
@@ -166,7 +173,8 @@ class TextClassificationService {
         
         for (const url of esmUrls) {
           try {
-            transformers = await import(url);
+            transformers = await import(/* @vite-ignore */ url);
+            console.log(`✅ Transformers.js loaded from CDN: ${url}`);
             break;
           } catch (urlError) {
             console.warn(`❌ Failed to load from ${url}:`, urlError.message);
@@ -175,13 +183,9 @@ class TextClassificationService {
             }
           }
         }
-        
-      } else {
-        // Use bundled version in development
-        transformers = await import('@xenova/transformers');
       }
     } catch (error) {
-      console.warn('⚠️ Failed to load Transformers.js:', error.message);
+      console.warn('⚠️ Failed to load Transformers.js from all sources:', error.message);
       transformers = null;
     }
 

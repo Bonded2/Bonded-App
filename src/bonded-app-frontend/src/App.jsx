@@ -73,14 +73,44 @@ const FastLoadingScreen = () => (
 export class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorDetails: null };
   }
+  
   static getDerivedStateFromError(error) {
-    return { hasError: true };
+    // Check if this is a field validation error that should be ignored
+    if (error && error.message && (
+      error.message.includes('invalid field') ||
+      error.message.includes('Field validation') ||
+      error.message.includes('SuppressedError') ||
+      error.name === 'SuppressedError'
+    )) {
+      console.warn('🔧 ErrorBoundary: Ignoring field validation error');
+      return { hasError: false };
+    }
+    
+    return { hasError: true, errorDetails: error };
   }
+  
   componentDidCatch(error, errorInfo) {
-    // Silent error logging for production
+    // Check if this is a field validation error
+    if (error && error.message && (
+      error.message.includes('invalid field') ||
+      error.message.includes('Field validation') ||
+      error.message.includes('SuppressedError') ||
+      error.name === 'SuppressedError'
+    )) {
+      console.warn('🔧 ErrorBoundary: Field validation error caught and ignored');
+      // Reset the error state to allow the component to continue
+      this.setState({ hasError: false, errorDetails: null });
+      return;
+    }
+    
+    // For development debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
   }
+  
   render() {
     if (this.state.hasError) {
       return (
@@ -95,6 +125,21 @@ export class ErrorBoundary extends React.Component {
         }}>
           <h1>Something went wrong</h1>
           <p>Please refresh the page to continue.</p>
+          {process.env.NODE_ENV === 'development' && this.state.errorDetails && (
+            <details style={{ marginTop: '20px', textAlign: 'left' }}>
+              <summary>Error Details (Development)</summary>
+              <pre style={{ 
+                fontSize: '12px', 
+                background: '#f5f5f5', 
+                padding: '10px', 
+                borderRadius: '4px',
+                maxWidth: '500px',
+                overflow: 'auto' 
+              }}>
+                {this.state.errorDetails.toString()}
+              </pre>
+            </details>
+          )}
           <button 
             onClick={() => window.location.reload()} 
             style={{
@@ -103,7 +148,8 @@ export class ErrorBoundary extends React.Component {
               color: 'white',
               border: 'none',
               borderRadius: '5px',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              marginTop: '10px'
             }}
           >
             Refresh Page
@@ -376,7 +422,7 @@ const OfflineIndicator = () => {
 export const App = () => {
   useEffect(() => {
     // ULTRA-OPTIMIZED: Minimal background initialization
-    const initializeApp = () => {
+    const initializeApp = async () => {
       // Background service worker registration (non-blocking)
       if ('serviceWorker' in navigator) {
         setTimeout(() => {
@@ -385,6 +431,17 @@ export const App = () => {
           });
         }, 2000); // Delay even more to not interfere with initial load
       }
+
+      // Initialize Local Vault system (T1.05) in background
+      setTimeout(async () => {
+        try {
+          const { localVault } = await import('./services/localVault.js');
+          await localVault.initialize();
+          console.log('✅ T1.05 Local Vault initialized in background');
+        } catch (error) {
+          console.warn('⚠️ Local Vault initialization failed:', error);
+        }
+      }, 1000); // Initialize after initial app load
     };
 
     // Minimal initialization
