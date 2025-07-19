@@ -1,645 +1,664 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
-import { api } from "../../services/api.js";
-import emailService from "../../services/emailService";
-import "./style.css";
+.partner-invite-screen {
+  min-height: 100vh;
+  width: 100%;
+  padding: 0;
+  overflow-y: auto;
+  background: var(--gradient-primary);
+  position: relative;
+}
 
-export const PartnerInvite = () => {
-  const [partnerEmail, setPartnerEmail] = useState("");
-  const [isEmailAccepted, setIsEmailAccepted] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [inviteStatus, setInviteStatus] = useState({
-    status: 'pending', // 'pending', 'sending', 'sent', 'error'
-    message: '',
-    inviteId: null
-  });
-  const [currentUser, setCurrentUser] = useState(null);
-  const navigate = useNavigate();
+/* Enhanced Navigation Header */
+.navigation-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(18, 18, 18, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 100;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-  useEffect(() => {
-    initializeUserData();
-  }, []);
+.modern-back-button {
+  width: 48px;
+  height: 48px;
+  background: var(--glass-background);
+  backdrop-filter: var(--glass-backdrop);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  color: white;
+  box-shadow: var(--shadow-lg);
+}
 
-  const initializeUserData = async () => {
-    try {
-      await api.initialize();
-      const profile = await api.getUserProfile();
-      setCurrentUser({
-        name: 'Bonded User', // Default name for now
-        email: profile.principal.toString(),
-        principal: profile.principal
-      });
-    } catch (error) {
-      // Suppress certificate validation errors in console (expected in playground)
-      const isCertError = error.message?.includes('Invalid certificate') || 
-                         error.message?.includes('Invalid signature from replica');
-      
-      // Ignore user data loading errors
-    }
-  };
+.modern-back-button:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
+  background: rgba(255, 255, 255, 0.15);
+}
 
-  const handleEmailChange = (e) => {
-    setPartnerEmail(e.target.value);
-    setIsEmailAccepted(false); // Reset on change
-    if (inviteStatus.status === 'error') {
-      setInviteStatus({ status: 'pending', message: '', inviteId: null });
-    }
-  };
+.modern-back-button:active {
+  transform: translateY(0);
+}
 
-  const isValidEmail = (email) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+.skip-invite-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 12px 20px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
 
-  const generateInviteLink = (inviteId) => {
-    // Generate dynamic invite link for current deployment
-    // Ensure we use the correct protocol and domain
-    let baseUrl = window.location.origin;
-    
-    // Handle cases where the app might be served from different domains
-    // but we want consistent invite links
-    if (window.location.hostname.includes('localhost') || 
-        window.location.hostname.includes('127.0.0.1')) {
-      // Development environment - use localhost
-      baseUrl = `${window.location.protocol}//${window.location.host}`;
-    } else {
-      // Production - use the current origin
-      baseUrl = window.location.origin;
-    }
-    
-    return `${baseUrl}/accept-invite?invite=${inviteId}`;
-  };
+.skip-invite-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
 
-  const createStyledEmail = (inviteId, inviterName, inviteLink) => {
-    return `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>You're Invited to Join Bonded</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Rethink Sans', Arial, sans-serif;
-            background-color: #f5f5f5;
-            color: #333333;
-        }
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            background: linear-gradient(135deg, #FF704D 0%, #ff8566 100%);
-            padding: 40px 20px;
-            text-align: center;
-        }
-        .logo {
-            color: #ffffff;
-            font-family: 'Trocchi', serif;
-            font-size: 32px;
-            font-weight: 400;
-            margin-bottom: 10px;
-            text-decoration: none;
-        }
-        .header-subtitle {
-            color: #ffffff;
-            font-size: 16px;
-            opacity: 0.9;
-            margin: 0;
-        }
-        .content {
-            padding: 40px 20px;
-        }
-        .invite-icon {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .invite-icon svg {
-            width: 64px;
-            height: 64px;
-        }
-        .title {
-            font-family: 'Trocchi', serif;
-            font-size: 28px;
-            color: #2C4CDF;
-            text-align: center;
-            margin-bottom: 16px;
-            font-weight: 400;
-        }
-        .message {
-            font-size: 18px;
-            line-height: 1.6;
-            color: #333333;
-            text-align: center;
-            margin-bottom: 32px;
-        }
-        .cta-button {
-            display: block;
-            width: 280px;
-            margin: 0 auto 32px auto;
-            padding: 16px 24px;
-            background: #2C4CDF;
-            color: #ffffff !important;
-            text-decoration: none;
-            border-radius: 24px;
-            font-family: 'Trocchi', serif;
-            font-size: 18px;
-            font-weight: 400;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(44, 76, 223, 0.3);
-            transition: all 0.2s ease;
-            border: none;
-            -webkit-text-size-adjust: none;
-        }
-        .cta-button:hover {
-            background: #3a5bef !important;
-            text-decoration: none !important;
-        }
-        .features {
-            background-color: #f8f9ff;
-            border-radius: 12px;
-            padding: 24px;
-            margin: 32px 0;
-        }
-        .features-title {
-            font-family: 'Trocchi', serif;
-            font-size: 20px;
-            color: #2C4CDF;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .feature-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .feature-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 16px;
-            color: #333333;
-        }
-        .feature-icon {
-            margin-right: 12px;
-            font-size: 20px;
-        }
-        .footer {
-            background-color: #f8f9fa;
-            padding: 24px 20px;
-            text-align: center;
-            border-top: 1px solid #e9ecef;
-        }
-        .footer-text {
-            font-size: 14px;
-            color: #666666;
-            margin: 0 0 8px 0;
-        }
-        .footer-link {
-            color: #2C4CDF;
-            text-decoration: none;
-        }
-        .security-note {
-            background-color: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 24px 0;
-            text-align: center;
-        }
-        .security-note-icon {
-            font-size: 24px;
-            margin-bottom: 8px;
-        }
-        .security-note-text {
-            font-size: 14px;
-            color: #856404;
-            margin: 0;
-        }
-        @media (max-width: 600px) {
-            .content {
-                padding: 24px 16px;
-            }
-            .title {
-                font-size: 24px;
-            }
-            .message {
-                font-size: 16px;
-            }
-            .cta-button {
-                width: 100%;
-                max-width: 280px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="email-container">
-        <div class="header">
-            <div class="logo">Bonded</div>
-            <p class="header-subtitle">Relationship Verification Made Simple</p>
-        </div>
-        
-        <div class="content">
-            <div class="invite-icon">
-                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="30" fill="#E3F2FD" stroke="#2C4CDF" stroke-width="2"/>
-                    <path d="M20 28C20 24.6863 22.6863 22 26 22H38C41.3137 22 44 24.6863 44 28V40C44 43.3137 41.3137 46 38 46H26C22.6863 46 20 43.3137 20 40V28Z" fill="#2C4CDF"/>
-                    <path d="M22 30L32 36L42 30" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-            </div>
-            
-            <h1 class="title">You're Invited to Join Bonded!</h1>
-            
-            <p class="message">
-                <strong>${inviterName || 'Your partner'}</strong> has invited you to build your shared relationship timeline on Bonded. 
-                Together, you'll create a secure, encrypted record of your relationship for visa applications and other official purposes.
-            </p>
-            
-            <a href="${inviteLink}" class="cta-button">Accept Invitation & Join</a>
-            
-            <div class="features">
-                <h3 class="features-title">What you'll get with Bonded:</h3>
-                <ul class="feature-list">
-                    <li class="feature-item">
-                        <span class="feature-icon">🔒</span>
-                        <span>End-to-end encrypted evidence storage</span>
-                    </li>
-                    <li class="feature-item">
-                        <span class="feature-icon">📱</span>
-                        <span>AI-powered content filtering and organization</span>
-                    </li>
-                    <li class="feature-item">
-                        <span class="feature-icon">📄</span>
-                        <span>Professional PDF exports for visa applications</span>
-                    </li>
-                    <li class="feature-item">
-                        <span class="feature-icon">⏰</span>
-                        <span>Automatic timeline generation and syncing</span>
-                    </li>
-                    <li class="feature-item">
-                        <span class="feature-icon">🌍</span>
-                        <span>Blockchain-backed authenticity verification</span>
-                    </li>
-                </ul>
-            </div>
-            
-            <div class="security-note">
-                <div class="security-note-icon">🛡️</div>
-                <p class="security-note-text">
-                    <strong>Your privacy is our priority.</strong> All your data is encrypted and only you and your partner can access it. 
-                    Not even Bonded can read your personal information.
-                </p>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p class="footer-text">
-                This invitation was sent by ${inviterName || 'your partner'} through Bonded.
-            </p>
-            <p class="footer-text">
-                If you didn't expect this invitation, you can safely ignore this email.
-            </p>
-            <p class="footer-text">
-                Questions? Visit <a href="${window.location.origin}/faq" class="footer-link">our FAQ</a> or 
-                <a href="mailto:support@bonded.app" class="footer-link">contact support</a>.
-            </p>
-        </div>
-    </div>
-</body>
-</html>`;
-  };
+.partner-invite-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(37, 99, 235, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+}
 
-  const sendPartnerInvite = async (email) => {
-    try {
-      setIsLoading(true);
-      setInviteStatus({
-        status: 'sending',
-        message: 'Creating your relationship bond...',
-        inviteId: null
-      });
-      
-      // Get current user name from profile
-      let inviterName = 'Your partner';
-      if (currentUser?.name) {
-        inviterName = currentUser.name;
-      }
+.partner-invite-container {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 80px 32px 40px; /* Extra top padding for fixed header */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: calc(100vh - 80px);
+  justify-content: center;
+}
 
-      setInviteStatus({
-        status: 'sending',
-        message: 'Storing invitation in ICP canister...',
-        inviteId: null
-      });
+.hero-section {
+  margin-bottom: 48px;
+  animation: fadeInUp 0.8s ease-out;
+}
 
-      // Get consistent base URL for the canister
-      let frontendUrl = window.location.origin;    
-      if (window.location.hostname.includes('localhost') || 
-          window.location.hostname.includes('127.0.0.1')) {
-        frontendUrl = `${window.location.protocol}//${window.location.host}`;
-      }
+.bonded-logo-blue {
+  height: 80px;
+  margin-bottom: 32px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
 
-      // Create invite data for ICP canister
-      const inviteData = {
-        partnerEmail: email,
-        inviterName: inviterName,
-        createdAt: Date.now(),
-        metadata: JSON.stringify({
-          created_from: 'partner_invite_screen',
-          deployment_environment: window.location.hostname,
-          frontend_url: frontendUrl
-        })
-      };
+.invite-title {
+  font-family: "Trocchi", serif;
+  font-size: 36px;
+  font-weight: 400;
+  color: #ffffff;
+  margin-bottom: 16px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: -0.5px;
+}
 
-      // Create invite in ICP canister (proper canister storage)
-      const inviteResult = await api.createPartnerInvite(inviteData);
+.invite-subtitle {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 24px;
+  max-width: 400px;
+  line-height: 1.6;
+  font-weight: 300;
+}
 
-      if (inviteResult.success) {
-        
-        setInviteStatus({
-          status: 'sending',
-          message: 'Sending invitation email via canister...',
-          inviteId: inviteResult.invite_id
-        });
+.invite-form {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin-bottom: 32px;
+  animation: slideIn 0.6s ease-out;
+}
 
-        // Send email using REAL EmailJS service
-        setInviteStatus({
-          status: 'sending',
-          message: 'Sending invitation email via EmailJS...',
-          inviteId: inviteResult.invite_id
-        });
+.form-group {
+  margin-bottom: 24px;
+  text-align: left;
+}
 
-        try {
-          // Initialize EmailJS service
-          await emailService.initialize(currentUser?.email || 'user@bonded.app', inviterName);
+.form-label {
+  display: block;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
-          // Send real email via EmailJS
-          const emailResult = await emailService.sendInviteEmail(
-            email,
-            inviteResult.invite_link,
-            inviterName
-          );
-          
-          setInviteStatus({
-            status: 'sent',
-            message: `✅ Invitation created and real email sent to ${email}! Check your inbox.`,
-            inviteId: inviteResult.invite_id,
-            inviteLink: inviteResult.invite_link
-        });
-        setIsEmailAccepted(true);
+.email-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  color: #ffffff;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
 
-        } catch (emailError) {
-          // EmailJS sending failed, providing manual sharing option
-          
-          // If EmailJS fails, provide manual sharing option
-        setInviteStatus({
-          status: 'manual_required',
-            message: 'Invitation created! Email service unavailable - please share the link manually.',
-            inviteId: inviteResult.invite_id,
-            inviteLink: inviteResult.invite_link,
-          manualInstructions: {
-              recipient: email,
-              subject: `You're invited to join Bonded by ${inviterName}`,
-              link: inviteResult.invite_link,
-              message: `Hi! ${inviterName} has invited you to join Bonded - a secure platform for building your relationship timeline together.\n\nClick this link to accept the invitation:\n${inviteResult.invite_link}\n\nThis invitation will expire in 7 days.\n\nBest regards,\nThe Bonded Team`
-          }
-        });
-          setIsEmailAccepted(true);
-        }
-      } else {
-        throw new Error(inviteResult.error || 'Failed to create invite in canister');
-      }
+.email-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
 
-    } catch (error) {
-      // Failed to create invite via ICP canister
-      
-      // Provide clear error message for canister failures
-      let errorMessage = 'Failed to create invitation in ICP canister. ';
-      
-      if (error.message?.includes('Not authenticated')) {
-        errorMessage = '🔐 Please log in first to create invitations.';
-      } else if (error.message?.includes('Invalid certificate') || 
-                 error.message?.includes('Invalid signature')) {
-        errorMessage = '🔗 Network connectivity issue with ICP. Please try again in a moment.';
-      } else {
-        errorMessage += 'Please ensure you\'re logged in and try again.';
-      }
-      
-      setInviteStatus({
-        status: 'error',
-        message: errorMessage,
-        inviteId: null,
-        error: error.message
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+.email-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
 
-  const handleInviteSend = async (e) => {
-    e.preventDefault();
-    if (isValidEmail(partnerEmail)) {
-      await sendPartnerInvite(partnerEmail);
-    }
-  };
+.email-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
-  const navigateToProfileSetup = () => {
-    // Skip verification for now and go to profile setup or timeline
-    // This maintains the existing user flow while bypassing KYC
-    navigate("/profile-setup");
-  };
+.status-message {
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  animation: slideIn 0.4s ease-out;
+}
 
-  const navigateToTimeline = () => {
-    // For users who want to skip everything and go straight to timeline
-    navigate("/timeline");
-  };
+.status-message.sending {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
 
-  return (
-    <div className="partner-invite-screen improved-contrast">
-      {/* Modern back button */}
-      <button onClick={() => navigate(-1)} className="modern-back-button">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
-      </button>
-      
-      <div className="partner-invite-container">
-        <div className="hero-section">
-          <img
-            className="bonded-logo-blue"
-            alt="Bonded logo blue"
-            src="/images/bonded-logo-blue.svg"
-          />
-          <h1 className="invite-title">Invite Your Partner</h1>
-          <p className="invite-subtitle">
-            Connect with your partner to build your relationship timeline together.
-          </p>
-        </div>
+.status-message.sent {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
 
-        <form onSubmit={handleInviteSend} className="invite-form">
-          <div className="email-field-container">
-            <CustomTextField
-              label="Partner's Email"
-              placeholder="Enter your partner's email address"
-              type="email"
-              value={partnerEmail}
-              onChange={handleEmailChange}
-              required={true}
-              className="form-field"
-              disabled={isLoading || inviteStatus.status === 'sent'}
-              supportingText=" " // Reserve space for status messages
-            />
-            {isEmailAccepted && <span className="email-accepted-icon">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 6L9 17L4 12" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </span>}
-            {!isEmailAccepted && partnerEmail && !isValidEmail(partnerEmail) && (
-              <p className="error-text email-error-text">Please enter a valid email address.</p>
-            )}
-          </div>
+.status-message.error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
 
-          {/* Status Display */}
-          {inviteStatus.status !== 'pending' && (
-            <div className={`invite-status-message ${inviteStatus.status}`}>
-              <div className="status-icon">
-                {inviteStatus.status === 'sending' && (
-                  <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" strokeDasharray="32" strokeDashoffset="32">
-                      <animate attributeName="stroke-dasharray" dur="2s" values="0 32;16 16;0 32;0 32" repeatCount="indefinite"/>
-                      <animate attributeName="stroke-dashoffset" dur="2s" values="0;-16;-32;-32" repeatCount="indefinite"/>
-                    </circle>
-                  </svg>
-                )}
-                {inviteStatus.status === 'sent' && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                )}
-                {inviteStatus.status === 'manual_required' && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                )}
-                {inviteStatus.status === 'error' && (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-                    <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" strokeWidth="2"/>
-                    <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" strokeWidth="2"/>
-                  </svg>
-                )}
-              </div>
-              <p className="status-text">{inviteStatus.message}</p>
-              
-              {/* Manual sharing instructions */}
-              {inviteStatus.status === 'manual_required' && inviteStatus.manualInstructions && (
-                <div className="manual-sharing-container">
-                  <h4>Manual Sharing Instructions:</h4>
-                  <div className="manual-content">
-                    <p><strong>To:</strong> {inviteStatus.manualInstructions.recipient}</p>
-                    <p><strong>Subject:</strong> {inviteStatus.manualInstructions.subject}</p>
-                    <div className="manual-message">
-                      <label>Message to copy:</label>
-                      <textarea 
-                        readOnly 
-                        value={inviteStatus.manualInstructions.message}
-                        onClick={(e) => e.target.select()}
-                        rows="8"
-                        className="manual-message-text"
-                      />
-                    </div>
-                    <div className="share-actions">
-                      <button 
-                        onClick={async () => {
-                          try {
-                            if (navigator.clipboard && window.isSecureContext) {
-                              await navigator.clipboard.writeText(inviteStatus.manualInstructions.message);
-                            } else {
-                              // Fallback method
-                              const textArea = document.createElement('textarea');
-                              textArea.value = inviteStatus.manualInstructions.message;
-                              textArea.style.position = 'fixed';
-                              textArea.style.left = '-999999px';
-                              document.body.appendChild(textArea);
-                              textArea.focus();
-                              textArea.select();
-                              document.execCommand('copy');
-                              textArea.remove();
-                            }
-                            alert('Message copied to clipboard! You can now paste it into your email or messaging app.');
-                          } catch (error) {
-                            alert('Unable to copy automatically. Please select the text above and copy manually.');
-                          }
-                        }}
-                        className="copy-button primary"
-                      >
-                        Copy Message
-                      </button>
-                      
-                      <button 
-                        onClick={() => {
-                          const mailtoUrl = `mailto:${inviteStatus.manualInstructions.recipient}?subject=${encodeURIComponent(inviteStatus.manualInstructions.subject)}&body=${encodeURIComponent(inviteStatus.manualInstructions.message)}`;
-                          window.open(mailtoUrl, '_self');
-                        }}
-                        className="copy-button secondary"
-                      >
-                        Open Email Client
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+.status-message.manual_required {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: rgba(255, 255, 255, 0.95);
+}
 
+.error-details {
+  margin-top: 12px;
+  font-size: 12px;
+  opacity: 0.8;
+}
 
-          <button 
-            type="submit" 
-            className={`send-invite-button ${inviteStatus.status}`}
-            disabled={isLoading || !isValidEmail(partnerEmail) || inviteStatus.status === 'sent' || inviteStatus.status === 'manual_required'}
-          >
-            {isLoading ? 'Sending...' : 
-             inviteStatus.status === 'sent' ? 'Email Sent!' : 
-             inviteStatus.status === 'manual_required' ? 'Ready to Share' :
-             'Send Invitation'}
-          </button>
-        </form>
+.error-details summary {
+  cursor: pointer;
+  padding: 4px 0;
+  font-weight: 500;
+}
 
-        {(inviteStatus.status === 'sent' || inviteStatus.status === 'manual_required') && (
-          <div className="invite-success-actions">
-            <p className="success-description">
-              {inviteStatus.status === 'sent' ? 
-                `Your invitation has been sent directly from your registered email! Your partner will receive a professionally styled email with instructions to join your relationship bond.` :
-                `Your invitation is ready! Please copy the message above and send it to your partner manually.`
-              }
-            </p>
-            
-            <div className="next-steps">
-              <h3>What's next?</h3>
-              <ul>
-                <li>Your partner will receive the invitation email</li>
-                <li>They'll click the secure link to accept</li>
-                <li>Your relationship bond will be automatically created</li>
-                <li>You can both start building your timeline</li>
-              </ul>
-            </div>
+.error-details pre {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 4px;
+  margin-top: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
-            <div className="action-buttons">
-              <button onClick={navigateToProfileSetup} className="primary-button">
-                Continue Profile Setup
-              </button>
-              <button onClick={navigateToTimeline} className="secondary-button">
-                Go to Timeline
-              </button>
-            </div>
-          </div>
-        )}
+.manual-instructions {
+  margin-top: 16px;
+  text-align: left;
+}
 
-      </div>
-    </div>
-  );
-}; 
+.manual-instructions h4 {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 14px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.manual-message-box {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.manual-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.copy-button {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  flex: 1;
+  min-width: 120px;
+}
+
+.copy-button.primary {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+}
+
+.copy-button.primary:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.copy-button.secondary {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+}
+
+.copy-button.secondary:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.send-invite-button {
+  width: 100%;
+  height: 56px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 16px;
+  color: #ffffff;
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.send-invite-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+
+.send-invite-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 3px 12px rgba(99, 102, 241, 0.4);
+}
+
+.send-invite-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.send-invite-button.sent {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+.send-invite-button.manual_required {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+}
+
+/* Success Actions Styling */
+.invite-success-actions {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.6s ease-out;
+  margin-bottom: 32px;
+}
+
+.success-description {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.6;
+  margin-bottom: 32px;
+  text-align: center;
+  font-weight: 400;
+}
+
+.next-steps {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.next-steps h3 {
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  color: #ffffff;
+  margin: 0 0 12px 0;
+  text-align: center;
+}
+
+.next-steps ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.next-steps li {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 13px;
+  color: #ffffff;
+  margin-bottom: 8px;
+  opacity: 0.9;
+  line-height: 1.4;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.primary-button {
+  width: 100%;
+  height: 48px;
+  background: linear-gradient(135deg, #FF704D 0%, #ff8566 100%);
+  border: none;
+  border-radius: 24px;
+  color: #ffffff;
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(255, 112, 77, 0.3);
+}
+
+.primary-button:hover {
+  background: linear-gradient(135deg, #ff8566 0%, #FF704D 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 112, 77, 0.4);
+}
+
+.secondary-button {
+  width: 100%;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  color: rgba(255, 255, 255, 0.9);
+  font-family: "Trocchi", serif;
+  font-size: 16px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondary-button:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Bottom Navigation Section */
+.bottom-navigation {
+  width: 100%;
+  max-width: 420px;
+  margin-top: 32px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  text-align: center;
+}
+
+.nav-help-text {
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.bottom-nav-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.outline-button {
+  padding: 12px 20px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  font-family: "Rethink Sans", sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  max-width: 150px;
+}
+
+.outline-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.95);
+  transform: translateY(-1px);
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .navigation-header {
+    padding: 8px 12px;
+  }
+  
+  .skip-invite-button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .partner-invite-container {
+    padding: 80px 20px 24px;
+    min-height: calc(100vh - 60px);
+  }
+
+  .hero-section {
+    margin-bottom: 32px;
+  }
+
+  .bonded-logo-blue {
+    height: 70px;
+    margin-bottom: 24px;
+  }
+
+  .invite-title {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+
+  .invite-subtitle {
+    font-size: 16px;
+    max-width: 100%;
+  }
+
+  .invite-form {
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  .send-invite-button {
+    height: 52px;
+    font-size: 15px;
+  }
+
+  .invite-success-actions {
+    padding: 24px;
+  }
+
+  .success-description {
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+
+  .next-steps {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .next-steps li {
+    font-size: 13px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    height: 48px;
+    font-size: 15px;
+  }
+  
+  .bottom-nav-buttons {
+    flex-direction: column;
+  }
+  
+  .outline-button {
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .partner-invite-container {
+    padding: 76px 16px 20px;
+  }
+
+  .invite-title {
+    font-size: 24px;
+  }
+
+  .invite-subtitle {
+    font-size: 15px;
+  }
+
+  .invite-form,
+  .invite-success-actions {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .network-status-info {
+    padding: 14px 18px;
+    border-radius: 14px;
+  }
+
+  .network-info-text {
+    font-size: 13px;
+  }
+  
+  .bottom-navigation {
+    padding: 20px;
+    border-radius: 16px;
+  }
+}
