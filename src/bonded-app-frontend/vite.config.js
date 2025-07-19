@@ -294,7 +294,8 @@ export default defineConfig({
       external: isProduction ? [
         // Only the most memory-intensive AI libraries
         '@xenova/transformers',
-        'onnxruntime-web'
+        'onnxruntime-web',
+        '@noble/curves/bls12-381'
       ] : [],
       output: {
         // Remove globals configuration - using import maps instead
