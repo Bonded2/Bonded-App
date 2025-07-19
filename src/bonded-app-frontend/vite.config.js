@@ -25,6 +25,7 @@ const require = createRequire(import.meta.url);
 const ellipticCurvePatchPlugin = () => {
   return {
     name: 'elliptic-curve-patch',
+    enforce: 'pre',
     transform(code, id) {
       // Target the specific files that use Field constructor
       if (id.includes('@noble/curves') || id.includes('modular.ts') || id.includes('modular.js') || 
