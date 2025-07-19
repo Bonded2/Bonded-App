@@ -151,7 +151,11 @@ export default defineConfig({
         if (id.includes('bigint-replacement.js') || id.includes('bigint-polyfill.js')) {
           return null;
         }
-        
+          
+        // Skip Noble crypto libraries to prevent syntax errors
+        if (id.includes('@noble/curves') || id.includes('@noble/hashes') || id.includes('@noble/')) {
+          return null;
+        }
         // Apply selective BigInt elimination - preserve CBOR functionality
         if (code.includes('BigInt') || code.includes('bigint')) {
           // Skip CBOR-related files to preserve serialization
