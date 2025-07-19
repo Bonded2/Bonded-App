@@ -1,0 +1,41 @@
+name: Build and Deploy React App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install dependencies
+      run: |
+        cd src/bonded-app-frontend
+        npm install
+        
+    - name: Build React app
+      run: |
+        cd src/bonded-app-frontend
+        npm run build
+        
+    - name: Deploy to docs folder
+      run: |
+        rm -rf docs/*
+        cp -r src/bonded-app-frontend/dist/* docs/
+        
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add docs/
+        git commit -m "Auto-deploy React app" || exit 0
+        git push
