@@ -3,6 +3,8 @@ name: Build and Deploy React App
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'src/bonded-app-frontend/**'
 
 jobs:
   build-and-deploy:
