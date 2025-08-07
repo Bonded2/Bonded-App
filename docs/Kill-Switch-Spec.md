@@ -1,5 +1,7 @@
 **Bonded Kill Switch Specification**
+
 **Overview**
+
 The Evidence Vault is a canister-based store (stable memory) of relationship evidence. The intended use is to prove the veracity of spousal relationships for immigrant visa applications. Threshold techniques (2-of-3) are used to create the signing key for all ‘regular’ functions such as ICP upload messages and evidence retrieval messages. However there is a special function which requires only one partner’s authorisation: the Kill Switch. An example use case for this function is when the relationship breaks down and one partner decides to abandon the process – the function allows the partner to unilaterally delete all existing data to prevent the other partner using it for nefarious purposes (such as blackmail, etc.) 
 **Purpose**
 A unilateral mechanism by which either partner in a Bonded relationship can trigger the irreversible deletion of evidence stored in the Bonded canister on the Internet Computer. This deletion is executed cryptographically and procedurally without the cooperation of the other partner, using a solo VetKeys-derived key within a predefined context.
