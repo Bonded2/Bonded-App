@@ -12,10 +12,12 @@ This specification governs the conditions, processes, and constraints under whic
 •	Standard threshold operations (which require 2-of-3 cooperation)
 
 **2. Functional Description**
+
 2.1. Triggering Party
 •	Either partner in a valid Bonded relationship may independently initiate the kill switch.
 •	No confirmation or agreement is required from the other partner.
 •	Identity is established cryptographically using a VetKeys-derived key specific to that individual and relationship context.
+
 2.2. Effect of Activation
 •	All evidence associated with the relationship stored in the Bonded ICP canister will be:
 o	Irrevocably deleted from stable memory.
@@ -23,6 +25,7 @@ o	Replaced with zeros or other overwrite technique to prevent forensic recovery.
 o	Flagged as "destroyed" in the canister metadata to prevent future access or replay.
 
 **3. Authentication and Authorization**
+
 3.1. VetKeys Derivation Context
 •	A special derivation context shall be used within vetKD for the kill-switch function:
 ruby
@@ -32,12 +35,14 @@ kill_switch:<relationshipID>:<partnerPrincipal>
 o	Be unique per relationship and partner
 o	Be usable by vetKD to derive a deterministic signing key
 o	Be registered with the canister during initial relationship setup
+
 3.2. Signature Mechanism
 •	The initiating partner uses the vetKD protocol to retrieve their kill-switch private key from the subnet nodes, encrypted for their device.
 •	The partner signs a standard ICP message containing a delete_all_data() instruction.
 •	The canister verifies this message using the associated public key, previously registered or derived.
 
 **4. Assumptions & Pre-conditions**
+
 4.1. Assumed VetKeys Capabilities (pending verification)
 The following capabilities are presumed but not yet fully confirmed in VetKeys:
 •	The ability to derive asymmetric key pairs (e.g., ECDSA or Ed25519) from a vetKD context, per user principal
@@ -47,9 +52,11 @@ The following capabilities are presumed but not yet fully confirmed in VetKeys:
 These assumptions must be validated against VetKeys documentation or clarified with its maintainers.
 
 **5. Security Constraints**
+
 5.1. Scope Isolation
 •	The kill-switch context must be functionally and cryptographically isolated from all other vetKD operations (e.g., signing evidence upload or partner authentication)
 •	No other context should allow unilateral authority over canister memory
+
 5.2. Replay and Reentrancy
 •	The kill switch may only be activated once per relationship
 •	Any further attempts by either partner should fail with a consistent “AlreadyDeleted” error
@@ -75,31 +82,42 @@ o	The kill switch remains unexecuted unless triggered by the other partner
 **Assumptions Check (Section 4.1 from spec)**
 A. Can derive asymmetric keys per user / context
 VetKD supports deterministic key derivation based on context and input, enabling distinct per-user keys for different use cases GitHub+11internetcomputer.org+11internetcomputer.org+11.
-This includes identity-based encryption and key management bound to user principal, which aligns with your "kill_switch:<relationshipID>:<partnerPrincipal>" context.
+This includes identity-based encryption and key management bound to user principal, which aligns with the "kill_switch:<relationshipID>:<partnerPrincipal>" context.
+
 B. Non-threshold (solo) derivation supported
 VetKD allows derivation of any number of unique derived keys via different contexts — including contexts that grant signing or decryption capability tied to a single principal, not requiring threshold operations Internet Computer Developer Forum.
 This supports the idea that a partner can derive their own solo-use key under a dedicated kill-switch context.
+
 C. Public key verifiability / consistency
 Derived keys are deterministic. Using the same context and inputs yields the same derived public key, letting the canister register or verify partner public keys over time Internet Computer Developer Forum+10Internet Computer Developer Forum+10internetcomputer.org+10.
+
 D. VetKD system API usable from canisters
 Canisters can invoke vetkd_derive_key and vetkd_public_key to retrieve encrypted keys (for users) or public keys. All derivations and transfers occur through the system API from within canisters Typefully+9internetcomputer.org+9GitHub+9.
+
 E. Signing capability possible with derived keys
 Although most examples focus on decryption (IBE) and data vault use, vetKD also supports generation of threshold BLS signatures and key derivation for signing per identity or context YouTube+12GitHub+12internetcomputer.org+12.
-Thus derived keys can be used for signing—in your kill-switch use case.
+
+Thus derived keys can be used for signing—in the kill-switch use case.
 ________________________________________
 **Caveats / Unverified Details**
+
 •	Explicit “solo signer” use case (i.e. a derived per-user signing key used outside threshold-based joint signing) is not demonstrated in existing documentation. While theoretically supported, this pattern isn't conventional in the provided examples.
+
 •	Transported private key purpose: vetKD encrypts the derived key using the user's transport key. It’s unclear whether signing keys for user-supplied contexts (versus IBE/decryption contexts) are supported out-of-the-box or require configuration with specific key types (e.g. BLS vs Ed25519).
+
 •	Revocation or disabling contexts: VetKD doesn’t expose an explicit revoke mechanism in the documentation. Once derivation context exists, a user may derive again unless handled at the canister logic level or key registration layer.
 
 _______________________________________
 **Next Steps**
 To fully validate:
+
 1.	Test a prototype:
 o	Derive a key using the proposed kill-switch context.
 o	Verify the corresponding public key can be used to check signatures.
-2.	Confirm signing support:
+
+3.	Confirm signing support:
 o	Ensure namespace supports signing (e.g. threshold BLS) using per-context keys as non-collaborative/signing keys.
-3.	Review vetKD API limits:
+
+5.	Review vetKD API limits:
 o	Verify whether there are restrictions on signing versus decryption contexts, key lifespan, or output formats.
 
