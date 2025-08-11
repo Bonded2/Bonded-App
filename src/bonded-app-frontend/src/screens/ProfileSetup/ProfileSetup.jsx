@@ -13,6 +13,7 @@ import {
   validateLocationConsistency 
 } from "../../utils/locationService";
 import "./style.css";
+
 // Flag formatter for country options
 const formatOptionLabel = ({ label, flag }) => (
   <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -20,6 +21,7 @@ const formatOptionLabel = ({ label, flag }) => (
     <span>{label}</span>
   </div>
 );
+
 export const ProfileSetup = () => {
   const navigate = useNavigate();
   const { canisterIntegration, isInitialized } = useBondedServices();
@@ -41,23 +43,34 @@ export const ProfileSetup = () => {
   const [locationError, setLocationError] = useState(null);
   const [vpnDetected, setVpnDetected] = useState(false);
   const [kycStatus, setKycStatus] = useState({
-    status: 'pending', // pending, in_progress, completed, failed
+    status: 'pending',
     message: 'Identity verification pending',
     verificationId: null
   });
   const [securityStatus, setSecurityStatus] = useState({
-    status: 'pending', // pending, checking, verified, error
+    status: 'pending',
     message: 'Location verification pending'
   });
-  // Removed multi-step flow - single step with verification skipped
+
+  // Navigation handlers
+  const handleBackNavigation = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/partner-invite");
+    }
+  };
+
+  const handleSkipToTimeline = () => {
+    navigate("/timeline");
+  };
+
   // Load countries and check for VPN on mount
   useEffect(() => {
     const loadUserData = async () => {
-      // Try to pre-populate with any existing data from ICP
       try {
         await icpUserService.initialize();
         
-        // Get current user data from ICP canister with retry logic
         let getUserAttempts = 0;
         let currentUser = null;
         
@@ -65,18 +78,14 @@ export const ProfileSetup = () => {
           try {
             currentUser = await icpUserService.getCurrentUser(true);
             if (currentUser && currentUser.isAuthenticated) {
-              
-              // If we have profile metadata, great! If not, keep trying a bit more
               if (currentUser.settings && 
                   (currentUser.settings.profile_metadata || currentUser.settings.profileMetadata)) {
                 break;
               } else if (getUserAttempts < 6) {
-                // Give the canister more time to process the save from registration
                 await new Promise(resolve => setTimeout(resolve, 1000 * (getUserAttempts + 1)));
                 getUserAttempts++;
                 continue;
               } else {
-                // After 6 attempts, proceed anyway with authenticated user
                 break;
               }
             }
@@ -90,33 +99,23 @@ export const ProfileSetup = () => {
           getUserAttempts++;
         }
         
-        
         if (currentUser) {
-          
-          // For authenticated users, assume they've completed registration and have basic info
           if (currentUser.isAuthenticated && currentUser.principal) {
-            
-            // Check if we have settings with profile metadata
             if (currentUser.settings) {
-              // Check multiple possible field names for profile metadata
               const profileMetadata = currentUser.settings.profileMetadata || 
                                       currentUser.settings.profile_metadata || 
                                       currentUser.settings.profile;
-              
               
               if (profileMetadata) {
                 try {
                   const profileData = typeof profileMetadata === 'string' ? 
                                       JSON.parse(profileMetadata) : profileMetadata;
                   
-                  
-                  // If profile is already complete, redirect to timeline
                   if (profileData.profileComplete) {
                     navigate("/timeline");
                     return;
                   }
                   
-                  // Pre-populate form with any existing data
                   setFormData({
                     fullName: profileData.fullName || "",
                     email: profileData.email || "",
@@ -127,44 +126,39 @@ export const ProfileSetup = () => {
                     profilePhoto: null
                   });
                   
-                  // Check if user already has basic info (name + email)
                   if (profileData.hasBasicInfo || 
                       (profileData.fullName && profileData.email)) {
                     setHasExistingBasicInfo(true);
                   }
                 } catch (parseError) {
                   console.warn('Failed to parse profile metadata:', parseError);
-                  // Even if parsing fails, assume authenticated user has basic info
                   setHasExistingBasicInfo(true);
                 }
               } else {
-                // No profile metadata yet, but user is authenticated so they went through registration
                 setHasExistingBasicInfo(true);
               }
             } else {
-              // No settings yet, but user is authenticated so they went through registration
-              // For authenticated users without settings yet, assume they just completed registration
               setHasExistingBasicInfo(true);
             }
-          } else {
           }
-        } else {
         }
       } catch (error) {
-        // If ICP data fails, start with empty form
+        console.warn('Failed to load user data:', error);
       }
     };
+
     const loadCountries = async () => {
       try {
         setIsLoading(true);
         const countryList = await getAllCountries();
         setCountries(countryList);
       } catch (error) {
+        console.warn('Failed to load countries:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    // Check for VPN
+
     const checkVPN = async () => {
       try {
         setSecurityStatus({
@@ -192,27 +186,27 @@ export const ProfileSetup = () => {
         });
       }
     };
+
     loadUserData();
     loadCountries();
     checkVPN();
   }, []);
+
   // Handle form input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear error when user types
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: "" });
     }
   };
+
   // Handle select changes (country, nationality)
   const handleSelectChange = (name, selectedOption) => {
     setFormData({ ...formData, [name]: selectedOption });
-    // Clear error when user selects
     if (formErrors[name]) {
       setFormErrors({ ...formErrors, [name]: "" });
     }
-    // If country is selected, reset city
     if (name === 'currentCountry') {
       setFormData(prev => ({
         ...prev,
@@ -220,6 +214,7 @@ export const ProfileSetup = () => {
       }));
     }
   };
+
   // Load cities based on country selection
   const loadCities = async (inputValue) => {
     if (!formData.currentCountry?.value) {
@@ -227,7 +222,6 @@ export const ProfileSetup = () => {
     }
     try {
       const cities = await getCitiesByCountry(formData.currentCountry.value);
-      // Filter by input value if provided
       if (inputValue) {
         return cities.filter(city => 
           city.label.toLowerCase().includes(inputValue.toLowerCase())
@@ -238,6 +232,7 @@ export const ProfileSetup = () => {
       return [];
     }
   };
+
   // Use browser geolocation to get current location
   const handleUseCurrentLocation = async () => {
     if (vpnDetected) {
@@ -247,22 +242,19 @@ export const ProfileSetup = () => {
     setIsLoadingLocation(true);
     setLocationError(null);
     try {
-      // Get GPS coordinates
       const coordinates = await getCurrentLocation();
-      // Verify location consistency
       const validationResult = await validateLocationConsistency(coordinates);
       if (!validationResult.isConsistent) {
         setLocationError(validationResult.message);
         setIsLoadingLocation(false);
         return;
       }
-      // Reverse geocode to get location details  
+
       const locationData = await reverseGeocode({
         lat: coordinates.lat,
         lng: coordinates.lng
       });
       if (locationData && locationData.country) {
-        // Find matching country in our list
         const matchingCountry = countries.find(country => 
           country.value.toLowerCase() === locationData.country.toLowerCase()
         );
@@ -285,12 +277,11 @@ export const ProfileSetup = () => {
       setIsLoadingLocation(false);
     }
   };
+
   // Form validation
   const validateForm = () => {
-    // Validate form fields
     const errors = {};
     
-    // Only validate name/email if user doesn't already have them from registration
     if (!hasExistingBasicInfo) {
       if (!formData.fullName) {
         errors.fullName = "Full name is required";
@@ -311,7 +302,6 @@ export const ProfileSetup = () => {
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       
-      // More accurate age calculation
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
         age--;
       }
@@ -337,79 +327,19 @@ export const ProfileSetup = () => {
     }
     
     setFormErrors(errors);
-    const isValid = Object.keys(errors).length === 0;
-    return isValid;
+    return Object.keys(errors).length === 0;
   };
-  // Start KYC verification process
-  const startKYCVerification = async () => {
-    try {
-      setKycStatus({
-        status: 'in_progress',
-        message: 'Starting identity verification...',
-        verificationId: null
-      });
-      // For production, integrate with Yoti or similar KYC provider
-      // This is a simplified implementation for demonstration
-      // Prepare data for Yoti KYC verification
-      const kycResponse = await prepareKYCVerification(formData);
-      if (kycResponse.success) {
-        setKycStatus({
-          status: 'completed',
-          message: 'Profile prepared for biometric verification',
-          verificationId: kycResponse.verificationId
-        });
-        // Navigate directly to verification screen
-        navigate("/verify");
-      } else {
-        setKycStatus({
-          status: 'failed',
-          message: kycResponse.message || 'Identity verification failed',
-          verificationId: null
-        });
-      }
-    } catch (error) {
-      setKycStatus({
-        status: 'failed',
-        message: 'Identity verification service unavailable. Please try again later.',
-        verificationId: null
-      });
-    }
-  };
-  // Prepare for KYC verification (Yoti integration happens in /verify screen)
-  const prepareKYCVerification = async (userData) => {
-    // Store user data temporarily for the verification screen
-    const profileData = {
-      ...userData,
-      profileComplete: false, // Will be set to true after successful verification
-      kycRequired: true,
-      kycProvider: 'Yoti',
-      kycPreparedAt: Date.now()
-    };
-    
-    // Save profile data to be used by Yoti verification
-    const profileMetadata = JSON.stringify(profileData);
-    await icpUserService.updateUserSettings({
-      profile_metadata: [profileMetadata]
-    });
-    
-    return {
-      success: true,
-      verificationId: `kyc_prep_${Date.now()}`,
-      message: 'Profile prepared for biometric verification'
-    };
-  };
-  // Complete profile setup and establish relationship if coming from invite
+
+  // Complete profile setup
   const completeProfileSetup = async () => {
     try {
-      // User is already authenticated and initialized from registration, just get current user
       const currentUser = await icpUserService.getCurrentUser(true);
-      
       const userPrincipal = currentUser?.principal?.toString() || 'User';
       
-      // Create initials from user's actual name
-      const avatar = formData.fullName ? formData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : userPrincipal.substring(0, 2).toUpperCase();
+      const avatar = formData.fullName ? 
+        formData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 
+        userPrincipal.substring(0, 2).toUpperCase();
       
-      // Prepare user data for storage using exact user input
       const userData = {
         ...formData,
         avatar,
@@ -420,29 +350,21 @@ export const ProfileSetup = () => {
         profileCompletedAt: Date.now()
       };
       
-      // Create profile metadata JSON for ICP canister
       const profileMetadata = JSON.stringify(userData);
       
-      // Update user settings with profile metadata on ICP canister  
       await icpUserService.updateUserSettings({
         profile_metadata: profileMetadata
       });
 
-      // Check if user came from an invite and establish relationship
       const urlParams = new URLSearchParams(window.location.search);
       const fromInvite = urlParams.get('from') === 'invite';
       
       if (fromInvite) {
-        // Look for stored invite data in sessionStorage
         const storedInviteData = sessionStorage.getItem('acceptedInviteData');
         if (storedInviteData) {
           try {
             const inviteData = JSON.parse(storedInviteData);
-            
-            // Clear the stored invite data
             sessionStorage.removeItem('acceptedInviteData');
-            
-            // Navigate to timeline since relationship should already be established
             navigate("/timeline");
             return;
           } catch (parseError) {
@@ -451,7 +373,6 @@ export const ProfileSetup = () => {
         }
       }
       
-      // Default navigation to timeline for completed profile
       navigate("/timeline");
     } catch (error) {
       setFormErrors({ 
@@ -459,7 +380,8 @@ export const ProfileSetup = () => {
       });
     }
   };
-  // Handle form submission - skip verification and complete profile directly
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -469,7 +391,6 @@ export const ProfileSetup = () => {
     
     setIsSubmitting(true);
     try {
-      // Skip KYC step and complete profile directly
       await completeProfileSetup();
     } catch (error) {
       setFormErrors({ 
@@ -479,20 +400,6 @@ export const ProfileSetup = () => {
       setIsSubmitting(false);
     }
   };
-  const handleBackNavigation = () => {
-  // Try multiple navigation methods
-  if (window.history.length > 1) {
-    navigate(-1);
-  } else {
-    // Fallback to partner invite or login
-    navigate("/partner-invite");
-  }
-};
-
-const handleSkipToTimeline = () => {
-  // Allow users to skip profile setup and go directly to timeline
-  navigate("/timeline");
-};
 
   return (
     <div className="profile-setup-screen">
@@ -504,130 +411,17 @@ const handleSkipToTimeline = () => {
           </svg>
         </button>
         
-        {/* Skip button for users who want to go to timeline */}
         <button onClick={handleSkipToTimeline} className="skip-invite-button">
           Skip & Go to Timeline
         </button>
       </div>
       
-      // And add these navigation handler functions to ProfileSetup.jsx:
-      
-      const handleBackNavigation = () => {
-        // Try multiple navigation methods
-        if (window.history.length > 1) {
-          navigate(-1);
-        } else {
-          // Fallback to partner invite or login
-          navigate("/partner-invite");
-        }
-      };
-      
-      const handleSkipToTimeline = () => {
-        // Allow users to skip profile setup and go directly to timeline
-        navigate("/timeline");
-      };
-      
-      // And add the navigation CSS to ProfileSetup's style.css:
-      
-      /* Enhanced Navigation Header */
-      .navigation-header {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 64px;
-        padding: 8px 16px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: rgba(18, 18, 18, 0.8);
-        backdrop-filter: blur(10px);
-        z-index: 100;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      }
-      
-      .modern-back-button {
-        width: 48px;
-        height: 48px;
-        background: var(--glass-background);
-        backdrop-filter: var(--glass-backdrop);
-        border: 1px solid var(--glass-border);
-        border-radius: var(--radius-full);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all var(--transition-normal);
-        color: white;
-        box-shadow: var(--shadow-lg);
-      }
-      
-      .modern-back-button:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-xl);
-        background: rgba(255, 255, 255, 0.15);
-      }
-      
-      .modern-back-button:active {
-        transform: translateY(0);
-      }
-      
-      .skip-invite-button {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 24px;
-        color: rgba(255, 255, 255, 0.9);
-        padding: 12px 20px;
-        font-family: "Rethink Sans", sans-serif;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-      
-      .skip-invite-button:hover {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-        transform: translateY(-1px);
-      }
-      
-      /* CSS Variables for consistency */
-      :root {
-        --glass-background: rgba(255, 255, 255, 0.1);
-        --glass-backdrop: blur(20px);
-        --glass-border: rgba(255, 255, 255, 0.2);
-        --radius-full: 50%;
-        --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
-        --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.25);
-        --transition-normal: all 0.2s ease;
-      }
-      
-      /* Update main container to account for fixed header */
-      .profile-setup-container {
-        padding-top: 80px; /* Add extra top padding for fixed header */
-        /* ... keep existing styles ... */
-      }
-      
-      /* Responsive adjustments */
-      @media (max-width: 640px) {
-        .navigation-header {
-          padding: 8px 12px;
-        }
-        
-        .skip-invite-button {
-          padding: 10px 16px;
-          font-size: 13px;
-        }
-        
-        .profile-setup-container {
-          padding-top: 76px;
-        }
-      }
       <div className="profile-setup-content">
         <h1 className="profile-title">Complete your profile</h1>
         <p className="profile-subtitle">
           Please provide your personal details and current location for verification
         </p>
+
         {/* Security Status Indicator */}
         <div className={`security-status ${securityStatus.status}`}>
           <div className="security-icon">
@@ -638,7 +432,7 @@ const handleSkipToTimeline = () => {
           </div>
           <div className="security-message">{securityStatus.message}</div>
         </div>
-        {/* Verification step skipped - direct profile completion */}
+
         <form className="profile-form" onSubmit={handleSubmit}>
           <div className="form-section">
             <h2 className="section-title">Personal Information</h2>
@@ -709,6 +503,7 @@ const handleSkipToTimeline = () => {
               )}
             </div>
           </div>
+
           <div className="form-section location-section">
             <h2 className="section-title">Current Location</h2>
             {locationError && (
@@ -768,11 +563,13 @@ const handleSkipToTimeline = () => {
               </div>
             )}
           </div>
+
           <div className="form-actions">
             <button type="submit" className="submit-button" disabled={vpnDetected || isSubmitting}>
               {isSubmitting ? 'Completing Profile...' : 'Complete Profile & Continue'}
             </button>
           </div>
+
           {formErrors.submit && (
             <div className="error-banner">
               <span className="error-icon">!</span>
@@ -783,4 +580,4 @@ const handleSkipToTimeline = () => {
       </div>
     </div>
   );
-}; 
+};
