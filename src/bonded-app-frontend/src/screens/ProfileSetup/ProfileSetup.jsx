@@ -481,6 +481,136 @@ export const ProfileSetup = () => {
   };
   return (
     <div className="profile-setup-screen">
+      // Add this navigation header component to ProfileSetup.jsx
+      // Insert this JSX at the beginning of the return statement, right after the opening div
+      
+      {/* Enhanced navigation header */}
+      <div className="navigation-header">
+        <button onClick={handleBackNavigation} className="modern-back-button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        
+        {/* Skip button for users who want to go to timeline */}
+        <button onClick={handleSkipToTimeline} className="skip-invite-button">
+          Skip & Go to Timeline
+        </button>
+      </div>
+      
+      // And add these navigation handler functions to ProfileSetup.jsx:
+      
+      const handleBackNavigation = () => {
+        // Try multiple navigation methods
+        if (window.history.length > 1) {
+          navigate(-1);
+        } else {
+          // Fallback to partner invite or login
+          navigate("/partner-invite");
+        }
+      };
+      
+      const handleSkipToTimeline = () => {
+        // Allow users to skip profile setup and go directly to timeline
+        navigate("/timeline");
+      };
+      
+      // And add the navigation CSS to ProfileSetup's style.css:
+      
+      /* Enhanced Navigation Header */
+      .navigation-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: rgba(18, 18, 18, 0.8);
+        backdrop-filter: blur(10px);
+        z-index: 100;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .modern-back-button {
+        width: 48px;
+        height: 48px;
+        background: var(--glass-background);
+        backdrop-filter: var(--glass-backdrop);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all var(--transition-normal);
+        color: white;
+        box-shadow: var(--shadow-lg);
+      }
+      
+      .modern-back-button:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-xl);
+        background: rgba(255, 255, 255, 0.15);
+      }
+      
+      .modern-back-button:active {
+        transform: translateY(0);
+      }
+      
+      .skip-invite-button {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 24px;
+        color: rgba(255, 255, 255, 0.9);
+        padding: 12px 20px;
+        font-family: "Rethink Sans", sans-serif;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      
+      .skip-invite-button:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
+      
+      /* CSS Variables for consistency */
+      :root {
+        --glass-background: rgba(255, 255, 255, 0.1);
+        --glass-backdrop: blur(20px);
+        --glass-border: rgba(255, 255, 255, 0.2);
+        --radius-full: 50%;
+        --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.15);
+        --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.25);
+        --transition-normal: all 0.2s ease;
+      }
+      
+      /* Update main container to account for fixed header */
+      .profile-setup-container {
+        padding-top: 80px; /* Add extra top padding for fixed header */
+        /* ... keep existing styles ... */
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 640px) {
+        .navigation-header {
+          padding: 8px 12px;
+        }
+        
+        .skip-invite-button {
+          padding: 10px 16px;
+          font-size: 13px;
+        }
+        
+        .profile-setup-container {
+          padding-top: 76px;
+        }
+      }
       <div className="profile-setup-content">
         <h1 className="profile-title">Complete your profile</h1>
         <p className="profile-subtitle">
