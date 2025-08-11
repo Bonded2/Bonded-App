@@ -479,11 +479,23 @@ export const ProfileSetup = () => {
       setIsSubmitting(false);
     }
   };
+  const handleBackNavigation = () => {
+  // Try multiple navigation methods
+  if (window.history.length > 1) {
+    navigate(-1);
+  } else {
+    // Fallback to partner invite or login
+    navigate("/partner-invite");
+  }
+};
+
+const handleSkipToTimeline = () => {
+  // Allow users to skip profile setup and go directly to timeline
+  navigate("/timeline");
+};
+
   return (
     <div className="profile-setup-screen">
-      // Add this navigation header component to ProfileSetup.jsx
-      // Insert this JSX at the beginning of the return statement, right after the opening div
-      
       {/* Enhanced navigation header */}
       <div className="navigation-header">
         <button onClick={handleBackNavigation} className="modern-back-button">
