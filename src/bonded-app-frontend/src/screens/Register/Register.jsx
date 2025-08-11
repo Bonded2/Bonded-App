@@ -22,9 +22,9 @@ export const Register = () => {
       try {
         const client = await AuthClient.create();
         setAuthClient(client);
-          } catch (error) {
-      // Failed to initialize auth client - continue with component render
-    }
+      } catch (error) {
+        // Failed to initialize auth client - continue with component render
+      }
     };
     initAuth();
   }, []);
@@ -39,6 +39,17 @@ export const Register = () => {
 
   const handlePasswordChange = (e) => {
     setPassword(e.target.value);
+  };
+
+  // Enhanced navigation with fallbacks
+  const handleBackNavigation = () => {
+    // Try multiple navigation methods
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      // Fallback to login if no history
+      navigate("/login");
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -71,9 +82,6 @@ export const Register = () => {
         password, // In production, this should be hashed
         timestamp: Date.now()
       };
-      
-      // REAL IMPLEMENTATION: Store registration data directly in ICP canister
-      // No need for sessionStorage - data will be stored in canister during authentication
       
       // Configure the login options
       const loginOptions = {
@@ -186,6 +194,20 @@ export const Register = () => {
 
   return (
     <div className="register">
+      {/* Enhanced navigation header */}
+      <div className="navigation-header">
+        <button onClick={handleBackNavigation} className="modern-back-button">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
+        
+        {/* Login link for users who want to login instead */}
+        <Link to="/login" className="skip-invite-button">
+          Have an account? Log in
+        </Link>
+      </div>
+
       <div className="register-container">
         <img
           className="bonded-logo-blue"
@@ -256,7 +278,7 @@ export const Register = () => {
               <div className="button-content">
                 {isLoading && <div className="loading-spinner"></div>}
                 <div className="button-label">
-                  {isLoading ? "Authenticating..." : "Create an account"}
+                  {isLoading ? "Creating Account..." : "Create Account"}
                 </div>
               </div>
             </div>
@@ -264,7 +286,10 @@ export const Register = () => {
         </form>
 
         <div className="login-redirect">
-          <p>Already have an account? <Link to="/login" className="login-link">Log in</Link></p>
+          <span className="login-text">Already have an account?</span>
+          <Link className="login-link" to="/login">
+            Log in
+          </Link>
         </div>
       </div>
     </div>
