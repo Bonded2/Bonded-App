@@ -99,51 +99,79 @@ class TextClassificationService {
     }
 
     this.isLoading = true;
-    this.stats.modelStatus = 'loading';
-
+    
     try {
-      // Load Transformers.js via ESM
-      const transformersLib = await this.loadTransformersJS();
-      
-      if (!transformersLib) {
-        throw new Error('Failed to load Transformers.js library');
-      }
-      
-      // Use the default export or named exports depending on the module format
-      const transformersAPI = transformersLib.default || transformersLib;
-      
-      // Load DistilBERT model for text classification
-      const { pipeline } = transformersAPI;
-      
-      // Use text classification pipeline with DistilBERT
-      this.model = await pipeline('text-classification', 'distilbert-base-uncased-finetuned-sst-2-english', {
-        revision: 'main',
-        model_file_name: 'model.onnx',
-        quantized: true
-      });
+      // Load the model and tokenizer
+      await this.loadModel();
       
       this.isInitialized = true;
       this.stats.modelStatus = 'loaded';
-      
-      // Cache successful initialization
-      if (this.db) {
-        await this.db.put('modelCache', {
-          initialized: true,
-          timestamp: Date.now(),
-          model: 'distilbert-base-uncased'
-        }, 'initStatus');
-      }
-      
+      console.log('✅ Text Classification Service initialized successfully');
       return true;
+      
     } catch (error) {
       this.lastError = error;
       this.stats.modelStatus = 'failed';
-      
-      // Still mark as initialized to use keyword fallback
-      this.isInitialized = true;
-      return false;
+      console.error('❌ Text Classification Service initialization failed:', error);
+      throw error;
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  /**
+   * Load the text classification model and tokenizer
+   */
+  async loadModel() {
+    try {
+      // Load transformers library
+      if (!transformers) {
+        transformers = await this.loadTransformersLibrary();
+      }
+      
+      // Load the DistilBERT model for text classification
+      const modelName = 'distilbert-base-uncased';
+      
+      this.tokenizer = await transformers.AutoTokenizer.from_pretrained(modelName);
+      this.model = await transformers.AutoModelForSequenceClassification.from_pretrained(modelName);
+      
+      console.log('✅ Text classification model loaded successfully');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Failed to load text classification model:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load the Transformers.js library dynamically
+   */
+  async loadTransformersLibrary() {
+    try {
+      // Try multiple CDN sources for reliability
+      const sources = [
+        TRANSFORMERS_JSDELIVR_ESM_URL,
+        TRANSFORMERS_SKYPACK_URL,
+        TRANSFORMERS_UNPKG_ESM_URL
+      ];
+
+      for (const source of sources) {
+        try {
+          console.log(`🔄 Loading Transformers.js from: ${source}`);
+          const module = await import(source);
+          console.log('✅ Transformers.js loaded successfully');
+          return module;
+        } catch (error) {
+          console.warn(`⚠️ Failed to load from ${source}:`, error);
+          continue;
+        }
+      }
+      
+      throw new Error('All Transformers.js sources failed to load');
+    } catch (error) {
+      console.error('❌ Failed to load Transformers.js library:', error);
+      throw error;
     }
   }
 

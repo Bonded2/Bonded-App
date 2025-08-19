@@ -1,1 +1,1 @@
-export { AIClassificationTest } from './AIClassificationTest'; 
+export { default as AIClassificationTest } from './AIClassificationTest'; 

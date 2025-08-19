@@ -2,7 +2,7 @@
  * AI Services Index - Optimized for Lazy Loading
  * 
  * This module provides lazy-loaded AI services to improve initial app load time.
- * Heavy models (Tesseract.js, NSFWJS, TensorFlow.js) are only loaded when actually needed.
+ * Heavy models (Tesseract.js, NSFWJS, TensorFlow.js, Gemma 3 270M) are only loaded when actually needed.
  */
 
 // LAZY LOADING: Create service factories instead of immediate instances
@@ -10,6 +10,7 @@ let _nsfwDetectionService = null;
 let _ocrService = null;
 let _textClassificationService = null;
 let _evidenceFilterService = null;
+let _gemmaService = null;
 
 /**
  * Get NSFW Detection Service (lazy loaded)
@@ -56,6 +57,17 @@ export const getEvidenceFilterService = async () => {
 };
 
 /**
+ * Get Gemma 3 270M Service (lazy loaded)
+ */
+export const getGemmaService = async () => {
+  if (!_gemmaService) {
+    const { gemmaService: service } = await import('./gemmaService.js');
+    _gemmaService = service;
+  }
+  return _gemmaService;
+};
+
+/**
  * Initialize AI services (non-blocking)
  * This can be called in the background to pre-load services
  */
@@ -66,7 +78,8 @@ export const initializeAIServices = async () => {
       getNSFWDetectionService(),
       getOCRService(), 
       getTextClassificationService(),
-      getEvidenceFilterService()
+      getEvidenceFilterService(),
+      getGemmaService()
     ];
     
     // Use Promise.allSettled to avoid blocking on any single failure
@@ -93,7 +106,8 @@ export const getAIServiceStatus = () => {
     nsfwDetection: _nsfwDetectionService !== null,
     ocr: _ocrService !== null,
     textClassification: _textClassificationService !== null,
-    evidenceFilter: _evidenceFilterService !== null
+    evidenceFilter: _evidenceFilterService !== null,
+    gemma: _gemmaService !== null
   };
 };
 
@@ -120,6 +134,10 @@ export const disposeAIServices = async () => {
       disposalPromises.push(_evidenceFilterService.dispose());
     }
     
+    if (_gemmaService && typeof _gemmaService.cleanup === 'function') {
+      disposalPromises.push(_gemmaService.cleanup());
+    }
+    
     await Promise.allSettled(disposalPromises);
     
     // Clear references
@@ -127,6 +145,7 @@ export const disposeAIServices = async () => {
     _ocrService = null;
     _textClassificationService = null;
     _evidenceFilterService = null;
+    _gemmaService = null;
     
     return { success: true };
   } catch (error) {
