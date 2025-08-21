@@ -35,8 +35,6 @@ export {
   // FaceDetectionService,    // DISABLED: Not needed for MVP NSFW filtering
   // faceDetectionService,    // DISABLED: Not needed for MVP NSFW filtering
   nsfwDetectionService,       // KEEP: For nudity detection
-  textClassificationService, // KEEP: For sexual content filtering
-  ocrService,                 // RE-ENABLED: Extract text from images for filtering
   aiEvidenceFilter 
 } from '../ai/index.js';
 

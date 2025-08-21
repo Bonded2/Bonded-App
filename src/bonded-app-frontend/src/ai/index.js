@@ -2,34 +2,24 @@
  * AI Services Index
  * 
  * Centralized AI service management with lazy loading
- * Heavy models (Tesseract.js, NSFWJS, TensorFlow.js) are only loaded when actually needed.
+ * Heavy models (Tesseract.js, NSFWJS, ONNX Runtime) are only loaded when actually needed.
  */
 
 // Service instances (lazy loaded)
-let _tensorflowService = null;
 let _nsfwService = null;
 let _faceDetectionService = null;
 let _ocrService = null;
 let _textClassificationService = null;
 let _evidenceFilterService = null;
-
-/**
- * Get TensorFlow Service (lazy loaded)
- */
-export const getTensorFlowService = async () => {
-  if (!_tensorflowService) {
-    const { tensorflowService: service } = await import('./tensorflowService.js');
-    _tensorflowService = service;
-  }
-  return _tensorflowService;
-};
+let _modelOptimizationService = null;
+let _wasmModelContainer = null;
 
 /**
  * Get NSFW Service (lazy loaded)
  */
 export const getNSFWService = async () => {
   if (!_nsfwService) {
-    const { nsfwService: service } = await import('./nsfwService.js');
+    const { nsfwDetectionService: service } = await import('./nsfwDetection.js');
     _nsfwService = service;
   }
   return _nsfwService;
@@ -73,10 +63,32 @@ export const getTextClassificationService = async () => {
  */
 export const getEvidenceFilterService = async () => {
   if (!_evidenceFilterService) {
-    const { evidenceFilterService: service } = await import('./evidenceFilter.js');
+    const { aiEvidenceFilter: service } = await import('./evidenceFilter.js');
     _evidenceFilterService = service;
   }
   return _evidenceFilterService;
+};
+
+/**
+ * Get Model Optimization Service (lazy loaded)
+ */
+export const getModelOptimizationService = async () => {
+  if (!_modelOptimizationService) {
+    const { modelOptimizationService: service } = await import('./modelOptimization.js');
+    _modelOptimizationService = service;
+  }
+  return _modelOptimizationService;
+};
+
+/**
+ * Get WASM Model Container (lazy loaded)
+ */
+export const getWasmModelContainer = async () => {
+  if (!_wasmModelContainer) {
+    const { wasmModelContainer: service } = await import('./wasmModelContainer.js');
+    _wasmModelContainer = service;
+  }
+  return _wasmModelContainer;
 };
 
 /**
@@ -84,12 +96,13 @@ export const getEvidenceFilterService = async () => {
  */
 export const getAIStatus = async () => {
   const status = {
-    tensorflow: _tensorflowService !== null,
     nsfw: _nsfwService !== null,
     faceDetection: _faceDetectionService !== null,
     ocr: _ocrService !== null,
     textClassification: _textClassificationService !== null,
-    evidenceFilter: _evidenceFilterService !== null
+    evidenceFilter: _evidenceFilterService !== null,
+    modelOptimization: _modelOptimizationService !== null,
+    wasmModelContainer: _wasmModelContainer !== null
   };
   
   return status;
@@ -104,12 +117,13 @@ export const initializeAIServices = async () => {
     
     // Initialize services in parallel
     await Promise.all([
-      getTensorFlowService(),
       getNSFWService(),
       getFaceDetectionService(),
       getOCRService(),
       getTextClassificationService(),
-      getEvidenceFilterService()
+      getEvidenceFilterService(),
+      getModelOptimizationService(),
+      getWasmModelContainer()
     ]);
     
     console.log('✅ All AI services initialized successfully');
@@ -129,34 +143,38 @@ export const cleanupAIServices = async () => {
     
     const disposalPromises = [];
     
-    if (_tensorflowService && typeof _tensorflowService.cleanup === 'function') {
-      disposalPromises.push(_tensorflowService.cleanup());
-    }
-    if (_nsfwService && typeof _nsfwService.cleanup === 'function') {
-      disposalPromises.push(_nsfwService.cleanup());
+    if (_nsfwService && typeof _nsfwService.dispose === 'function') {
+      disposalPromises.push(_nsfwService.dispose());
     }
     if (_faceDetectionService && typeof _faceDetectionService.cleanup === 'function') {
       disposalPromises.push(_faceDetectionService.cleanup());
     }
-    if (_ocrService && typeof _ocrService.cleanup === 'function') {
-      disposalPromises.push(_ocrService.cleanup());
+    if (_ocrService && typeof _ocrService.dispose === 'function') {
+      disposalPromises.push(_ocrService.dispose());
     }
-    if (_textClassificationService && typeof _textClassificationService.cleanup === 'function') {
-      disposalPromises.push(_textClassificationService.cleanup());
+    if (_textClassificationService && typeof _textClassificationService.dispose === 'function') {
+      disposalPromises.push(_textClassificationService.dispose());
     }
-    if (_evidenceFilterService && typeof _evidenceFilterService.cleanup === 'function') {
-      disposalPromises.push(_evidenceFilterService.cleanup());
+    if (_evidenceFilterService && typeof _evidenceFilterService.dispose === 'function') {
+      disposalPromises.push(_evidenceFilterService.dispose());
+    }
+    if (_modelOptimizationService && typeof _modelOptimizationService.cleanup === 'function') {
+      disposalPromises.push(_modelOptimizationService.cleanup());
+    }
+    if (_wasmModelContainer && typeof _wasmModelContainer.cleanup === 'function') {
+      disposalPromises.push(_wasmModelContainer.cleanup());
     }
     
     await Promise.allSettled(disposalPromises);
     
     // Clear references
-    _tensorflowService = null;
     _nsfwService = null;
     _faceDetectionService = null;
     _ocrService = null;
     _textClassificationService = null;
     _evidenceFilterService = null;
+    _modelOptimizationService = null;
+    _wasmModelContainer = null;
     
     console.log('✅ AI services cleaned up successfully');
   } catch (error) {
@@ -164,16 +182,11 @@ export const cleanupAIServices = async () => {
   }
 };
 
-// LEGACY EXPORTS: Keep for backward compatibility but make them lazy
+// Legacy exports for backward compatibility
 export const aiEvidenceFilter = {
-  async filterImage(imageInput) {
+  async filterEvidence(evidence) {
     const service = await getEvidenceFilterService();
-    return service.filterImage(imageInput);
-  },
-  
-  async filterText(text) {
-    const service = await getEvidenceFilterService();
-    return service.filterText(text);
+    return service.filterEvidence(evidence);
   },
   
   async dispose() {
@@ -181,7 +194,6 @@ export const aiEvidenceFilter = {
   }
 };
 
-// Export individual services with lazy loading
 export const nsfwDetectionService = {
   async detectNSFW(image) {
     const service = await getNSFWService();
@@ -194,44 +206,19 @@ export const nsfwDetectionService = {
   }
 };
 
-export const ocrService = {
-  async extractText(image, options = {}) {
-    const service = await getOCRService();
-    return service.extractText(image, options);
-  },
-  
-  async dispose() {
-    const service = await getOCRService();
-    return service.dispose();
-  }
-};
-
-export const textClassificationService = {
-  async classifyText(text) {
-    const service = await getTextClassificationService();
-    return service.classifyText(text);
-  },
-  
-  async dispose() {
-    const service = await getTextClassificationService();
-    return service.dispose();
-  }
-};
-
 // Default export for convenience
 export default {
-  getTensorFlowService,
   getNSFWService,
   getFaceDetectionService,
   getOCRService,
   getTextClassificationService,
   getEvidenceFilterService,
+  getModelOptimizationService,
+  getWasmModelContainer,
   initializeAIServices,
   cleanupAIServices,
   getAIStatus,
   // Legacy exports
   aiEvidenceFilter,
-  nsfwDetectionService,
-  ocrService,
-  textClassificationService
+  nsfwDetectionService
 }; 

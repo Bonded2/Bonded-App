@@ -8,7 +8,7 @@ const urlsToCache = [
   '/manifest.json',
   '/favicon.ico',
   '/logo2.svg',
-  '/images/bonded-logo-blue.svg',
+  '/images/bonded-logo-gray.svg',
   '/images/icp-logo-button.svg',
   '/images/app-icon.svg',
   '/images/icon-192x192.png',
@@ -39,12 +39,19 @@ const urlsToCache = [
 ];
 // Install a service worker
 self.addEventListener('install', event => {
+  console.log('Service worker installing...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
+        console.log('Cache opened, adding URLs to cache...');
         return cache.addAll(urlsToCache);
       })
+      .then(() => {
+        console.log('Service worker installed successfully');
+      })
       .catch(error => {
+        console.error('Service worker installation failed:', error);
+        // Continue with installation even if caching fails
       })
   );
   // Force the waiting service worker to become the active service worker
@@ -78,10 +85,44 @@ self.addEventListener('fetch', event => {
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
-        .catch(() => {
+        .then(response => {
+          // Ensure we have a valid response
+          if (response && response instanceof Response) {
+            return response;
+          }
+          // If response is invalid, throw an error to trigger fallback
+          throw new Error('Invalid response');
+        })
+        .catch(error => {
+          console.log('Navigation request failed, serving offline page:', error);
           return caches.open(CACHE_NAME)
             .then(cache => {
               return cache.match(OFFLINE_URL);
+            })
+            .then(offlineResponse => {
+              // Ensure we return a valid Response object
+              if (offlineResponse && offlineResponse instanceof Response) {
+                return offlineResponse;
+              }
+              // Fallback to a basic offline response
+              return new Response(
+                '<html><body><h1>Offline</h1><p>Please check your connection and try again.</p></body></html>',
+                {
+                  status: 200,
+                  headers: { 'Content-Type': 'text/html' }
+                }
+              );
+            })
+            .catch(cacheError => {
+              console.log('Cache fallback failed, creating basic offline response:', cacheError);
+              // Final fallback - create a basic offline response
+              return new Response(
+                '<html><body><h1>Offline</h1><p>Please check your connection and try again.</p></body></html>',
+                {
+                  status: 200,
+                  headers: { 'Content-Type': 'text/html' }
+                }
+              );
             });
         })
     );
@@ -102,13 +143,21 @@ self.addEventListener('fetch', event => {
       caches.match(event.request)
         .then(response => {
           // Cache hit - return response
-          if (response) {
+          if (response && response instanceof Response) {
             return response;
           }
           // For non-same-origin requests, try network only
           if (!isSameOrigin) {
             return fetch(event.request)
+              .then(networkResponse => {
+                // Ensure we have a valid response
+                if (networkResponse && networkResponse instanceof Response) {
+                  return networkResponse;
+                }
+                throw new Error('Invalid network response');
+              })
               .catch(error => {
+                console.log('Cross-origin request failed:', error);
                 // Return a generic fallback for cross-origin resources
                 return new Response('Network error', {
                   status: 408,
@@ -121,7 +170,7 @@ self.addEventListener('fetch', event => {
           return fetch(fetchRequest)
             .then(response => {
               // Check if we received a valid response
-              if (!response || response.status !== 200 || response.type !== 'basic') {
+              if (!response || !(response instanceof Response) || response.status !== 200 || response.type !== 'basic') {
                 return response;
               }
               // Clone the response because it's a one-time use stream
@@ -134,15 +183,30 @@ self.addEventListener('fetch', event => {
                     cache.put(event.request, responseToCache);
                   })
                   .catch(error => {
+                    console.log('Failed to cache response:', error);
                   });
               }
               return response;
             })
             .catch(error => {
+              console.log('Fetch request failed:', error);
               // For images, try returning a generic placeholder
               if (event.request.destination === 'image') {
                 return caches.match('/images/placeholder-image.png')
-                  .catch(() => {
+                  .then(placeholderResponse => {
+                    if (placeholderResponse && placeholderResponse instanceof Response) {
+                      return placeholderResponse;
+                    }
+                    // If placeholder not found, return transparent image
+                    return new Response(
+                      'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+                      {
+                        headers: { 'Content-Type': 'image/gif' }
+                      }
+                    );
+                  })
+                  .catch(placeholderError => {
+                    console.log('Placeholder image failed, using transparent fallback:', placeholderError);
                     // If placeholder not found, return transparent image
                     return new Response(
                       'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
@@ -159,23 +223,39 @@ self.addEventListener('fetch', event => {
               });
             });
         })
+        .catch(error => {
+          console.log('Cache match failed:', error);
+          // Final fallback for any unexpected errors
+          return new Response('Service worker error', {
+            status: 500,
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        })
     );
   }
 });
 // Update a service worker and clean up old cache versions
 self.addEventListener('activate', event => {
+  console.log('Service worker activating...');
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
+      console.log('Found caches:', cacheNames);
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
+      console.log('Old caches cleaned up, claiming clients...');
       return self.clients.claim();
+    }).then(() => {
+      console.log('Service worker activated successfully');
+    }).catch(error => {
+      console.error('Service worker activation failed:', error);
     })
   );
 });
@@ -196,24 +276,37 @@ self.addEventListener('message', event => {
 });
 // Handle background sync for pending relationship evidence uploads
 self.addEventListener('sync', event => {
-  if (event.tag === 'relationship-evidence-sync') {
-    event.waitUntil(syncRelationshipEvidence());
-  }
-  
-  // Handle automated photo library scanning (T4.16)
-  if (event.tag === 'automated-photo-scan') {
-    event.waitUntil(performAutomatedPhotoScan());
-  }
-  
-  // Handle daily evidence processing (photos + uploads)
-  if (event.tag === 'daily-evidence-processing') {
-    event.waitUntil(performDailyEvidenceProcessing());
+  if (event.tag === 'background-sync-evidence') {
+    event.waitUntil(
+      // Background sync logic would go here
+      Promise.resolve()
+    );
   }
 });
+
+// Global error handler for unhandled promise rejections
+self.addEventListener('unhandledrejection', event => {
+  console.error('Unhandled promise rejection in service worker:', event.reason);
+  event.preventDefault();
+});
+
+// Global error handler for uncaught errors
+self.addEventListener('error', event => {
+  console.error('Uncaught error in service worker:', event.error);
+});
+
+console.log('Service worker script loaded successfully');
+
 // Handle periodic background sync for daily evidence processing
 self.addEventListener('periodicsync', event => {
-  if (event.tag === 'daily-evidence-upload') {
-    event.waitUntil(performDailyEvidenceProcessing());
+  if (event.tag === 'daily-evidence-processing') {
+    event.waitUntil(
+      Promise.resolve().then(() => {
+        console.log('Periodic sync event received:', event.tag);
+        // Periodic sync logic would go here
+        return Promise.resolve();
+      })
+    );
   }
 });
 // Handle push notifications for collaboration invites
@@ -239,101 +332,4 @@ self.addEventListener('notificationclick', event => {
       clients.openWindow(event.notification.data.url)
     );
   }
-});
-// Function to sync pending relationship evidence
-async function syncRelationshipEvidence() {
-  try {
-    // Get all pending evidence uploads from IndexedDB
-    const pendingUploads = await getPendingUploads();
-    // Process each pending upload
-    const uploadPromises = pendingUploads.map(async (item) => {
-      try {
-        // Attempt to upload to the blockchain
-        const response = await fetch('/api/evidence/upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(item)
-        });
-        if (response.ok) {
-          // If successful, remove from pending queue
-          await removePendingUpload(item.id);
-          return { success: true, id: item.id };
-        } else {
-          return { success: false, id: item.id, error: 'Server error' };
-        }
-      } catch (error) {
-        return { success: false, id: item.id, error: error.message };
-      }
-    });
-    return Promise.all(uploadPromises);
-  } catch (error) {
-  }
-}
-// Mock function - in real implementation, would access IndexedDB
-async function getPendingUploads() {
-  // This would be implemented to retrieve pending uploads from IndexedDB
-  return [];
-}
-// Mock function - in real implementation, would access IndexedDB
-async function removePendingUpload(id) {
-  // This would be implemented to remove a successful upload from the pending queue
-  return true;
-}
-/**
- * Perform automated photo library scanning in background (T4.16)
- */
-async function performAutomatedPhotoScan() {
-  try {
-    console.log('📸 Service Worker: Starting automated photo scan...');
-    
-    // Post message to all clients to trigger photo scanning
-    const clients = await self.clients.matchAll({ includeUncontrolled: true });
-    
-    if (clients.length === 0) {
-      console.log('📸 Service Worker: No active clients - photo scan deferred');
-      return Promise.resolve({ deferred: true });
-    }
-    
-    for (const client of clients) {
-      client.postMessage({
-        type: 'AUTOMATED_PHOTO_SCAN_TRIGGER',
-        timestamp: Date.now(),
-        source: 'service-worker'
-      });
-    }
-    
-    console.log('✅ Service Worker: Photo scan trigger sent to clients');
-    return Promise.resolve({ triggered: true });
-  } catch (error) {
-    console.error('❌ Service Worker: Photo scan failed:', error);
-    return Promise.reject(error);
-  }
-}
-
-// Function to perform daily evidence processing in background
-async function performDailyEvidenceProcessing() {
-  try {
-    console.log('🔄 Service Worker: Starting daily evidence processing...');
-    
-    // Send message to main app to trigger evidence processing
-    const clients = await self.clients.matchAll();
-    if (clients.length > 0) {
-      // App is open, send message to trigger processing
-      clients[0].postMessage({
-        type: 'TRIGGER_DAILY_PROCESSING',
-        timestamp: Date.now(),
-        source: 'service-worker'
-      });
-      
-      console.log('✅ Service Worker: Daily processing trigger sent');
-    } else {
-      // App is closed, we would need to implement background processing
-      // For MVP, we'll just log and wait for app to open
-      console.log('🔄 Service Worker: No active clients - processing deferred');
-    }
-  } catch (error) {
-    console.error('❌ Service Worker: Daily processing failed:', error);
-  }
-} 
+}); 
