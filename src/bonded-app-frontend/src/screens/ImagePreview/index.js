@@ -1,1 +1,1 @@
-export { ImagePreview } from './ImagePreview'; 
+export { ImagePreview } from './ImagePreview'; export { default } from "./ImagePreview";

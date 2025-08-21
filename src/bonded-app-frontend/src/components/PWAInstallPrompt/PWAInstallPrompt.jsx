@@ -296,3 +296,4 @@ export const PWAInstallPrompt = () => {
     </div>
   );
 }; 
+export default PWAInstallPrompt;

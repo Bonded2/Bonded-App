@@ -581,3 +581,5 @@ export const ProfileSetup = () => {
     </div>
   );
 };
+
+export default ProfileSetup;

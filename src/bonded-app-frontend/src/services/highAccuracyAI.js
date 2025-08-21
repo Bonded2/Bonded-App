@@ -9,7 +9,8 @@
  * - Multi-modal analysis (text + image + metadata)
  */
 
-import * as ort from 'onnxruntime-web';
+// Remove direct import to prevent bundling issues
+// import * as ort from 'onnxruntime-web';
 
 class HighAccuracyAI {
   constructor() {
@@ -45,6 +46,7 @@ class HighAccuracyAI {
     this.validationCache = new Map();
     this.feedbackData = [];
     this.initPromise = null;
+    this.ort = null; // Store ONNX Runtime reference
   }
 
   async initialize() {
@@ -59,8 +61,17 @@ class HighAccuracyAI {
     try {
       console.log('🚀 Initializing high-accuracy AI models...');
       
-      // Initialize ONNX Runtime
-      ort.env.wasm.wasmPaths = '/';
+      // Dynamically load ONNX Runtime to prevent bundling issues
+      try {
+        const { loadOnnxRuntime } = await import('../utils/moduleLoader.js');
+        this.ort = await loadOnnxRuntime();
+        if (this.ort && this.ort.env && this.ort.env.wasm) {
+          this.ort.env.wasm.wasmPaths = '/';
+        }
+      } catch (error) {
+        console.warn('⚠️ ONNX Runtime not available, continuing without it:', error.message);
+        this.ort = null;
+      }
       
       // Load models in parallel
       await Promise.all([

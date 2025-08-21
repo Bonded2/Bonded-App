@@ -68,6 +68,12 @@ if ('serviceWorker' in navigator) {
           try {
             // Dynamically import and trigger photo scan
             const module = await import('./services/automatedPhotoLibrary.js');
+            
+            // Ensure the service is initialized before performing scan
+            if (module.automatedPhotoLibrary && typeof module.automatedPhotoLibrary.init === 'function') {
+              await module.automatedPhotoLibrary.init();
+            }
+            
             const result = await module.automatedPhotoLibrary.performAutomatedScan();
             console.log('📸 Automated photo scan completed:', result);
             
@@ -81,6 +87,14 @@ if ('serviceWorker' in navigator) {
             }
           } catch (error) {
             console.error('❌ Photo scan trigger failed:', error);
+            // Send error notification to service worker
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'PHOTO_SCAN_FAILED',
+                error: error.message,
+                timestamp: Date.now()
+              });
+            }
           }
         }
         
@@ -89,6 +103,12 @@ if ('serviceWorker' in navigator) {
           try {
             // Dynamically import and trigger daily processing
             const module = await import('./services/scheduler.js');
+            
+            // Ensure the service is initialized before performing scheduled upload
+            if (module.schedulerService && typeof module.schedulerService.init === 'function') {
+              await module.schedulerService.init();
+            }
+            
             const result = await module.schedulerService.performScheduledUpload();
             console.log('🔄 Daily processing completed:', result);
             
@@ -102,6 +122,55 @@ if ('serviceWorker' in navigator) {
             }
           } catch (error) {
             console.error('❌ Daily processing trigger failed:', error);
+            
+            // Enhanced error handling - try to provide fallback processing
+            try {
+              console.log('🔄 Attempting fallback daily processing...');
+              
+                          // Try to use the scheduler's simple fallback method
+            if (module.schedulerService && typeof module.schedulerService.performSimpleDailyProcessing === 'function') {
+              const fallbackResult = await module.schedulerService.performSimpleDailyProcessing();
+              console.log('✅ Fallback daily processing completed:', fallbackResult);
+              
+              // Notify service worker of fallback completion
+              if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                  type: 'DAILY_PROCESSING_FALLBACK_COMPLETED',
+                  result: fallbackResult,
+                  timestamp: Date.now()
+                });
+              }
+              return; // Exit early if fallback succeeded
+            }
+            
+            // Try to import and use the evidence processor directly as last resort
+            const evidenceModule = await import('./services/evidenceProcessor.js');
+            if (evidenceModule.evidenceProcessor) {
+              const fallbackResult = await evidenceModule.evidenceProcessor.processDailyEvidence();
+              console.log('✅ Evidence processor fallback completed:', fallbackResult);
+              
+              // Notify service worker of fallback completion
+              if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                  type: 'DAILY_PROCESSING_FALLBACK_COMPLETED',
+                  result: fallbackResult,
+                  timestamp: Date.now()
+                });
+              }
+              return; // Exit early if fallback succeeded
+            }
+            } catch (fallbackError) {
+              console.warn('⚠️ Fallback daily processing also failed:', fallbackError.message);
+            }
+            
+            // Send error notification to service worker
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'DAILY_PROCESSING_FAILED',
+                error: error.message,
+                timestamp: Date.now()
+              });
+            }
           }
         }
       });

@@ -549,3 +549,5 @@ export const PartnerInvite = () => {
     </div>
   );
 };
+
+export default PartnerInvite;

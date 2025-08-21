@@ -102,3 +102,5 @@ export const GettingStarted = () => {
     </div>
   );
 };
+
+export default GettingStarted;

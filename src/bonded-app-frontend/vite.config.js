@@ -21,117 +21,6 @@ const network = process.env["DFX_NETWORK"] || "local";
 
 const require = createRequire(import.meta.url);
 
-// Custom plugin to patch elliptic curve Field constructor
-const ellipticCurvePatchPlugin = () => {
-  return {
-    name: 'elliptic-curve-patch',
-    enforce: 'pre',
-    transform(code, id) {
-      // Target the specific files that use Field constructor
-      if (id.includes('@noble/curves') || id.includes('modular.ts') || id.includes('modular.js') || 
-          id.includes('tower.ts') || id.includes('tower.js') || id.includes('bls12-381')) {
-        
-        // Replace Field constructor calls with a safe version
-        let patchedCode = code;
-        
-        // Patch the Field class definition
-        patchedCode = patchedCode.replace(
-          /class\s+Field\s*{([^}]+constructor\s*\([^)]*\)\s*{[^}]*})/g,
-          (match, classBody) => {
-            return `class Field {${classBody.replace(
-              /constructor\s*\(([^)]*)\)\s*{([^}]*)}/,
-              (ctorMatch, params, body) => {
-                return `constructor(${params}) {
-                  try {
-                    ${body}
-                  } catch (e) {
-                    if (e.message && e.message.includes('invalid field')) {
-                      console.warn('Field validation bypassed:', e.message);
-                      this.order = typeof ORDER !== 'undefined' ? ORDER : 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n;
-                      this.p = this.order;
-                      this.one = 1n;
-                      this.zero = 0n;
-                    } else {
-                      throw e;
-                    }
-                  }
-                }`
-              }
-            )}`
-          }
-        );
-        
-        // Patch direct Field instantiations
-        patchedCode = patchedCode.replace(
-          /new\s+Field\s*\(/g,
-          'new (function Field(...args) { ' +
-          'const inst = Object.create(Field.prototype); ' +
-          'try { ' +
-          'Field.prototype.constructor.apply(inst, args); ' +
-          '} catch (e) { ' +
-          'if (e.message && (e.message.includes("invalid field") || e.message.includes("Cannot set properties"))) { ' +
-          'console.warn("Field error caught:", e.message); ' +
-          'inst.order = args[0] || 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n; ' +
-          'inst.p = inst.order; ' +
-          'inst.one = 1n; ' +
-          'inst.zero = 0n; ' +
-          'inst.add = function(a,b) { return (a+b) % this.order; }; ' +
-          'inst.sub = function(a,b) { return (a-b+this.order) % this.order; }; ' +
-          'inst.mul = function(a,b) { return (a*b) % this.order; }; ' +
-          'inst.div = function(a,b) { return this.mul(a, this.inv(b)); }; ' +
-          'inst.inv = function(a) { return this.pow(a, this.order - 2n); }; ' +
-          'inst.pow = function(base, exp) { ' +
-          'let result = 1n; base = base % this.order; ' +
-          'while (exp > 0n) { ' +
-          'if (exp % 2n === 1n) result = (result * base) % this.order; ' +
-          'exp = exp / 2n; base = (base * base) % this.order; ' +
-          '} return result; }; ' +
-          '} else throw e; } ' +
-          'return inst; })('
-        );
-        
-        // Patch function-style Field calls
-        patchedCode = patchedCode.replace(
-          /(\w+)\s*=\s*Field\s*\(/g,
-          '$1 = (function() { ' +
-          'try { return Field(' 
-        );
-        
-        // Close the function-style patches
-        patchedCode = patchedCode.replace(
-          /Field\s*\(([^)]+)\);/g,
-          (match, args) => {
-            return `Field(${args}); } catch (e) { ` +
-              `if (e.message && (e.message.includes('invalid field') || e.message.includes('Cannot set properties'))) { ` +
-              `console.warn('Field error in assignment:', e.message); ` +
-              `return { order: ${args} || 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n, ` +
-              `p: ${args} || 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n, ` +
-              `one: 1n, zero: 0n, ` +
-              `add: function(a,b) { return (a+b) % this.order; }, ` +
-              `sub: function(a,b) { return (a-b+this.order) % this.order; }, ` +
-              `mul: function(a,b) { return (a*b) % this.order; }, ` +
-              `div: function(a,b) { return this.mul(a, this.inv(b)); }, ` +
-              `inv: function(a) { return this.pow(a, this.order - 2n); }, ` +
-              `pow: function(base, exp) { ` +
-              `let result = 1n; base = base % this.order; ` +
-              `while (exp > 0n) { ` +
-              `if (exp % 2n === 1n) result = (result * base) % this.order; ` +
-              `exp = exp / 2n; base = (base * base) % this.order; ` +
-              `} return result; } ` +
-              `}; } else throw e; } })();`
-          }
-        );
-        
-        return {
-          code: patchedCode,
-          map: null
-        };
-      }
-      return null;
-    }
-  };
-};
-
 export default defineConfig({
   plugins: [
     react({
@@ -141,8 +30,35 @@ export default defineConfig({
     EnvironmentPlugin("all", { prefix: "CANISTER_" }),
     EnvironmentPlugin("all", { prefix: "DFX_" }),
     EnvironmentPlugin("all", { prefix: "VITE_" }),
-    // Plugin to fix elliptic curve field errors
-    ellipticCurvePatchPlugin(),
+    // Custom plugin to handle ICP package resolution
+    {
+      name: 'icp-package-resolver',
+      enforce: 'pre',
+      resolveId(id) {
+        // Handle ICP package imports during development
+        if (id.startsWith('@dfinity/')) {
+          if (isDev) {
+            // In development, redirect to our polyfills
+            return resolve(__dirname, 'src/utils/icpPolyfill.js');
+          } else {
+            // In production, mark as external
+            return { id, external: true };
+          }
+        }
+        
+        // Handle canister integration service during development
+        if (isDev && id.endsWith('canisterIntegration.js')) {
+          return resolve(__dirname, 'src/services/canisterIntegration.dev.js');
+        }
+        
+        // Handle API service during development
+        if (isDev && id.endsWith('api.js')) {
+          return resolve(__dirname, 'src/services/api.dev.js');
+        }
+        
+        return null;
+      }
+    },
     // NUCLEAR BigInt elimination - apply to ALL files including dependencies
     {
       name: 'ultimate-bigint-elimination',
@@ -229,13 +145,20 @@ export default defineConfig({
   },
   optimizeDeps: {
     // Exclude heavy AI dependencies from pre-bundling to save CPU
-    exclude: ['@xenova/transformers', 'onnxruntime-web', 'tesseract.js', 'nsfwjs'],
+    exclude: [
+      '@xenova/transformers', 
+      'onnxruntime-web', 
+      'tesseract.js', 
+      'nsfwjs',
+      // Exclude ICP packages to avoid resolution issues during development
+      '@dfinity/identity',
+      '@dfinity/agent',
+      '@dfinity/auth-client',
+      '@dfinity/candid',
+      '@dfinity/principal'
+    ],
     include: [
       // Critical dependencies for optimization with BigInt fixes
-      '@dfinity/agent',
-      '@dfinity/auth-client', 
-      '@dfinity/candid',
-      '@dfinity/principal',
       ...(isProduction ? [] : [
         'react',
         'react-dom',
@@ -295,13 +218,21 @@ export default defineConfig({
           }
         }
       ],
-      // LIGHTWEIGHT: Only externalize the heaviest AI libraries to reduce build load
-      external: isProduction ? [
-        // Only the most memory-intensive AI libraries
-        '@xenova/transformers',
-        'onnxruntime-web',
-        '@noble/curves/bls12-381'
-      ] : [],
+      // Always externalize ICP packages to avoid resolution issues
+      external: [
+        // ICP packages
+        '@dfinity/identity',
+        '@dfinity/agent',
+        '@dfinity/auth-client',
+        '@dfinity/candid',
+        '@dfinity/principal',
+        // AI libraries (only in production)
+        ...(isProduction ? [
+          '@xenova/transformers',
+          'onnxruntime-web',
+          '@noble/curves/bls12-381'
+        ] : [])
+      ],
       output: {
         // Remove globals configuration - using import maps instead
         // Import maps in HTML handle module resolution automatically
@@ -339,7 +270,11 @@ export default defineConfig({
           rewrite: (path) => path.replace(/^\/api/, "/api"),
         },
       }
-    })
+    }),
+    // Handle ICP package imports during development
+    fs: {
+      allow: ['..']
+    }
   },
   define: {
     // Global definitions for environment
@@ -376,7 +311,13 @@ export default defineConfig({
       util: 'util',
       process: 'process/browser',
       // BigInt replacement
-      'bigint': resolve(__dirname, 'src/bigint-replacement.js')
+      'bigint': resolve(__dirname, 'src/bigint-replacement.js'),
+      // ICP package aliases to prevent resolution issues
+      '@dfinity/identity': '@dfinity/identity',
+      '@dfinity/agent': '@dfinity/agent',
+      '@dfinity/auth-client': '@dfinity/auth-client',
+      '@dfinity/candid': '@dfinity/candid',
+      '@dfinity/principal': '@dfinity/principal'
     },
     // Fix polyfill resolution issues
     dedupe: ['globalThis', 'core-js']

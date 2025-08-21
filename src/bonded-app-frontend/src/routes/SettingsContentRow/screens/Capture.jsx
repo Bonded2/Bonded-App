@@ -503,3 +503,4 @@ export const Capture = () => {
     </div>
   );
 };
+export default Capture;

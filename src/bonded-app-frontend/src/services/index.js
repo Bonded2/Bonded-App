@@ -13,7 +13,7 @@ export { default as canisterIntegrationService } from './canisterIntegration.js'
 export { default as canisterStorage } from './canisterStorage.js';
 export { default as emailService } from './emailService.js';
 export { default as evidenceProcessor } from './evidenceProcessor.js';
-export { default as highAccuracyAI } from './highAccuracyAI.js';
+// export { default as highAccuracyAI } from './highAccuracyAI.js'; // Removed to prevent immediate loading
 export { default as icpNetworkHelper } from './icpNetworkHelper.js';
 export { default as icpUserService } from './icpUserService.js';
 export { mediaAccessService } from './mediaAccess.js';
@@ -42,6 +42,12 @@ export {
 
 // Re-export crypto services
 export { EncryptionService, encryptionService } from '../crypto/encryption.js';
+
+// Lazy loading for heavy AI services to prevent immediate loading
+export const getHighAccuracyAI = async () => {
+  const { default: HighAccuracyAI } = await import('./highAccuracyAI.js');
+  return new HighAccuracyAI();
+};
 
 // Re-export instances from their respective modules
 // timelineService already exported above 

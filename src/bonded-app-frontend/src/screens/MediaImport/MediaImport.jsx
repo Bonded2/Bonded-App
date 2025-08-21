@@ -540,3 +540,4 @@ export const MediaImport = () => {
     </div>
   );
 }; 
+export default MediaImport;

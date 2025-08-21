@@ -111,24 +111,34 @@ class AutomatedPhotoLibraryService {
   }
 
   /**
-   * Initialize AI services for photo filtering
+   * Initialize AI services for photo analysis
    */
   async initializeAIServices() {
     try {
-      // Initialize NSFW detection
-      if (this.settings.excludeNSFW) {
-        this.nsfwService = await getNSFWDetectionService();
-        await this.nsfwService.loadModel();
+      console.log('🤖 Initializing AI services...');
+      
+      // Initialize text classification service
+      if (this.textClassificationService) {
+        await this.textClassificationService.initialize();
       }
       
-      // Initialize text classification (for photo OCR text)
-      this.textService = await getTextClassificationService();
-      await this.textService.loadModel();
+      // Initialize NSFW detection service
+      if (this.nsfwDetectionService) {
+        await this.nsfwDetectionService.initialize();
+      }
       
-      console.log('🤖 AI services initialized for photo filtering');
+      // Initialize face detection service
+      if (this.faceDetectionService) {
+        await this.faceDetectionService.initialize();
+      }
+      
+      console.log('✅ AI services initialized successfully');
+      return true;
+      
     } catch (error) {
-      console.warn('⚠️ AI services initialization failed:', error);
-      // Continue without AI - fallback to basic filtering
+      console.warn('⚠️ AI services initialization failed, continuing without AI features:', error);
+      // Continue without AI features - the service can still function
+      return false;
     }
   }
 
@@ -136,24 +146,29 @@ class AutomatedPhotoLibraryService {
    * Initialize the best access method for current platform
    */
   async initializeAccessMethod() {
-    // Try File System Access API first (Chrome/Edge on desktop)
-    if (this.platform === 'desktop' && 'showDirectoryPicker' in window) {
-      this.accessMethod = 'file_system_access';
-      console.log('📁 Using File System Access API');
-      return;
+    try {
+      // Try File System Access API first (Chrome/Edge on desktop)
+      if (this.platform === 'desktop' && 'showDirectoryPicker' in window) {
+        this.accessMethod = 'file_system_access';
+        console.log('📁 Using File System Access API');
+        return;
+      }
+      
+      // Try Web Share Target API (PWA on mobile)
+      if ('serviceWorker' in navigator && this.platform !== 'desktop') {
+        this.accessMethod = 'web_share_target';
+        console.log('📱 Using Web Share Target API');
+        await this.setupWebShareTarget();
+        return;
+      }
+      
+      // Fallback to file input method
+      this.accessMethod = 'file_input_fallback';
+      console.log('⚡ Using file input fallback method');
+    } catch (error) {
+      console.warn('⚠️ Failed to initialize access method, using fallback:', error);
+      this.accessMethod = 'file_input_fallback';
     }
-    
-    // Try Web Share Target API (PWA on mobile)
-    if ('serviceWorker' in navigator && this.platform !== 'desktop') {
-      this.accessMethod = 'web_share_target';
-      console.log('📱 Using Web Share Target API');
-      await this.setupWebShareTarget();
-      return;
-    }
-    
-    // Fallback to file input method
-    this.accessMethod = 'file_input_fallback';
-    console.log('⚡ Using file input fallback method');
   }
 
   /**
@@ -306,11 +321,45 @@ class AutomatedPhotoLibraryService {
       return { success: false, message: 'Scan already in progress' };
     }
 
+    // Ensure service is properly initialized
+    if (!this.isInitialized) {
+      console.log('🔄 Service not initialized, ensuring initialization...');
+      await this.ensureInitialized();
+    }
+
+    // Check if we can actually perform a scan
+    const scanCapability = await this.canPerformScan();
+    if (!scanCapability.canScan) {
+      console.log(`⚠️ Cannot perform scan: ${scanCapability.reason}`);
+      return {
+        success: false,
+        error: scanCapability.reason,
+        alternative: scanCapability.alternative,
+        instructions: scanCapability.instructions,
+        totalScanned: 0,
+        processed: 0,
+        evidence: 0
+      };
+    }
+
+    // Ensure access method is initialized
+    if (!this.accessMethod) {
+      console.log('🔄 Initializing access method...');
+      await this.initializeAccessMethod();
+      
+      // If still no access method, try fallback
+      if (!this.accessMethod) {
+        console.log('🔄 Trying fallback access method...');
+        await this.handleNoAccessMethod();
+      }
+    }
+
     this.scanInProgress = true;
     const scanStartTime = Date.now();
 
     try {
       console.log('📸 Starting automated photo scan...');
+      console.log(`📸 Using access method: ${this.accessMethod}`);
       
       // Get photos based on access method
       let photos = [];
@@ -326,7 +375,7 @@ class AutomatedPhotoLibraryService {
           photos = await this.scanViaFileInput(options);
           break;
         default:
-          throw new Error('No valid access method available');
+          throw new Error(`No valid access method available. Current method: ${this.accessMethod}`);
       }
 
       // Process photos through AI pipeline
@@ -353,13 +402,20 @@ class AutomatedPhotoLibraryService {
       
     } catch (error) {
       console.error('❌ Automated photo scan failed:', error);
-      return {
-        success: false,
-        error: error.message,
-        totalScanned: 0,
-        processed: 0,
-        evidence: 0
-      };
+      
+      // Try to provide a graceful response
+      try {
+        return await this.provideGracefulResponse(error);
+      } catch (fallbackError) {
+        console.error('❌ Graceful response also failed:', fallbackError);
+        return {
+          success: false,
+          error: error.message,
+          totalScanned: 0,
+          processed: 0,
+          evidence: 0
+        };
+      }
     } finally {
       this.scanInProgress = false;
     }
@@ -369,19 +425,28 @@ class AutomatedPhotoLibraryService {
    * Scan photos using File System Access API
    */
   async scanViaFileSystemAccess(options) {
-    if (!this.directoryHandle) {
-      const accessGranted = await this.requestDirectoryAccess();
-      if (!accessGranted) {
-        throw new Error('Directory access required for automated scanning');
-      }
+    if (this.accessMethod !== 'file_system_access') {
+      throw new Error('File System Access API not supported on this platform');
     }
 
-    const photos = [];
-    const cutoffDate = new Date(Date.now() - (this.settings.daysScanRange * 24 * 60 * 60 * 1000));
-    
     try {
+      if (!this.directoryHandle) {
+        const accessGranted = await this.requestDirectoryAccess();
+        if (!accessGranted) {
+          throw new Error('Directory access required for automated scanning');
+        }
+      }
+
+      const photos = [];
+      const cutoffDate = new Date(Date.now() - (this.settings.daysScanRange * 24 * 60 * 60 * 1000));
+      
       // Recursively scan directory
       await this.scanDirectoryRecursive(this.directoryHandle, photos, cutoffDate, 0, 3); // Max 3 levels deep
+      
+      if (photos.length === 0) {
+        console.log('📸 No photos found in accessible directory');
+        return [];
+      }
       
       return photos;
     } catch (error) {
@@ -860,6 +925,37 @@ class AutomatedPhotoLibraryService {
   }
 
   /**
+   * Handle case when no access method is available
+   */
+  async handleNoAccessMethod() {
+    console.log('⚠️ No photo access method available, providing fallback options');
+    
+    // Try to detect what's available
+    const availableMethods = [];
+    
+    if ('showDirectoryPicker' in window) {
+      availableMethods.push('file_system_access');
+    }
+    
+    if ('serviceWorker' in navigator) {
+      availableMethods.push('web_share_target');
+    }
+    
+    availableMethods.push('file_input_fallback');
+    
+    console.log(`📸 Available methods: ${availableMethods.join(', ')}`);
+    
+    // Set the first available method as fallback
+    if (availableMethods.length > 0) {
+      this.accessMethod = availableMethods[0];
+      console.log(`📸 Using fallback method: ${this.accessMethod}`);
+      return true;
+    }
+    
+    return false;
+  }
+
+  /**
    * Load settings from storage
    */
   async loadSettings() {
@@ -1014,6 +1110,418 @@ class AutomatedPhotoLibraryService {
       console.log('🧹 Photo library cache cleared');
     } catch (error) {
       console.error('❌ Failed to clear cache:', error);
+    }
+  }
+
+  /**
+   * Provide graceful response when photo scanning fails
+   */
+  async provideGracefulResponse(error) {
+    console.log('🔄 Providing graceful response for failed scan');
+    
+    const platformInfo = this.getPlatformInfo();
+    
+    // Return a user-friendly response with platform info
+    return {
+      success: false,
+      error: 'Photo scanning is not available on this device/browser',
+      suggestion: 'Please use the manual upload feature instead',
+      platformInfo: platformInfo,
+      totalScanned: 0,
+      processed: 0,
+      evidence: 0,
+      fallbackAvailable: true
+    };
+  }
+
+  /**
+   * Check if service is properly initialized
+   */
+  isInitialized() {
+    return this.accessMethod !== null && this.platform !== null;
+  }
+
+  /**
+   * Ensure service is initialized
+   */
+  async ensureInitialized() {
+    if (!this.isInitialized) {
+      console.log('🔄 Service not initialized, initializing...');
+      await this.init();
+    }
+    return this.isInitialized;
+  }
+
+  /**
+   * Check if current platform supports photo scanning
+   */
+  isPlatformSupported() {
+    // Check if any access method is available
+    const hasFileSystemAccess = 'showDirectoryPicker' in window;
+    const hasServiceWorker = 'serviceWorker' in navigator;
+    const hasFileInput = true; // File input is always available
+    
+    return hasFileSystemAccess || hasServiceWorker || hasFileInput;
+  }
+
+  /**
+   * Get platform compatibility info
+   */
+  getPlatformInfo() {
+    return {
+      platform: this.platform,
+      supported: this.isPlatformSupported(),
+      accessMethods: {
+        fileSystemAccess: 'showDirectoryPicker' in window,
+        serviceWorker: 'serviceWorker' in navigator,
+        fileInput: true
+      },
+      currentMethod: this.accessMethod
+    };
+  }
+
+  /**
+   * Get manual upload instructions
+   */
+  getManualUploadInstructions() {
+    const platformInfo = this.getPlatformInfo();
+    
+    let instructions = {
+      title: 'Manual Photo Upload',
+      description: 'Automated photo scanning is not available on your device. Please use manual upload instead.',
+      steps: [
+        'Click the "Upload Photos" button',
+        'Select photos from your device',
+        'Photos will be processed automatically'
+      ]
+    };
+    
+    if (platformInfo.platform === 'mobile') {
+      instructions.steps.push('On mobile, you can also use the camera to take new photos');
+    }
+    
+    if (platformInfo.accessMethods.fileInput) {
+      instructions.steps.push('File selection is always available as a fallback');
+    }
+    
+    return {
+      ...instructions,
+      platformInfo: platformInfo,
+      automatedScanAvailable: false
+    };
+  }
+
+  /**
+   * Check if service can perform photo scanning
+   */
+  async canPerformScan() {
+    // Ensure service is initialized
+    if (!this.isInitialized) {
+      await this.ensureInitialized();
+    }
+    
+    // Check platform support
+    if (!this.isPlatformSupported()) {
+      return {
+        canScan: false,
+        reason: 'Platform not supported',
+        alternative: 'Manual upload available',
+        instructions: this.getManualUploadInstructions()
+      };
+    }
+    
+    // Check access method
+    if (!this.accessMethod) {
+      return {
+        canScan: false,
+        reason: 'No access method available',
+        alternative: 'Manual upload available',
+        instructions: this.getManualUploadInstructions()
+      };
+    }
+    
+    // Check if we have the necessary permissions
+    if (this.accessMethod === 'file_system_access' && !this.directoryHandle) {
+      return {
+        canScan: false,
+        reason: 'Directory access not granted',
+        alternative: 'Request directory access or use manual upload',
+        instructions: this.getManualUploadInstructions()
+      };
+    }
+    
+    return {
+      canScan: true,
+      method: this.accessMethod,
+      platform: this.platform
+    };
+  }
+
+  /**
+   * Request necessary permissions for photo scanning
+   */
+  async requestPermissions() {
+    const permissions = {
+      fileSystemAccess: false,
+      serviceWorker: false,
+      camera: false
+    };
+    
+    try {
+      // Try to request file system access
+      if ('showDirectoryPicker' in window) {
+        try {
+          const handle = await window.showDirectoryPicker({
+            mode: 'read',
+            startIn: 'pictures'
+          });
+          this.directoryHandle = handle;
+          permissions.fileSystemAccess = true;
+          console.log('✅ File system access granted');
+        } catch (error) {
+          console.log('❌ File system access denied:', error.name);
+        }
+      }
+      
+      // Check service worker availability
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          permissions.serviceWorker = true;
+          console.log('✅ Service worker available');
+        } catch (error) {
+          console.log('❌ Service worker not available:', error);
+        }
+      }
+      
+      // Check camera access
+      if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach(track => track.stop());
+          permissions.camera = true;
+          console.log('✅ Camera access granted');
+        } catch (error) {
+          console.log('❌ Camera access denied:', error.name);
+        }
+      }
+      
+      return {
+        success: Object.values(permissions).some(p => p),
+        permissions: permissions,
+        nextSteps: this.getPermissionNextSteps(permissions)
+      };
+      
+    } catch (error) {
+      console.error('❌ Permission request failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        permissions: permissions
+      };
+    }
+  }
+
+  /**
+   * Get next steps based on granted permissions
+   */
+  getPermissionNextSteps(permissions) {
+    const steps = [];
+    
+    if (permissions.fileSystemAccess) {
+      steps.push('You can now use automated photo scanning');
+    } else {
+      steps.push('File system access not available - use manual upload instead');
+    }
+    
+    if (permissions.serviceWorker) {
+      steps.push('Background processing is available');
+    }
+    
+    if (permissions.camera) {
+      steps.push('You can take new photos directly in the app');
+    }
+    
+    return steps;
+  }
+
+  /**
+   * Get comprehensive service status for debugging
+   */
+  async getStatusReport() {
+    const status = {
+      timestamp: new Date().toISOString(),
+      service: {
+        initialized: this.isInitialized,
+        scanInProgress: this.scanInProgress,
+        platform: this.platform,
+        accessMethod: this.accessMethod
+      },
+      platform: this.getPlatformInfo(),
+      permissions: await this.getPermissionStatus(),
+      capabilities: await this.canPerformScan(),
+      aiServices: {
+        textClassification: this.textClassificationService ? this.textClassificationService.isInitialized : false,
+        nsfwDetection: this.nsfwDetectionService ? this.nsfwDetectionService.isInitialized : false,
+        faceDetection: this.faceDetectionService ? this.faceDetectionService.isInitialized : false
+      },
+      settings: this.settings,
+      errors: this.lastError
+    };
+    
+    return status;
+  }
+
+  /**
+   * Get current permission status
+   */
+  async getPermissionStatus() {
+    const status = {
+      fileSystemAccess: false,
+      serviceWorker: false,
+      camera: false,
+      notifications: false
+    };
+    
+    try {
+      // Check file system access
+      if ('showDirectoryPicker' in window) {
+        status.fileSystemAccess = true;
+      }
+      
+      // Check service worker
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          status.serviceWorker = true;
+        } catch (error) {
+          status.serviceWorker = false;
+        }
+      }
+      
+      // Check camera
+      if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+        status.camera = true;
+      }
+      
+      // Check notifications
+      if ('Notification' in window) {
+        status.notifications = true;
+      }
+      
+    } catch (error) {
+      console.warn('⚠️ Error checking permissions:', error);
+    }
+    
+    return status;
+  }
+
+  /**
+   * Retry photo scan with different access method
+   */
+  async retryWithDifferentMethod() {
+    console.log('🔄 Retrying with different access method...');
+    
+    // Get available methods
+    const availableMethods = [];
+    if ('showDirectoryPicker' in window) availableMethods.push('file_system_access');
+    if ('serviceWorker' in navigator) availableMethods.push('web_share_target');
+    availableMethods.push('file_input_fallback');
+    
+    // Find current method index
+    const currentIndex = availableMethods.indexOf(this.accessMethod);
+    const nextIndex = (currentIndex + 1) % availableMethods.length;
+    const nextMethod = availableMethods[nextIndex];
+    
+    console.log(`🔄 Switching from ${this.accessMethod} to ${nextMethod}`);
+    this.accessMethod = nextMethod;
+    
+    // Try to initialize the new method
+    try {
+      switch (nextMethod) {
+        case 'file_system_access':
+          if (this.directoryHandle) {
+            // Check if we still have permission
+            try {
+              await this.directoryHandle.queryPermission({ mode: 'read' });
+              console.log('✅ Directory access still valid');
+            } catch (error) {
+              console.log('❌ Directory access expired, requesting new access');
+              this.directoryHandle = null;
+              await this.requestDirectoryAccess();
+            }
+          }
+          break;
+          
+        case 'web_share_target':
+          await this.setupWebShareTarget();
+          break;
+          
+        case 'file_input_fallback':
+          console.log('✅ File input fallback ready');
+          break;
+      }
+      
+      return {
+        success: true,
+        newMethod: nextMethod,
+        message: `Switched to ${nextMethod}`
+      };
+      
+    } catch (error) {
+      console.error(`❌ Failed to initialize ${nextMethod}:`, error);
+      return {
+        success: false,
+        error: error.message,
+        newMethod: nextMethod
+      };
+    }
+  }
+
+  /**
+   * Manually trigger photo scan with user interaction
+   */
+  async manualPhotoScan() {
+    console.log('📸 Manual photo scan triggered');
+    
+    try {
+      // Check if we can perform a scan
+      const scanCapability = await this.canPerformScan();
+      if (!scanCapability.canScan) {
+        console.log(`⚠️ Cannot perform scan: ${scanCapability.reason}`);
+        return {
+          success: false,
+          error: scanCapability.reason,
+          alternative: scanCapability.alternative,
+          instructions: scanCapability.instructions
+        };
+      }
+      
+      // If file system access is available but no directory handle, request access
+      if (this.accessMethod === 'file_system_access' && !this.directoryHandle) {
+        console.log('📁 Requesting directory access...');
+        const accessGranted = await this.requestDirectoryAccess();
+        if (!accessGranted) {
+          return {
+            success: false,
+            error: 'Directory access denied',
+            alternative: 'Use manual upload instead',
+            instructions: this.getManualUploadInstructions()
+          };
+        }
+      }
+      
+      // Perform the scan
+      return await this.performAutomatedScan();
+      
+    } catch (error) {
+      console.error('❌ Manual photo scan failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        alternative: 'Use manual upload instead',
+        instructions: this.getManualUploadInstructions()
+      };
     }
   }
 }

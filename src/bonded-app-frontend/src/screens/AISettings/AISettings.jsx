@@ -251,3 +251,5 @@ export const AISettings = () => {
     </div>
   );
 };
+
+export default AISettings;

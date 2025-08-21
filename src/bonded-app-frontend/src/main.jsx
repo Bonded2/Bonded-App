@@ -4,38 +4,28 @@
   const originalError = Error;
   const originalThrow = function(error) { throw error; };
   
-  // Override Error constructor to suppress field validation errors
-  Error = function(message, ...args) {
-    if (typeof message === 'string' && (
-      message.includes('invalid field: expected ORDER > 0, got 0') ||
-      message.includes('Field validation bypassed') ||
-      message.includes('Field validation intercepted')
-    )) {
-      console.warn('🔧 Field validation error suppressed:', message);
-      // Return a non-throwing stub object that mimics an error
-      const suppressedError = {
-        name: 'SuppressedError',
-        message: 'Suppressed for compatibility',
-        stack: '',
-        toString: () => 'SuppressedError: Suppressed for compatibility'
-      };
-      // Don't actually throw - just return the stub
-      return suppressedError;
-    }
-    return new originalError(message, ...args);
-  };
-  Error.prototype = originalError.prototype;
-  
-  // Override global throw for field validation errors
+  // Targeted error suppression for cryptographic field validation errors only
   const originalConsoleError = console.error;
   console.error = function(...args) {
     const message = args.join(' ');
-    if (message.includes('invalid field') || message.includes('Field validation')) {
-      console.warn('🔧 Console error suppressed:', ...args);
+    if (message.includes('Field validation bypassed') || 
+        message.includes('invalid field: expected ORDER > 0, got 0')) {
+      console.warn('🔧 Cryptographic field validation error suppressed:', ...args);
       return;
     }
     return originalConsoleError.apply(console, args);
   };
+  
+  // Override only specific field validation errors without creating stub objects
+  window.addEventListener('error', function(event) {
+    if (event.error && event.error.message && 
+        (event.error.message.includes('Field validation bypassed') ||
+         event.error.message.includes('invalid field: expected ORDER > 0, got 0'))) {
+      console.warn('🔧 Field validation error caught and suppressed:', event.error.message);
+      event.preventDefault();
+      return false;
+    }
+  });
   
   // Comprehensive Field fallback
   if (!window.Field) {

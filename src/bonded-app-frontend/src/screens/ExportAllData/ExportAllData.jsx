@@ -344,3 +344,4 @@ export const ExportAllData = ({ onClose }) => {
     </div>
   );
 }; 
+export default ExportAllData;

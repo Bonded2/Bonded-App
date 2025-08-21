@@ -1,18 +1,13 @@
 /**
- * NSFW Detection Service - UPDATED v2.1
+ * NSFW Detection Service - FIXED v2.2
  * 
- * Privacy-first NSFW content detection using NSFWJS
- * Uses bundled package for better compatibility
+ * Privacy-first NSFW content detection using bundled NSFWJS
+ * Fixed to work without external CDN dependencies
  * Based on: https://github.com/infinitered/nsfwjs
  */
 
 // Global NSFWJS module reference
 let nsfwjs;
-
-// ESM CDN URLs for production (much smaller and faster)
-const NSFWJS_ESM_URL = 'https://cdn.skypack.dev/nsfwjs@4.2.1';
-const NSFWJS_UNPKG_ESM_URL = 'https://unpkg.com/nsfwjs@4.2.1/dist/nsfwjs.esm.js';
-const NSFWJS_JSDELIVR_ESM_URL = 'https://cdn.jsdelivr.net/npm/nsfwjs@4.2.1/+esm';
 
 class NSFWDetectionService {
   constructor() {
@@ -31,7 +26,7 @@ class NSFWDetectionService {
   }
 
   /**
-   * Load NSFWJS library using simplified import strategy
+   * Load NSFWJS library using bundled package only
    */
   async loadNSFWJS() {
     if (nsfwjs) return nsfwjs;
@@ -39,13 +34,14 @@ class NSFWDetectionService {
     console.log('🔄 Loading NSFWJS library...');
 
     try {
-      // Use bundled package directly (most reliable in Vite)
-      const { default: nsfwjsModule } = await import('nsfwjs');
-      nsfwjs = nsfwjsModule || await import('nsfwjs');
-      console.log('✅ NSFWJS loaded successfully');
+      // Use bundled package directly - no external CDN dependencies
+      const nsfwjsModule = await import('nsfwjs');
+      nsfwjs = nsfwjsModule.default || nsfwjsModule;
+      console.log('✅ NSFWJS loaded successfully from bundled package');
       return nsfwjs;
     } catch (error) {
-      console.error('❌ Failed to load NSFWJS:', error);
+      console.warn('⚠️ Failed to load bundled NSFWJS:', error.message);
+      console.log('🔄 Falling back to lightweight NSFW detection...');
       nsfwjs = null;
       return null;
     }
@@ -94,7 +90,7 @@ class NSFWDetectionService {
         try {
           this.model = await loadStrategies[i]();
           const modelType = ['Default MobileNetV2', 'MobileNetV2Mid', 'InceptionV3'][i];
-          const source = this.isProduction ? 'ESM CDN' : 'Bundled';
+          console.log(`✅ NSFW model loaded: ${modelType}`);
           break;
         } catch (strategyError) {
           console.warn(`Strategy ${i + 1} failed:`, strategyError.message);
@@ -182,7 +178,7 @@ class NSFWDetectionService {
           sexy: 0.8
         },
         fallback: false,
-        model: this.isProduction ? 'nsfwjs-esm-cdn' : 'nsfwjs-bundled'
+        model: 'nsfwjs-bundled'
       };
 
     } catch (error) {
@@ -192,24 +188,87 @@ class NSFWDetectionService {
   }
 
   /**
-   * Fallback classification using image analysis
+   * Enhanced fallback classification using multiple detection methods
    */
   async fallbackClassification(imageElement) {
     try {
-      // Basic image analysis fallback
+      const results = await Promise.allSettled([
+        this.analyzeSkinTone(imageElement),
+        this.analyzeImageProperties(imageElement),
+        this.analyzeColorDistribution(imageElement)
+      ]);
+
+      // Combine results from multiple detection methods
+      const skinResult = results[0].status === 'fulfilled' ? results[0].value : null;
+      const propertyResult = results[1].status === 'fulfilled' ? results[1].value : null;
+      const colorResult = results[2].status === 'fulfilled' ? results[2].value : null;
+
+      // Weighted decision based on multiple factors
+      let nsfwScore = 0;
+      let confidence = 0.1;
+      let classification = 'unknown';
+
+      if (skinResult) {
+        nsfwScore += skinResult.nsfwScore * 0.4;
+        confidence = Math.max(confidence, skinResult.confidence);
+      }
+
+      if (propertyResult) {
+        nsfwScore += propertyResult.nsfwScore * 0.3;
+        confidence = Math.max(confidence, propertyResult.confidence);
+      }
+
+      if (colorResult) {
+        nsfwScore += colorResult.nsfwScore * 0.3;
+        confidence = Math.max(confidence, colorResult.confidence);
+      }
+
+      const isNSFW = nsfwScore > 0.6; // Conservative threshold
+
+      return {
+        isNSFW,
+        confidence: Math.min(confidence, 0.9), // Cap confidence for fallback
+        classification: isNSFW ? 'fallback_detected' : 'fallback_safe',
+        fallback: true,
+        method: 'multi_method_analysis',
+        model: 'fallback',
+        details: {
+          skinAnalysis: skinResult,
+          propertyAnalysis: propertyResult,
+          colorAnalysis: colorResult,
+          combinedScore: nsfwScore
+        }
+      };
+      
+    } catch (error) {
+      console.error('Enhanced fallback classification error:', error);
+      return {
+        isNSFW: false, // Default to safe when analysis fails
+        confidence: 0.1,
+        classification: 'analysis_failed',
+        fallback: true,
+        error: error.message,
+        model: 'fallback'
+      };
+    }
+  }
+
+  /**
+   * Skin tone analysis for NSFW detection
+   */
+  async analyzeSkinTone(imageElement) {
+    try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       
-      canvas.width = imageElement.width || imageElement.videoWidth || 224;
-      canvas.height = imageElement.height || imageElement.videoHeight || 224;
+      canvas.width = Math.min(imageElement.width || imageElement.naturalWidth || 224, 224);
+      canvas.height = Math.min(imageElement.height || imageElement.naturalHeight || 224, 224);
       
       ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
       
-      // Analyze image properties (very basic)
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       
-      // Calculate average skin tone presence (rough heuristic)
       let skinPixels = 0;
       let totalPixels = data.length / 4;
       
@@ -218,39 +277,117 @@ class NSFWDetectionService {
         const g = data[i + 1];
         const b = data[i + 2];
         
-        // Basic skin tone detection (very approximate)
-        if (r > 95 && g > 40 && b > 20 && 
-            r > g && r > b && 
-            Math.abs(r - g) > 15) {
+        // Enhanced skin tone detection
+        if (this.isSkinTone(r, g, b)) {
           skinPixels++;
         }
       }
       
       const skinRatio = skinPixels / totalPixels;
-      
-      // Very conservative classification - only flag very obvious cases
-      const isNSFW = skinRatio > 0.7; // Very high skin tone ratio
+      const nsfwScore = Math.min(skinRatio * 1.2, 1.0); // Boost score slightly
       
       return {
-        isNSFW,
+        nsfwScore,
         confidence: skinRatio,
-        classification: isNSFW ? 'high_skin_tone' : 'normal',
-        fallback: true,
-        method: 'skin_tone_analysis',
-        model: 'fallback'
+        skinRatio,
+        totalPixels
       };
       
     } catch (error) {
-      console.error('Fallback classification error:', error);
-      // Default to safe when analysis fails
+      console.error('Skin tone analysis error:', error);
+      return { nsfwScore: 0, confidence: 0.1 };
+    }
+  }
+
+  /**
+   * Enhanced skin tone detection
+   */
+  isSkinTone(r, g, b) {
+    // Multiple skin tone detection algorithms
+    const algorithm1 = r > 95 && g > 40 && b > 20 && r > g && r > b && Math.abs(r - g) > 15;
+    const algorithm2 = r > 80 && g > 30 && b > 15 && r > g * 1.2 && r > b * 1.2;
+    const algorithm3 = r > 100 && g > 50 && b > 30 && r > g + 20 && r > b + 20;
+    
+    return algorithm1 || algorithm2 || algorithm3;
+  }
+
+  /**
+   * Image properties analysis
+   */
+  async analyzeImageProperties(imageElement) {
+    try {
+      const width = imageElement.width || imageElement.naturalWidth;
+      const height = imageElement.height || imageElement.naturalHeight;
+      
+      // Analyze aspect ratio and size
+      const aspectRatio = width / height;
+      const isPortrait = aspectRatio < 0.8;
+      const isLandscape = aspectRatio > 1.2;
+      const isSquare = Math.abs(aspectRatio - 1) < 0.1;
+      
+      // Portrait images might be more likely to contain NSFW content
+      let nsfwScore = 0;
+      if (isPortrait) nsfwScore += 0.2;
+      if (isSquare) nsfwScore += 0.1;
+      
       return {
-        isNSFW: false,
-        confidence: 0.1,
-        classification: 'analysis_failed',
-        fallback: true,
-        error: error.message,
-        model: 'fallback'
+        nsfwScore: Math.min(nsfwScore, 0.5),
+        confidence: 0.3,
+        aspectRatio,
+        dimensions: { width, height }
       };
+      
+    } catch (error) {
+      console.error('Image properties analysis error:', error);
+      return { nsfwScore: 0, confidence: 0.1 };
+    }
+  }
+
+  /**
+   * Color distribution analysis
+   */
+  async analyzeColorDistribution(imageElement) {
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = Math.min(imageElement.width || imageElement.naturalWidth || 100, 100);
+      canvas.height = Math.min(imageElement.height || imageElement.naturalHeight || 100, 100);
+      
+      ctx.drawImage(imageElement, 0, 0, canvas.width, canvas.height);
+      
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      let redDominance = 0;
+      let warmColors = 0;
+      let totalPixels = data.length / 4;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        
+        if (r > g && r > b) redDominance++;
+        if (r > 150 && g > 100 && b < 100) warmColors++; // Warm/skin-like colors
+      }
+      
+      const redRatio = redDominance / totalPixels;
+      const warmRatio = warmColors / totalPixels;
+      
+      // Warm colors and red dominance might indicate skin
+      const nsfwScore = (redRatio * 0.4) + (warmRatio * 0.3);
+      
+      return {
+        nsfwScore: Math.min(nsfwScore, 0.6),
+        confidence: 0.4,
+        redRatio,
+        warmRatio
+      };
+      
+    } catch (error) {
+      console.error('Color distribution analysis error:', error);
+      return { nsfwScore: 0, confidence: 0.1 };
     }
   }
 
@@ -281,7 +418,9 @@ class NSFWDetectionService {
       isLoading: this.isLoading,
       error: this.loadError,
       usingFallback: this.model === 'fallback',
-      modelType: this.model === 'fallback' ? 'fallback' : this.isProduction ? 'nsfwjs-esm-cdn' : 'nsfwjs-bundled'
+      modelType: this.model === 'fallback' ? 'fallback' : 'nsfwjs-bundled',
+      fallbackMethods: ['skin_tone', 'image_properties', 'color_distribution'],
+      version: '2.2-fixed'
     };
   }
 
