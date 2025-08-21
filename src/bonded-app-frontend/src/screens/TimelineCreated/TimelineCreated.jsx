@@ -682,3 +682,5 @@ export const TimelineCreated = () => {
     </div>
   );
 };
+
+export default TimelineCreated;

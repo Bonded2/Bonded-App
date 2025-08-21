@@ -322,6 +322,30 @@ class APIService {
     const matches = hexString.match(/.{1,2}/g) || [];
     return new Uint8Array(matches.map(byte => parseInt(byte, 16)));
   }
+
+  /**
+   * Get the current user's principal
+   */
+  getPrincipal() {
+    if (this.identity) {
+      return this.identity.getPrincipal();
+    }
+    return null;
+  }
+
+  /**
+   * Check if user is authenticated
+   */
+  isAuthenticated() {
+    return this.authClient ? this.authClient.isAuthenticated() : false;
+  }
+
+  /**
+   * Get the current identity
+   */
+  getIdentity() {
+    return this.identity;
+  }
 }
 
 // Export singleton instance

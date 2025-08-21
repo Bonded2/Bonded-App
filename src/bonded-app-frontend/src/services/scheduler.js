@@ -25,15 +25,30 @@ class SchedulerService {
    */
   async init() {
     try {
+      console.log('🔄 Initializing scheduler service...');
+      
       // Load settings from storage
       await this.loadSettings();
+      
       // Schedule next upload if enabled
       if (this.settings.enabled) {
         this.scheduleNextUpload();
+        console.log('✅ Scheduler initialized and next upload scheduled');
+      } else {
+        console.log('ℹ️ Scheduler disabled - no uploads scheduled');
       }
+      
       // Register for periodic background sync if available
       await this.registerPeriodicSync();
+      
+      return true;
     } catch (error) {
+      console.warn('⚠️ Scheduler initialization failed:', error.message);
+      console.log('🔄 Scheduler will use default settings and continue...');
+      
+      // Use default settings and continue
+      this.settings.enabled = false; // Disable to prevent errors
+      return false;
     }
   }
   /**
@@ -79,20 +94,24 @@ class SchedulerService {
       let photoScanResult = { success: true, evidence: 0 };
       
       try {
-        // Check if photo scan is due
-        if (automatedPhotoLibrary.isDailyAutomatedScanDue()) {
-          console.log('📸 Performing automated photo library scan...');
-          photoScanResult = await automatedPhotoLibrary.performAutomatedScan();
-          
-          if (photoScanResult.success && photoScanResult.evidence > 0) {
-            console.log(`✅ Photo scan completed: ${photoScanResult.evidence} evidence photos collected`);
-          } else if (photoScanResult.success && photoScanResult.evidence === 0) {
-            console.log('📸 Photo scan completed: No new evidence photos found');
+        // Check if photo scan is due and if automatedPhotoLibrary is available
+        if (automatedPhotoLibrary && typeof automatedPhotoLibrary.isDailyAutomatedScanDue === 'function') {
+          if (automatedPhotoLibrary.isDailyAutomatedScanDue()) {
+            console.log('📸 Performing automated photo library scan...');
+            photoScanResult = await automatedPhotoLibrary.performAutomatedScan();
+            
+            if (photoScanResult.success && photoScanResult.evidence > 0) {
+              console.log(`✅ Photo scan completed: ${photoScanResult.evidence} evidence photos collected`);
+            } else if (photoScanResult.success && photoScanResult.evidence === 0) {
+              console.log('📸 Photo scan completed: No new evidence photos found');
+            } else {
+              console.warn('⚠️ Photo scan failed:', photoScanResult.error);
+            }
           } else {
-            console.warn('⚠️ Photo scan failed:', photoScanResult.error);
+            console.log('📸 Photo scan not due - skipping');
           }
         } else {
-          console.log('📸 Photo scan not due - skipping');
+          console.warn('⚠️ Automated photo library service not available - skipping photo scan');
         }
       } catch (photoError) {
         console.error('❌ Photo scan error:', photoError);
@@ -101,7 +120,18 @@ class SchedulerService {
       
       // STEP 2: Upload pending timeline entries to ICP canister
       console.log('☁️ Uploading evidence to secure storage...');
-      const uploadResult = await timelineService.uploadPendingEntries();
+      let uploadResult = { success: false, uploaded: 0, failed: 0, error: 'Timeline service not available' };
+      
+      try {
+        if (timelineService && typeof timelineService.uploadPendingEntries === 'function') {
+          uploadResult = await timelineService.uploadPendingEntries();
+        } else {
+          console.warn('⚠️ Timeline service not available - skipping upload');
+        }
+      } catch (uploadError) {
+        console.error('❌ Upload error:', uploadError);
+        uploadResult = { success: false, uploaded: 0, failed: 0, error: uploadError.message };
+      }
       
       // Combine results
       const combinedResult = {
@@ -113,31 +143,48 @@ class SchedulerService {
       };
       
       if (combinedResult.success) {
-        // Show success notification
-        await this.showSuccessNotification(combinedResult);
+        console.log('✅ Scheduled evidence processing completed successfully');
+        console.log(`📊 Results: ${combinedResult.uploaded} uploaded, ${combinedResult.failed} failed`);
         
-        // Store last successful upload time
+        // Update last upload time
         localStorage.setItem('bonded-last-upload', Date.now().toString());
+        
+        // Schedule next upload
+        this.scheduleNextUpload();
       } else {
-        // Queue for retry
-        await this.scheduleRetry(combinedResult);
-        // Show error notification
-        await this.showErrorNotification(combinedResult);
+        console.error('❌ Scheduled evidence processing failed:', combinedResult.error);
+        
+        // Retry logic
+        if (this.settings.retryInterval && this.settings.maxRetries > 0) {
+          console.log(`🔄 Scheduling retry in ${this.settings.retryInterval / 60000} minutes...`);
+          setTimeout(async () => {
+            try {
+              if (timelineService && typeof timelineService.uploadPendingEntries === 'function') {
+                const retryResult = await timelineService.uploadPendingEntries();
+                if (retryResult.success) {
+                  console.log('✅ Retry successful');
+                  this.scheduleNextUpload();
+                } else {
+                  console.warn('⚠️ Retry failed:', retryResult.error);
+                }
+              }
+            } catch (retryError) {
+              console.error('❌ Retry error:', retryError);
+            }
+          }, this.settings.retryInterval);
+        }
       }
       
       return combinedResult;
     } catch (error) {
-      const errorResult = { 
-        success: false, 
-        error: error.message, 
-        uploaded: 0, 
+      console.error('❌ Scheduled evidence processing error:', error);
+      return {
+        success: false,
+        error: error.message,
+        uploaded: 0,
         failed: 0,
-        photoScan: { success: false, evidence: 0 }
+        photoScan: { success: false, error: error.message, evidence: 0 }
       };
-      
-      // Schedule retry
-      await this.scheduleRetry(errorResult);
-      return errorResult;
     }
   }
   /**
@@ -429,25 +476,59 @@ class SchedulerService {
    */
   async triggerManualUpload() {
     try {
+      if (!timelineService || typeof timelineService.uploadPendingEntries !== 'function') {
+        throw new Error('Timeline service not available');
+      }
+      
       const result = await timelineService.uploadPendingEntries();
       
       if (result.success) {
-        await this.showSuccessNotification(result);
+        console.log('✅ Manual upload successful:', result);
         localStorage.setItem('bonded-last-upload', Date.now().toString());
       } else {
-        await this.showErrorNotification(result);
+        console.warn('⚠️ Manual upload failed:', result.error);
       }
       
       return result;
     } catch (error) {
+      console.error('❌ Manual upload error:', error);
       const errorResult = { 
         success: false, 
         error: error.message, 
         uploaded: 0, 
         failed: 0 
       };
-      await this.showErrorNotification(errorResult);
       return errorResult;
+    }
+  }
+
+  /**
+   * Simple fallback daily processing method
+   * @returns {Promise<Object>} Processing result
+   */
+  async performSimpleDailyProcessing() {
+    try {
+      console.log('🔄 Performing simple daily processing...');
+      
+      // Just try to upload any pending entries
+      let result = { success: false, uploaded: 0, failed: 0, error: 'No processing performed' };
+      
+      if (timelineService && typeof timelineService.uploadPendingEntries === 'function') {
+        result = await timelineService.uploadPendingEntries();
+        console.log('✅ Simple daily processing completed:', result);
+      } else {
+        console.warn('⚠️ Timeline service not available for simple processing');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Simple daily processing error:', error);
+      return {
+        success: false,
+        error: error.message,
+        uploaded: 0,
+        failed: 0
+      };
     }
   }
   /**

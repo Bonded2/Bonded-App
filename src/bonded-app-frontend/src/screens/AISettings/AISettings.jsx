@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ConsistentTopBar } from "../../components/ConsistentTopBar/ConsistentTopBar";
-import { getNSFWDetectionService, getTextClassificationService, getEvidenceFilterService } from "../../ai";
+import { getNSFWService, getTextClassificationService, getEvidenceFilterService } from "../../ai";
 import "./style.css";
 
 export const AISettings = () => {
@@ -25,55 +25,57 @@ export const AISettings = () => {
 
   // Initialize AI services on component mount
   useEffect(() => {
-    initializeAIServices();
+    const initializeAIServices = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Initialize AI services
+        const nsfwService = await getNSFWService();
+        const textService = await getTextClassificationService();
+        const evidenceService = await getEvidenceFilterService();
+        
+        // Initialize NSFW Detection Service
+        setAiStatus(prev => ({ ...prev, nsfwDetection: { ...prev.nsfwDetection, isLoading: true } }));
+        await nsfwService.loadModel();
+        const nsfwStatus = nsfwService.getStatus();
+        setAiStatus(prev => ({ ...prev, nsfwDetection: { 
+          isLoaded: nsfwStatus.isLoaded, 
+          isLoading: false, 
+          error: nsfwStatus.error,
+          modelType: nsfwStatus.modelType 
+        }}));
+
+        // Initialize Text Classification Service  
+        setAiStatus(prev => ({ ...prev, textClassification: { ...prev.textClassification, isLoading: true } }));
+        await textService.loadModel();
+        const textStatus = textService.getStatus();
+        setAiStatus(prev => ({ ...prev, textClassification: { 
+          isLoaded: textStatus.isLoaded, 
+          isLoading: false, 
+          error: textStatus.error,
+          modelType: textStatus.modelName 
+        }}));
+
+        // Initialize Evidence Filter Service
+        await evidenceService.updateSettings({
+          enableNSFWFilter: aiSettings.excludeNudity,
+          enableTextFilter: aiSettings.excludeSexualContent
+        });
+        setAiStatus(prev => ({ ...prev, evidenceFilter: { 
+          isLoaded: true, 
+          isLoading: false, 
+          error: null 
+        }}));
+
+      } catch (error) {
+        console.error('❌ AI Services initialization failed:', error);
+        setAiStatus(prev => Object.keys(prev).reduce((acc, key) => ({
+          ...acc,
+          [key]: { isLoaded: false, isLoading: false, error: error.message }
+        }), {}));
+      }
+    };
   }, []);
-
-  const initializeAIServices = async () => {
-    try {
-      // Initialize NSFW Detection Service
-      setAiStatus(prev => ({ ...prev, nsfwDetection: { ...prev.nsfwDetection, isLoading: true } }));
-      const nsfwService = await getNSFWDetectionService();
-      await nsfwService.loadModel();
-      const nsfwStatus = nsfwService.getStatus();
-      setAiStatus(prev => ({ ...prev, nsfwDetection: { 
-        isLoaded: nsfwStatus.isLoaded, 
-        isLoading: false, 
-        error: nsfwStatus.error,
-        modelType: nsfwStatus.modelType 
-      }}));
-
-      // Initialize Text Classification Service  
-      setAiStatus(prev => ({ ...prev, textClassification: { ...prev.textClassification, isLoading: true } }));
-      const textService = await getTextClassificationService();
-      await textService.loadModel();
-      const textStatus = textService.getStatus();
-      setAiStatus(prev => ({ ...prev, textClassification: { 
-        isLoaded: textStatus.isLoaded, 
-        isLoading: false, 
-        error: textStatus.error,
-        modelType: textStatus.modelName 
-      }}));
-
-      // Initialize Evidence Filter Service
-      const evidenceService = await getEvidenceFilterService();
-      await evidenceService.updateSettings({
-        enableNSFWFilter: aiSettings.excludeNudity,
-        enableTextFilter: aiSettings.excludeSexualContent
-      });
-      setAiStatus(prev => ({ ...prev, evidenceFilter: { 
-        isLoaded: true, 
-        isLoading: false, 
-        error: null 
-      }}));
-
-    } catch (error) {
-      console.error('❌ AI Services initialization failed:', error);
-      setAiStatus(prev => Object.keys(prev).reduce((acc, key) => ({
-        ...acc,
-        [key]: { isLoaded: false, isLoading: false, error: error.message }
-      }), {}));
-    }
-  };
 
   const handleBack = () => {
     // Navigate back to timeline (main dashboard) for better UX
@@ -251,3 +253,5 @@ export const AISettings = () => {
     </div>
   );
 };
+
+export default AISettings;

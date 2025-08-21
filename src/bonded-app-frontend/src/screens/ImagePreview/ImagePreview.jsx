@@ -169,3 +169,4 @@ export const ImagePreview = ({ onClose, item: propItem }) => {
     </div>
   );
 }; 
+export default ImagePreview;

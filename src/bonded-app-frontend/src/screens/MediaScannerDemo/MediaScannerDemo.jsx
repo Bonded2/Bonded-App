@@ -173,4 +173,4 @@ export const MediaImport = () => {
   );
 };
 // For backward compatibility
-export const MediaScannerDemo = MediaImport; 
+export const MediaScannerDemo = MediaImport; export default MediaScannerDemo;

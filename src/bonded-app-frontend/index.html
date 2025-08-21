@@ -137,6 +137,41 @@
     // Ensure src.value structure exists
     window.src = { value: { SelfDescribeCborSerializer: window.SelfDescribeCborSerializer }};
   </script>
+  
+  <!-- AI Model Libraries - Load before main app -->
+  <script>
+    // Initialize AI modules promise
+    window.aiInitPromise = (async () => {
+      try {
+        // Load ONNX Runtime from CDN
+        const ortScript = document.createElement('script');
+        ortScript.src = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js';
+        ortScript.crossOrigin = 'anonymous';
+        
+        await new Promise((resolve, reject) => {
+          ortScript.onload = resolve;
+          ortScript.onerror = reject;
+          document.head.appendChild(ortScript);
+        });
+        
+        // Wait for ONNX Runtime to be available
+        while (!window.ort) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Configure ONNX Runtime
+        if (window.ort && window.ort.env) {
+          window.ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency || 4, 4);
+          window.ort.env.wasm.simd = true;
+        }
+        
+        return { ort: window.ort };
+      } catch (error) {
+        console.warn('Failed to load ONNX Runtime from CDN:', error);
+        return { ort: null };
+      }
+    })();
+  </script>
 </head>
 
 <body>

@@ -1,1 +1,1 @@
-export { MediaImport, MediaScannerDemo } from './MediaScannerDemo'; 
+export { MediaImport, MediaScannerDemo } from './MediaScannerDemo'; export { default } from "./MediaImport,";

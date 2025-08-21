@@ -19,7 +19,7 @@ body {
   position: relative;
   /* Unified blue gradient background */
   background: var(--gradient-primary);
-  color: white;
+  color: rgb(0, 0, 0);
   transition: background var(--transition-slow);
 }
 

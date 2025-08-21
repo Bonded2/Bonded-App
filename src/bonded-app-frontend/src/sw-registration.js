@@ -37,15 +37,6 @@ if ('serviceWorker' in navigator) {
           
           // Register for background sync tags (T4.16)
           if ('sync' in registration) {
-            // Register photo scan sync
-            registration.sync.register('automated-photo-scan')
-              .then(() => {
-                console.log('📸 Photo scan background sync registered');
-              })
-              .catch((error) => {
-                console.warn('⚠️ Photo scan background sync registration failed:', error);
-              });
-            
             // Register daily processing sync
             registration.sync.register('daily-evidence-processing')
               .then(() => {
@@ -63,32 +54,17 @@ if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', async (event) => {
         const { type, timestamp, source } = event.data;
         
-        if (type === 'AUTOMATED_PHOTO_SCAN_TRIGGER') {
-          console.log('📸 Received photo scan trigger from service worker');
-          try {
-            // Dynamically import and trigger photo scan
-            const module = await import('./services/automatedPhotoLibrary.js');
-            const result = await module.automatedPhotoLibrary.performAutomatedScan();
-            console.log('📸 Automated photo scan completed:', result);
-            
-            // Notify service worker of completion
-            if (navigator.serviceWorker.controller) {
-              navigator.serviceWorker.controller.postMessage({
-                type: 'PHOTO_SCAN_COMPLETED',
-                result: result,
-                timestamp: Date.now()
-              });
-            }
-          } catch (error) {
-            console.error('❌ Photo scan trigger failed:', error);
-          }
-        }
-        
         if (type === 'TRIGGER_DAILY_PROCESSING') {
           console.log('🔄 Received daily processing trigger from service worker');
           try {
             // Dynamically import and trigger daily processing
             const module = await import('./services/scheduler.js');
+            
+            // Ensure the service is initialized before performing scheduled upload
+            if (module.schedulerService && typeof module.schedulerService.init === 'function') {
+              await module.schedulerService.init();
+            }
+            
             const result = await module.schedulerService.performScheduledUpload();
             console.log('🔄 Daily processing completed:', result);
             
@@ -102,6 +78,15 @@ if ('serviceWorker' in navigator) {
             }
           } catch (error) {
             console.error('❌ Daily processing trigger failed:', error);
+            
+            // Send error notification to service worker
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'DAILY_PROCESSING_FAILED',
+                error: error.message,
+                timestamp: Date.now()
+              });
+            }
           }
         }
       });

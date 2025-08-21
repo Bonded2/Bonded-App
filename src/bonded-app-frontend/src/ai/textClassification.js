@@ -11,10 +11,7 @@ import { openDB } from 'idb';
 // Conditional import based on environment
 let transformers;
 
-// ESM CDN URLs for production (optimized and smaller)
-const TRANSFORMERS_JSDELIVR_ESM_URL = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/+esm';
-const TRANSFORMERS_SKYPACK_URL = 'https://cdn.skypack.dev/@xenova/transformers@2.6.0';
-const TRANSFORMERS_UNPKG_ESM_URL = 'https://unpkg.com/@xenova/transformers@2.6.0/dist/transformers.esm.js';
+// No external CDN dependencies - use bundled package only
 
 /**
  * Production Text Classification Service
@@ -99,93 +96,92 @@ class TextClassificationService {
     }
 
     this.isLoading = true;
-    this.stats.modelStatus = 'loading';
-
+    
     try {
-      // Load Transformers.js via ESM
-      const transformersLib = await this.loadTransformersJS();
-      
-      if (!transformersLib) {
-        throw new Error('Failed to load Transformers.js library');
-      }
-      
-      // Use the default export or named exports depending on the module format
-      const transformersAPI = transformersLib.default || transformersLib;
-      
-      // Load DistilBERT model for text classification
-      const { pipeline } = transformersAPI;
-      
-      // Use text classification pipeline with DistilBERT
-      this.model = await pipeline('text-classification', 'distilbert-base-uncased-finetuned-sst-2-english', {
-        revision: 'main',
-        model_file_name: 'model.onnx',
-        quantized: true
-      });
+      // Load the model and tokenizer
+      await this.loadModel();
       
       this.isInitialized = true;
       this.stats.modelStatus = 'loaded';
-      
-      // Cache successful initialization
-      if (this.db) {
-        await this.db.put('modelCache', {
-          initialized: true,
-          timestamp: Date.now(),
-          model: 'distilbert-base-uncased'
-        }, 'initStatus');
-      }
-      
+      console.log('✅ Text Classification Service initialized successfully');
       return true;
+      
     } catch (error) {
       this.lastError = error;
       this.stats.modelStatus = 'failed';
-      
-      // Still mark as initialized to use keyword fallback
-      this.isInitialized = true;
-      return false;
+      console.error('❌ Text Classification Service initialization failed:', error);
+      throw error;
     } finally {
       this.isLoading = false;
     }
   }
 
   /**
-   * Load Transformers.js using ESM imports
+   * Load the text classification model and tokenizer
+   */
+  async loadModel() {
+    try {
+      if (!transformers) {
+        transformers = await this.loadTransformersLibrary();
+      }
+      
+      // Check if transformers loaded successfully
+      if (!transformers || !transformers.AutoTokenizer) {
+        console.warn('⚠️ Transformers.js not available, falling back to keyword-based classification');
+        this.model = null;
+        this.tokenizer = null;
+        return false;
+      }
+      
+      // Load the DistilBERT model for text classification
+      const modelName = 'distilbert-base-uncased';
+      
+      this.tokenizer = await transformers.AutoTokenizer.from_pretrained(modelName);
+      this.model = await transformers.AutoModelForSequenceClassification.from_pretrained(modelName);
+      
+      console.log('✅ Text classification model loaded successfully');
+      return true;
+      
+    } catch (error) {
+      console.error('❌ Failed to load text classification model:', error);
+      // Fallback to keyword-based classification
+      this.model = null;
+      this.tokenizer = null;
+      return false;
+    }
+  }
+
+  /**
+   * Load the Transformers.js library dynamically
+   */
+  async loadTransformersLibrary() {
+    try {
+      // Use bundled package only - no external CDN dependencies
+      console.log('🔄 Loading Transformers.js from bundled package...');
+      const module = await import('@xenova/transformers');
+      console.log('✅ Transformers.js loaded successfully from bundled package');
+      return module;
+    } catch (error) {
+      console.warn('⚠️ Failed to load bundled Transformers.js:', error.message);
+      console.log('🔄 Falling back to keyword-based classification...');
+      return null;
+    }
+  }
+
+  /**
+   * Load Transformers.js using bundled package only
    */
   async loadTransformersJS() {
     if (transformers) return transformers;
 
     try {
-      // Always try bundled version first (works in both dev and production)
-      try {
-        transformers = await import('@xenova/transformers');
-        console.log('✅ Transformers.js loaded from bundled package');
-        return transformers;
-      } catch (bundleError) {
-        console.warn('⚠️ Bundled Transformers.js failed, trying CDN:', bundleError.message);
-      }
-
-      // Fallback to CDN only if bundled fails and in production
-      if (this.isProduction) {
-        const esmUrls = [
-          TRANSFORMERS_JSDELIVR_ESM_URL, // jsDelivr ESM (fastest)
-          TRANSFORMERS_SKYPACK_URL,      // Skypack (optimized ESM)
-          TRANSFORMERS_UNPKG_ESM_URL     // unpkg ESM (fallback)
-        ];
-        
-        for (const url of esmUrls) {
-          try {
-            transformers = await import(/* @vite-ignore */ url);
-            console.log(`✅ Transformers.js loaded from CDN: ${url}`);
-            break;
-          } catch (urlError) {
-            console.warn(`❌ Failed to load from ${url}:`, urlError.message);
-            if (url === esmUrls[esmUrls.length - 1]) {
-              throw urlError; // Last URL failed
-            }
-          }
-        }
-      }
+      // Use bundled package only - no external CDN dependencies
+      transformers = await import('@xenova/transformers');
+      console.log('✅ Transformers.js loaded from bundled package');
+      return transformers;
     } catch (error) {
-      console.warn('⚠️ Failed to load Transformers.js from all sources:', error.message);
+      console.warn('⚠️ Failed to load bundled Transformers.js:', error.message);
+      console.log('🔄 Falling back to keyword-based classification...');
       transformers = null;
     }
 

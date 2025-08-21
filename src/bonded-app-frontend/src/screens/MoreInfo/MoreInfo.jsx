@@ -88,3 +88,5 @@ export const MoreInfo = () => {
     </div>
   );
 };
+
+export default MoreInfo;

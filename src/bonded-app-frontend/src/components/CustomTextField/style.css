@@ -142,7 +142,7 @@
   background-repeat: no-repeat;
   background-position: calc(100% - 12px) center;
   background-size: 20px;
-  color: #FFFFFF;
+  color: #000000;
 }
 
 /* Ensure date inputs show a placeholder-like color when empty */

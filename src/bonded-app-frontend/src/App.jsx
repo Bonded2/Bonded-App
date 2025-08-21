@@ -5,30 +5,30 @@ import { RouterProvider, createBrowserRouter, Navigate } from "react-router-dom"
 import { Splash } from "./screens/Splash/Splash";
 
 // LAZY LOAD: ALL other components to minimize initial bundle
-const Login = lazy(() => import("./screens/Login/Login").then(m => ({ default: m.Login })));
-const Register = lazy(() => import("./screens/Register").then(m => ({ default: m.Register })));
-const GettingStarted = lazy(() => import("./screens/GettingStarted").then(m => ({ default: m.GettingStarted })));
-const Verify = lazy(() => import("./screens/Verify").then(m => ({ default: m.Verify })));
-const MoreInfo = lazy(() => import("./screens/MoreInfo").then(m => ({ default: m.MoreInfo })));
-const TimelineCreated = lazy(() => import("./screens/TimelineCreated").then(m => ({ default: m.TimelineCreated })));
-const Account = lazy(() => import("./screens/Account/Account").then(m => ({ default: m.Account })));
-const Privacy = lazy(() => import("./screens/Privacy/Privacy").then(m => ({ default: m.Privacy })));
-const FAQ = lazy(() => import("./screens/FAQ/FAQ").then(m => ({ default: m.FAQ })));
-const ExportTimeline = lazy(() => import("./screens/ExportTimeline").then(m => ({ default: m.ExportTimeline })));
-const TimestampFolder = lazy(() => import("./screens/TimestampFolder").then(m => ({ default: m.TimestampFolder })));
-const ImagePreview = lazy(() => import("./screens/ImagePreview").then(m => ({ default: m.ImagePreview })));
-const ExportAllData = lazy(() => import("./screens/ExportAllData").then(m => ({ default: m.ExportAllData })));
-const MediaImport = lazy(() => import("./screens/MediaImport").then(m => ({ default: m.MediaImport })));
-const ProfileSetup = lazy(() => import("./screens/ProfileSetup/ProfileSetup").then(m => ({ default: m.ProfileSetup })));
-const AISettings = lazy(() => import("./screens/AISettings/AISettings").then(m => ({ default: m.AISettings })));
-const PartnerInvite = lazy(() => import("./screens/PartnerInvite/PartnerInvite").then(m => ({ default: m.PartnerInvite })));
-const AcceptInvite = lazy(() => import("./screens/AcceptInvite/AcceptInvite").then(m => ({ default: m.AcceptInvite })));
-const Capture = lazy(() => import("./routes/SettingsContentRow/screens/Capture").then(m => ({ default: m.Capture })));
+const Login = lazy(() => import("./screens/Login/Login"));
+const Register = lazy(() => import("./screens/Register"));
+const GettingStarted = lazy(() => import("./screens/GettingStarted"));
+const Verify = lazy(() => import("./screens/Verify"));
+const MoreInfo = lazy(() => import("./screens/MoreInfo"));
+const TimelineCreated = lazy(() => import("./screens/TimelineCreated"));
+const Account = lazy(() => import("./screens/Account/Account"));
+const Privacy = lazy(() => import("./screens/Privacy/Privacy"));
+const FAQ = lazy(() => import("./screens/FAQ/FAQ"));
+const ExportTimeline = lazy(() => import("./screens/ExportTimeline"));
+const TimestampFolder = lazy(() => import("./screens/TimestampFolder"));
+const ImagePreview = lazy(() => import("./screens/ImagePreview"));
+const ExportAllData = lazy(() => import("./screens/ExportAllData"));
+const MediaImport = lazy(() => import("./screens/MediaImport"));
+const ProfileSetup = lazy(() => import("./screens/ProfileSetup/ProfileSetup"));
+const AISettings = lazy(() => import("./screens/AISettings/AISettings"));
+const PartnerInvite = lazy(() => import("./screens/PartnerInvite/PartnerInvite"));
+const AcceptInvite = lazy(() => import("./screens/AcceptInvite/AcceptInvite"));
+const Capture = lazy(() => import("./routes/SettingsContentRow/screens/Capture"));
 
 // LAZY LOAD: PWA components (not critical for initial load)
-const PWAInstallPrompt = lazy(() => import("./components/PWAInstallPrompt/PWAInstallPrompt").then(m => ({ default: m.PWAInstallPrompt })));
-const OfflineStatusBar = lazy(() => import("./components/OfflineStatusBar/OfflineStatusBar").then(m => ({ default: m.OfflineStatusBar })));
-const GeoMetadataProvider = lazy(() => import("./features/geolocation/GeoMetadataProvider").then(m => ({ default: m.default })));
+const PWAInstallPrompt = lazy(() => import("./components/PWAInstallPrompt/PWAInstallPrompt"));
+const OfflineStatusBar = lazy(() => import("./components/OfflineStatusBar/OfflineStatusBar"));
+const GeoMetadataProvider = lazy(() => import("./features/geolocation/GeoMetadataProvider"));
 
 // Ultra-fast loading screen for instant feedback
 const FastLoadingScreen = () => (
@@ -84,7 +84,7 @@ export class ErrorBoundary extends React.Component {
       error.message.includes('SuppressedError') ||
       error.name === 'SuppressedError'
     )) {
-      console.warn('🔧 ErrorBoundary: Ignoring field validation error');
+      console.warn('🔧 ErrorBoundary: Ignoring field validation error:', error.message);
       return { hasError: false };
     }
     
@@ -99,7 +99,7 @@ export class ErrorBoundary extends React.Component {
       error.message.includes('SuppressedError') ||
       error.name === 'SuppressedError'
     )) {
-      console.warn('🔧 ErrorBoundary: Field validation error caught and ignored');
+      console.warn('🔧 ErrorBoundary: Field validation error caught and ignored:', error.message);
       // Reset the error state to allow the component to continue
       this.setState({ hasError: false, errorDetails: null });
       return;

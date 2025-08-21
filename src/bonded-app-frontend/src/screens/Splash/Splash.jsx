@@ -39,4 +39,4 @@ export const Splash = () => {
       </div>
     </div>
   );
-}; 
+}; export default Splash;

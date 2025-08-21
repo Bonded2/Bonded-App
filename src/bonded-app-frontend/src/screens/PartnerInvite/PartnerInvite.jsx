@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import icpUserService from "../../services/icpUserService";
 import emailService from "../../services/emailService";
-import api from "../../services/api";
+import { api } from "../../services/api";
 import "./style.css";
 
 export const PartnerInvite = () => {
@@ -415,7 +415,7 @@ export const PartnerInvite = () => {
           <img
             className="bonded-logo-blue"
             alt="Bonded logo blue"
-            src="/images/bonded-logo-blue.svg"
+            src="/images/bonded-logo-gray.svg"
           />
           <h1 className="invite-title">Invite Your Partner</h1>
           <p className="invite-subtitle">
@@ -549,3 +549,5 @@ export const PartnerInvite = () => {
     </div>
   );
 };
+
+export default PartnerInvite;

@@ -303,7 +303,7 @@ export const AcceptInvite = () => {
         <img
           className="bonded-logo"
           alt="Bonded"
-          src="/images/bonded-logo-blue.svg"
+          src="/images/bonded-logo-gray.svg"
         />
         
         <div className="status-header">
@@ -325,3 +325,4 @@ export const AcceptInvite = () => {
     </div>
   );
 }; 
+export default AcceptInvite;

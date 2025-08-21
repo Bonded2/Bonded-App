@@ -728,3 +728,4 @@ function getColorForDate(date) {
   }
   return colors[Math.abs(hash) % colors.length];
 } 
+export default ExportTimeline;
