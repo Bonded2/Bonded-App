@@ -23,7 +23,7 @@
 
 #### App ↔ Canister API (Minimal)
 
-candid```
+```candid
 startKycSession(jurisdiction: Text) -> {
 sessionId: Text,
 auth: {
