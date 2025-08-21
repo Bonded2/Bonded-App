@@ -27,9 +27,29 @@ import { AuthClient } from '@dfinity/auth-client';
 import { Principal } from '@dfinity/principal';
 
 // Environment configuration
-const API_HOST = import.meta.env.VITE_API_HOST || 'https://ic0.app';
-const CANISTER_ID = import.meta.env.VITE_BACKEND_CANISTER_ID || 'f4nqh-tiaaa-aaaab-qb2bq-cai';
-const IS_LOCAL = import.meta.env.VITE_DFX_NETWORK === 'local';
+const IS_LOCAL = import.meta.env.VITE_DFX_NETWORK === 'local' || 
+                 window.location.hostname === 'localhost' || 
+                 window.location.hostname === '127.0.0.1' ||
+                 window.location.hostname.includes('localhost');
+
+const API_HOST = IS_LOCAL ? 'http://127.0.0.1:4943' : (import.meta.env.VITE_API_HOST || 'https://ic0.app');
+
+// Get canister ID based on network
+let CANISTER_ID = import.meta.env.VITE_BACKEND_CANISTER_ID;
+if (IS_LOCAL && !CANISTER_ID) {
+  // Try to get from canister_ids.json or use default local ID
+  CANISTER_ID = 'uxrrr-q7777-77774-qaaaq-cai';
+} else if (!CANISTER_ID) {
+  // Production fallback
+  CANISTER_ID = 'f4nqh-tiaaa-aaaab-qb2ba-cai';
+}
+
+console.log('🔧 API Configuration:', {
+  IS_LOCAL,
+  API_HOST,
+  CANISTER_ID,
+  hostname: window.location.hostname
+});
 
 // IDL factory - will be imported from declarations after dfx generate
 let idlFactory = null;
@@ -109,7 +129,7 @@ class APIService {
     try {
       await this.authClient.login({
         identityProvider: IS_LOCAL 
-          ? `http://localhost:4943/?canisterId=${CANISTER_ID}`
+          ? `http://127.0.0.1:4943/?canisterId=rdmx6-jaaaa-aaaah-qdrqq-cai`
           : 'https://identity.ic0.app',
         onSuccess: async () => {
           this.identity = this.authClient.getIdentity();

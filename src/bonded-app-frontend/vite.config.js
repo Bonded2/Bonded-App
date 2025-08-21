@@ -260,7 +260,11 @@ export default defineConfig({
     },
     headers: {
       'Cross-Origin-Embedder-Policy': 'credentialless',
-      'Cross-Origin-Opener-Policy': 'same-origin'
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      // Add CORS headers for local development
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     },
     ...(isDev && {
       proxy: {
@@ -269,6 +273,13 @@ export default defineConfig({
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, "/api"),
         },
+        // Proxy ICP canister calls for local development
+        "/.ic": {
+          target: `http://127.0.0.1:4943`,
+          changeOrigin: true,
+          secure: false,
+          ws: true
+        }
       }
     }),
     // Handle ICP package imports during development
