@@ -13,7 +13,7 @@
  * - Daily automated evidence collection
  */
 
-import { getNSFWDetectionService, getTextClassificationService } from '../ai/index.js';
+import { getNSFWService, getTextClassificationService } from '../ai/index.js';
 import { mediaAccessService } from './mediaAccess.js';
 import { localVault } from './localVault.js';
 import { encryptionService } from '../crypto/encryption.js';

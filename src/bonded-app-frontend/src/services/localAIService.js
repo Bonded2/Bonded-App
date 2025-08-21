@@ -1,201 +1,204 @@
-import * as tf from '@tensorflow/tfjs';
-import { loadGraphModel } from '@tensorflow/tfjs-converter';
-import { getGemmaService } from '../ai/index.js';
+/**
+ * Local AI Service - Fallback AI Processing
+ * 
+ * Provides basic AI functionality when external services are not available
+ */
 
 class LocalAIService {
   constructor() {
-    this.models = new Map();
     this.isInitialized = false;
-    this.gemmaService = null;
+    this.fallbackMethods = {
+      textClassification: true,
+      contentModeration: true,
+      evidenceExtraction: true,
+      timelineAnalysis: true
+    };
   }
 
   async initialize() {
     try {
-      // Set backend priority: WebGL > WASM > CPU
-      await tf.setBackend('webgl');
-      await tf.ready();
-      
-      // Initialize Gemma 3 270M service
-      this.gemmaService = await getGemmaService();
-      await this.gemmaService.initialize();
-      
-      // Load pre-trained models
-      await this.loadModels();
-      
+      // Initialize basic fallback methods
       this.isInitialized = true;
-      console.log('✅ Local AI initialized successfully with Gemma 3 270M');
+      console.log('✅ Local AI initialized successfully with fallback methods');
+      return true;
     } catch (error) {
-      console.error('Failed to initialize local AI:', error);
-      // Fallback to CPU backend
-      await tf.setBackend('cpu');
+      console.error('❌ Failed to initialize Local AI:', error);
+      return false;
     }
   }
 
-  async loadModels() {
-    // Load your specific models here
-    const modelUrls = {
-      'nsfw': '/models/nsfw-detection/model.json',
-      'face-detection': '/models/face-detection/model.json',
-      'text-classification': '/models/text-classification/model.json'
-    };
-
-    for (const [name, url] of Object.entries(modelUrls)) {
-      try {
-        const model = await loadGraphModel(url);
-        this.models.set(name, model);
-      } catch (error) {
-        console.warn(`Failed to load ${name} model:`, error);
-      }
-    }
-  }
-
-  async processImage(imageElement, modelName = 'nsfw') {
+  /**
+   * Text classification using fallback methods
+   */
+  async classifyText(text) {
     if (!this.isInitialized) {
-      throw new Error('Local AI not initialized');
-    }
-
-    const model = this.models.get(modelName);
-    if (!model) {
-      throw new Error(`Model ${modelName} not found`);
-    }
-
-    // Preprocess image
-    const tensor = tf.browser.fromPixels(imageElement)
-      .expandDims()
-      .div(255.0);
-
-    // Run inference
-    const predictions = await model.predict(tensor);
-    
-    // Cleanup
-    tensor.dispose();
-    
-    return predictions;
-  }
-
-  async classifyText(text, modelName = 'text-classification') {
-    if (!this.isInitialized || !this.gemmaService) {
-      throw new Error('Local AI not initialized');
+      throw new Error('Local AI service not initialized');
     }
 
     try {
-      // Use Gemma 3 270M for text classification
-      const result = await this.gemmaService.classifyText(text);
-      return result;
-    } catch (error) {
-      console.warn('Gemma classification failed, falling back to basic classification:', error);
-      // Fallback to basic keyword-based classification
-      return this.basicTextClassification(text);
-    }
-  }
+      // Basic keyword-based text classification
+      const explicitKeywords = ['sex', 'explicit', 'nsfw', 'nude', 'naked', 'porn', 'adult'];
+      const violentKeywords = ['violence', 'blood', 'gore', 'kill', 'murder', 'attack'];
+      const hasExplicit = explicitKeywords.some(keyword => 
+        text.toLowerCase().includes(keyword)
+      );
+      const hasViolent = violentKeywords.some(keyword => 
+        text.toLowerCase().includes(keyword)
+      );
 
-  async moderateContent(text) {
-    if (!this.isInitialized || !this.gemmaService) {
-      throw new Error('Local AI not initialized');
-    }
-
-    try {
-      // Use Gemma 3 270M for content moderation
-      const result = await this.gemmaService.moderateContent(text);
-      return result;
-    } catch (error) {
-      console.warn('Gemma moderation failed, falling back to basic moderation:', error);
-      // Fallback to basic keyword-based moderation
-      return this.basicContentModeration(text);
-    }
-  }
-
-  async extractEvidence(text) {
-    if (!this.isInitialized || !this.gemmaService) {
-      throw new Error('Local AI not initialized');
-    }
-
-    try {
-      // Use Gemma 3 270M for evidence extraction
-      const result = await this.gemmaService.extractEvidence(text);
-      return result;
-    } catch (error) {
-      console.warn('Gemma evidence extraction failed:', error);
-      return { error: 'Evidence extraction failed', text: text.substring(0, 100) + '...' };
-    }
-  }
-
-  async analyzeTimeline(text) {
-    if (!this.isInitialized || !this.gemmaService) {
-      throw new Error('Local AI not initialized');
-    }
-
-    try {
-      // Use Gemma 3 270M for timeline analysis
-      const result = await this.gemmaService.analyzeTimeline(text);
-      return result;
-    } catch (error) {
-      console.warn('Gemma timeline analysis failed:', error);
-      return { error: 'Timeline analysis failed', text: text.substring(0, 100) + '...' };
-    }
-  }
-
-  // Fallback methods for when Gemma is not available
-  basicTextClassification(text) {
-    const explicitKeywords = ['sex', 'fuck', 'porn', 'nsfw', 'explicit'];
-    const cleanText = text.toLowerCase();
-    
-    let explicitCount = 0;
-    for (const keyword of explicitKeywords) {
-      if (cleanText.includes(keyword)) {
-        explicitCount++;
+      if (hasExplicit) {
+        return {
+          label: 'EXPLICIT',
+          confidence: 0.85,
+          model: 'Local AI Fallback',
+          method: 'keyword-based'
+        };
+      } else if (hasViolent) {
+        return {
+          label: 'VIOLENT',
+          confidence: 0.80,
+          model: 'Local AI Fallback',
+          method: 'keyword-based'
+        };
+      } else {
+        return {
+          label: 'SAFE',
+          confidence: 0.75,
+          model: 'Local AI Fallback',
+          method: 'keyword-based'
+        };
       }
+    } catch (error) {
+      console.warn('Local AI classification failed:', error);
+      throw new Error('Text classification failed');
     }
-    
-    return {
-      success: true,
-      result: {
-        category: explicitCount > 0 ? 'explicit' : 'safe',
-        confidence: explicitCount > 0 ? 0.8 : 0.9,
-        reasoning: explicitCount > 0 ? `Contains ${explicitCount} explicit keywords` : 'No explicit content detected'
-      },
-      processingTime: 0,
-      model: 'Basic Keyword Fallback',
-      instructionType: 'textClassification'
-    };
   }
 
-  basicContentModeration(text) {
-    const result = this.basicTextClassification(text);
-    result.result.isExplicit = result.result.category === 'explicit';
-    result.instructionType = 'contentModeration';
-    return result;
+  /**
+   * Content moderation using fallback methods
+   */
+  async moderateContent(text) {
+    if (!this.isInitialized) {
+      throw new Error('Local AI service not initialized');
+    }
+
+    try {
+      // Basic content moderation using keyword detection
+      const inappropriateKeywords = [
+        'hate', 'racism', 'discrimination', 'bully', 'harass',
+        'threat', 'violence', 'illegal', 'drugs', 'weapons'
+      ];
+      
+      const hasInappropriate = inappropriateKeywords.some(keyword => 
+        text.toLowerCase().includes(keyword)
+      );
+
+      return {
+        isAppropriate: !hasInappropriate,
+        confidence: hasInappropriate ? 0.80 : 0.70,
+        model: 'Local AI Fallback',
+        method: 'keyword-based',
+        flags: hasInappropriate ? ['inappropriate_content'] : []
+      };
+    } catch (error) {
+      console.warn('Local AI moderation failed:', error);
+      throw new Error('Content moderation failed');
+    }
   }
 
+  /**
+   * Evidence extraction using fallback methods
+   */
+  async extractEvidence(text) {
+    if (!this.isInitialized) {
+      throw new Error('Local AI service not initialized');
+    }
+
+    try {
+      // Basic evidence extraction using pattern matching
+      const evidencePatterns = {
+        dates: /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g,
+        locations: /\b[A-Z][a-z]+(?:[\s,]+[A-Z][a-z]+)*\b/g,
+        names: /\b[A-Z][a-z]+ [A-Z][a-z]+\b/g,
+        emails: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g
+      };
+
+      const extracted = {};
+      for (const [type, pattern] of Object.entries(evidencePatterns)) {
+        const matches = text.match(pattern);
+        if (matches) {
+          extracted[type] = [...new Set(matches)];
+        }
+      }
+
+      return {
+        evidence: extracted,
+        confidence: 0.60,
+        model: 'Local AI Fallback',
+        method: 'pattern-matching'
+      };
+    } catch (error) {
+      console.warn('Local AI evidence extraction failed:', error);
+      throw new Error('Evidence extraction failed');
+    }
+  }
+
+  /**
+   * Timeline analysis using fallback methods
+   */
+  async analyzeTimeline(text) {
+    if (!this.isInitialized) {
+      throw new Error('Local AI service not initialized');
+    }
+
+    try {
+      // Basic timeline analysis using date extraction
+      const datePattern = /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g;
+      const dates = text.match(datePattern) || [];
+      
+      const timeline = dates.map(date => ({
+        date: date,
+        confidence: 0.70,
+        type: 'extracted_date'
+      }));
+
+      return {
+        timeline: timeline,
+        totalEvents: timeline.length,
+        confidence: 0.65,
+        model: 'Local AI Fallback',
+        method: 'date-extraction'
+      };
+    } catch (error) {
+      console.warn('Local AI timeline analysis failed:', error);
+      throw new Error('Timeline analysis failed');
+    }
+  }
+
+  /**
+   * Get service status
+   */
   async getStatus() {
     return {
       isInitialized: this.isInitialized,
-      gemmaService: this.gemmaService ? await this.gemmaService.getStatus() : null,
-      tensorflowModels: Array.from(this.models.keys()),
-      backend: tf.getBackend()
+      fallbackMethods: this.fallbackMethods,
+      model: 'Local AI Fallback',
+      capabilities: ['text_classification', 'content_moderation', 'evidence_extraction', 'timeline_analysis']
     };
   }
 
+  /**
+   * Cleanup resources
+   */
   async cleanup() {
     try {
-      if (this.gemmaService) {
-        await this.gemmaService.cleanup();
-      }
-      
-      // Cleanup TensorFlow models
-      for (const model of this.models.values()) {
-        if (model && typeof model.dispose === 'function') {
-          model.dispose();
-        }
-      }
-      this.models.clear();
-      
       this.isInitialized = false;
       console.log('✅ Local AI service cleaned up successfully');
     } catch (error) {
-      console.error('❌ Cleanup failed:', error);
+      console.error('❌ Error during Local AI cleanup:', error);
     }
   }
 }
 
-export default new LocalAIService();
+export const localAIService = new LocalAIService();
+export default localAIService;

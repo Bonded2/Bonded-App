@@ -6,15 +6,15 @@
  * - T2.02: Text sexual content filtering
  */
 
-import { getNSFWDetectionService, getTextClassificationService, getEvidenceFilterService } from './src/ai/index.js';
+import { getNSFWService, getTextClassificationService, getEvidenceFilterService } from './src/ai/index.js';
 
 async function testAIIntegration() {
   console.log('🧪 Testing T2.01 & T2.02 AI Integration...\n');
 
   try {
-    // Test T2.01: NSFW Detection Service
-    console.log('📸 Testing T2.01: NSFW Detection Service');
-    const nsfwService = await getNSFWDetectionService();
+    // Test NSFW Detection
+    console.log('🧪 Testing NSFW Detection...');
+    const nsfwService = await getNSFWService();
     const nsfwStatus = nsfwService.getStatus();
     console.log('  ✅ NSFW Service Status:', nsfwStatus);
     

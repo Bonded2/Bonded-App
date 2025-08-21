@@ -106,7 +106,7 @@
 
     <script type="module">
         // Import AI services
-        import { getNSFWDetectionService, getTextClassificationService, getEvidenceFilterService } from '../src/ai/index.js';
+        import { getNSFWService, getTextClassificationService, getEvidenceFilterService } from '../src/ai/index.js';
 
         let log = (elementId, message) => {
             const element = document.getElementById(elementId);
@@ -131,7 +131,7 @@
             log(resultId, '🧪 Testing T2.01: NSFW Detection Service');
             
             try {
-                const nsfwService = await getNSFWDetectionService();
+                const nsfwService = await getNSFWService();
                 log(resultId, '✅ NSFW Service loaded successfully');
                 
                 updateStatus(statusId, 'loading', 'Loading NSFW model...');
@@ -248,7 +248,7 @@
             
             try {
                 // Simulate what the AI Settings component does
-                const nsfwService = await getNSFWDetectionService();
+                const nsfwService = await getNSFWService();
                 const textService = await getTextClassificationService();
                 const evidenceService = await getEvidenceFilterService();
                 

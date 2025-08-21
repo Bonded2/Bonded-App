@@ -1,182 +1,206 @@
 import React, { useState, useEffect } from 'react';
-import localAIService from '../../services/localAIService';
-import { gemmaService } from '../../ai/gemmaService';
+import { localAIService } from '../../services/localAIService';
 import './style.css';
 
 const AIClassificationTest = () => {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [results, setResults] = useState(null);
   const [inputText, setInputText] = useState('');
-  const [selectedService, setSelectedService] = useState('gemma');
-  const [serviceStatus, setServiceStatus] = useState(null);
+  const [selectedService, setSelectedService] = useState('local');
+  const [results, setResults] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState({});
 
   useEffect(() => {
-    // Initialize local AI when component mounts
-    initializeServices();
+    const checkServiceStatus = async () => {
+      try {
+        const localStatus = await localAIService.getStatus();
+        setServiceStatus({
+          local: localStatus
+        });
+      } catch (error) {
+        console.error('Failed to check service status:', error);
+      }
+    };
+
+    checkServiceStatus();
   }, []);
 
-  const initializeServices = async () => {
-    try {
-      // Initialize both services
-      await localAIService.initialize();
-      
-      // Get service status
-      const localStatus = await localAIService.getStatus();
-      const gemmaStatus = await gemmaService.getStatus();
-      
-      setServiceStatus({
-        local: localStatus,
-        gemma: gemmaStatus
-      });
-      
-      console.log('✅ AI services initialized successfully');
-    } catch (error) {
-      console.error('❌ AI services initialization failed:', error);
+  const handleTextClassification = async () => {
+    if (!inputText.trim()) {
+      alert('Please enter some text to classify');
+      return;
     }
-  };
 
-  const handleImageUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    setIsProcessing(true);
-    try {
-      const img = new Image();
-      img.onload = async () => {
-        const predictions = await localAIService.processImage(img);
-        setResults({
-          type: 'image',
-          data: predictions,
-          service: 'Local AI (TensorFlow)'
-        });
-        setIsProcessing(false);
-      };
-      img.src = URL.createObjectURL(file);
-    } catch (error) {
-      console.error('AI processing failed:', error);
-      setResults({
-        type: 'error',
-        error: error.message,
-        service: 'Local AI'
-      });
-      setIsProcessing(false);
-    }
-  };
-
-  const handleTextProcessing = async () => {
-    if (!inputText.trim()) return;
-
-    setIsProcessing(true);
+    setIsLoading(true);
     try {
       let result;
       
-      if (selectedService === 'gemma') {
-        // Use Gemma 3 270M for text processing
-        result = await gemmaService.classifyText(inputText);
-        setResults({
-          type: 'text',
-          data: result,
-          service: 'Gemma 3 270M'
-        });
-      } else {
-        // Use Local AI service
+      if (selectedService === 'local') {
+        // Use Local AI for text processing
         result = await localAIService.classifyText(inputText);
-        setResults({
-          type: 'text',
-          data: result,
+        result = {
+          ...result,
           service: 'Local AI'
-        });
+        };
+      } else {
+        // Fallback to local AI
+        result = await localAIService.classifyText(inputText);
+        result = {
+          ...result,
+          service: 'Local AI'
+        };
       }
+
+      setResults({
+        type: 'text_classification',
+        result: result,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('Text processing failed:', error);
       setResults({
         type: 'error',
         error: error.message,
-        service: selectedService === 'gemma' ? 'Gemma 3 270M' : 'Local AI'
+        timestamp: new Date().toISOString()
       });
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
     }
   };
 
   const handleContentModeration = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim()) {
+      alert('Please enter some text to moderate');
+      return;
+    }
 
-    setIsProcessing(true);
+    setIsLoading(true);
     try {
       let result;
       
-      if (selectedService === 'gemma') {
-        result = await gemmaService.moderateContent(inputText);
+      if (selectedService === 'local') {
+        result = await localAIService.moderateContent(inputText);
+        result = {
+          ...result,
+          service: 'Local AI'
+        };
       } else {
         result = await localAIService.moderateContent(inputText);
+        result = {
+          ...result,
+          service: 'Local AI'
+        };
       }
-      
+
       setResults({
-        type: 'moderation',
-        data: result,
-        service: selectedService === 'gemma' ? 'Gemma 3 270M' : 'Local AI'
+        type: 'content_moderation',
+        result: result,
+        timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Content moderation failed:', error);
       setResults({
         type: 'error',
         error: error.message,
-        service: selectedService === 'gemma' ? 'Gemma 3 270M' : 'Local AI'
+        timestamp: new Date().toISOString()
       });
     } finally {
-      setIsProcessing(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handleEvidenceExtraction = async () => {
+    if (!inputText.trim()) {
+      alert('Please enter some text to extract evidence from');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let result;
+      
+      if (selectedService === 'local') {
+        result = await localAIService.extractEvidence(inputText);
+        result = {
+          ...result,
+          service: 'Local AI'
+        };
+      } else {
+        result = await localAIService.extractEvidence(inputText);
+        result = {
+          ...result,
+          service: 'Local AI'
+        };
+      }
+
+      setResults({
+        type: 'evidence_extraction',
+        result: result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      setResults({
+        type: 'error',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTimelineAnalysis = async () => {
+    if (!inputText.trim()) {
+      alert('Please enter some text to analyze timeline from');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let result;
+      
+      if (selectedService === 'local') {
+        result = await localAIService.analyzeTimeline(inputText);
+        result = {
+          ...result,
+          service: 'Local AI'
+        };
+      } else {
+        result = await localAIService.analyzeTimeline(inputText);
+        result = {
+          ...result,
+          service: 'Local AI'
+        };
+      }
+
+      setResults({
+        type: 'timeline_analysis',
+        result: result,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      setResults({
+        type: 'error',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const clearResults = () => {
     setResults(null);
-    setInputText('');
   };
-
-  const getServiceInfo = () => {
-    if (selectedService === 'gemma') {
-      return {
-        name: 'Gemma 3 270M',
-        description: 'Google\'s ultra-efficient local AI model',
-        features: ['0.75% battery usage', 'On-device processing', 'Instruction-tuned', 'INT4 quantization']
-      };
-    } else {
-      return {
-        name: 'Local AI (TensorFlow)',
-        description: 'TensorFlow.js with custom models',
-        features: ['WebGL acceleration', 'Custom models', 'Real-time processing', 'Cross-platform']
-      };
-    }
-  };
-
-  const serviceInfo = getServiceInfo();
 
   return (
     <div className="ai-classification-test">
       <div className="test-header">
-        <h2>🤖 AI Classification Test</h2>
-        <p>Test local AI processing with Gemma 3 270M and TensorFlow.js</p>
+        <h2>AI Classification Test</h2>
+        <p>Test local AI processing with fallback methods</p>
       </div>
 
-      <div className="service-selector">
+      <div className="service-selection">
         <h3>Select AI Service</h3>
         <div className="service-options">
-          <label className="service-option">
-            <input
-              type="radio"
-              name="service"
-              value="gemma"
-              checked={selectedService === 'gemma'}
-              onChange={(e) => setSelectedService(e.target.value)}
-            />
-            <div className="service-info">
-              <strong>Gemma 3 270M</strong>
-              <span>Ultra-efficient local AI</span>
-            </div>
-          </label>
-          
-          <label className="service-option">
+          <label>
             <input
               type="radio"
               name="service"
@@ -184,141 +208,118 @@ const AIClassificationTest = () => {
               checked={selectedService === 'local'}
               onChange={(e) => setSelectedService(e.target.value)}
             />
-            <div className="service-info">
-              <strong>Local AI (TensorFlow)</strong>
-              <span>Custom TensorFlow models</span>
-            </div>
+            <strong>Local AI Fallback</strong>
           </label>
         </div>
         
-        <div className="selected-service-info">
-          <h4>{serviceInfo.name}</h4>
-          <p>{serviceInfo.description}</p>
-          <ul>
-            {serviceInfo.features.map((feature, index) => (
-              <li key={index}>✨ {feature}</li>
-            ))}
-          </ul>
+        <div className="service-status">
+          <h4>Service Status</h4>
+          <div className="status-item">
+            <span className="status-label">Local AI:</span>
+            <span className={`status-value ${serviceStatus.local?.isInitialized ? 'ready' : 'not-ready'}`}>
+              {serviceStatus.local?.isInitialized ? 'Ready' : 'Not Ready'}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="test-sections">
-        <div className="test-section">
-          <h3>📝 Text Processing</h3>
-          <div className="text-input">
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder="Enter text to analyze..."
-              rows={4}
-            />
-          </div>
-          
-          <div className="text-actions">
-            <button
-              onClick={handleTextProcessing}
-              disabled={isProcessing || !inputText.trim()}
-              className="btn-primary"
-            >
-              {isProcessing ? '🔄 Processing...' : '🚀 Classify Text'}
-            </button>
-            
-            <button
-              onClick={handleContentModeration}
-              disabled={isProcessing || !inputText.trim()}
-              className="btn-secondary"
-            >
-              🛡️ Moderate Content
-            </button>
-          </div>
-        </div>
+      <div className="test-input">
+        <h3>Input Text</h3>
+        <textarea
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Enter text to test AI classification..."
+          rows={6}
+          className="text-input"
+        />
+      </div>
 
-        <div className="test-section">
-          <h3>🖼️ Image Processing</h3>
-          <div className="image-upload">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              id="image-upload"
-            />
-            <label htmlFor="image-upload" className="upload-label">
-              📁 Choose Image File
-            </label>
-          </div>
-          <p className="upload-hint">Supports JPEG, PNG, WebP, HEIC formats</p>
+      <div className="test-actions">
+        <h3>Test Actions</h3>
+        <div className="action-buttons">
+          <button
+            onClick={handleTextClassification}
+            disabled={isLoading || !inputText.trim()}
+            className="action-button"
+          >
+            Text Classification
+          </button>
+          <button
+            onClick={handleContentModeration}
+            disabled={isLoading || !inputText.trim()}
+            className="action-button"
+          >
+            Content Moderation
+          </button>
+          <button
+            onClick={handleEvidenceExtraction}
+            disabled={isLoading || !inputText.trim()}
+            className="action-button"
+          >
+            Evidence Extraction
+          </button>
+          <button
+            onClick={handleTimelineAnalysis}
+            disabled={isLoading || !inputText.trim()}
+            className="action-button"
+          >
+            Timeline Analysis
+          </button>
         </div>
       </div>
 
-      {isProcessing && (
-        <div className="processing-indicator">
+      {isLoading && (
+        <div className="loading-state">
+          <p>Processing with {selectedService === 'local' ? 'Local AI' : 'Local AI'}...</p>
           <div className="spinner"></div>
-          <p>Processing with {selectedService === 'gemma' ? 'Gemma 3 270M' : 'Local AI'}...</p>
         </div>
       )}
 
       {results && (
-        <div className="results-section">
-          <h3>Results</h3>
-          <div className={`result-container ${results.type === 'error' ? 'error' : 'success'}`}>
-            <div className="result-header">
-              <span className="result-type">
-                {results.type === 'error' ? '❌ Error' : `✅ ${results.type.toUpperCase()}`}
-              </span>
-              <span className="result-service">{results.service}</span>
+        <div className="test-results">
+          <div className="results-header">
+            <h3>Test Results</h3>
+            <button onClick={clearResults} className="clear-button">
+              Clear Results
+            </button>
+          </div>
+          
+          <div className="result-content">
+            <div className="result-meta">
+              <p><strong>Type:</strong> {results.type}</p>
+              <p><strong>Service:</strong> {results.result?.service || 'Unknown'}</p>
+              <p><strong>Timestamp:</strong> {new Date(results.timestamp).toLocaleString()}</p>
             </div>
-            
+
             {results.type === 'error' ? (
-              <div className="result-error">
-                <strong>Error:</strong> {results.error}
+              <div className="error-result">
+                <p><strong>Error:</strong> {results.error}</p>
               </div>
             ) : (
-              <div className="result-data">
-                <pre>{JSON.stringify(results.data, null, 2)}</pre>
+              <div className="success-result">
+                <h4>Results</h4>
+                <pre className="result-json">
+                  {JSON.stringify(results.result, null, 2)}
+                </pre>
               </div>
             )}
           </div>
-          
-          <button onClick={clearResults} className="btn-clear">
-            🗑️ Clear Results
-          </button>
         </div>
       )}
 
-      {serviceStatus && (
-        <div className="service-status">
-          <h3>Service Status</h3>
-          <div className="status-grid">
-            <div className="status-card">
-              <h4>Local AI Service</h4>
-              <div className="status-item">
-                <span>Initialized:</span>
-                <span className={serviceStatus.local?.isInitialized ? 'success' : 'error'}>
-                  {serviceStatus.local?.isInitialized ? '✅ Yes' : '❌ No'}
-                </span>
-              </div>
-              <div className="status-item">
-                <span>Backend:</span>
-                <span>{serviceStatus.local?.backend || 'Unknown'}</span>
-              </div>
-            </div>
-            
-            <div className="status-card">
-              <h4>Gemma 3 270M</h4>
-              <div className="status-item">
-                <span>Initialized:</span>
-                <span className={serviceStatus.gemma?.isInitialized ? 'success' : 'error'}>
-                  {serviceStatus.gemma?.isInitialized ? '✅ Yes' : '❌ No'}
-                </span>
-              </div>
-              <div className="status-item">
-                <span>Status:</span>
-                <span>{serviceStatus.gemma?.modelStatus || 'Unknown'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="test-info">
+        <h4>Local AI Fallback</h4>
+        <p>
+          This service provides basic AI functionality using keyword-based detection and pattern matching.
+          It serves as a fallback when more advanced AI models are not available.
+        </p>
+        <ul>
+          <li><strong>Text Classification:</strong> Detects explicit and violent content using keywords</li>
+          <li><strong>Content Moderation:</strong> Identifies inappropriate content patterns</li>
+          <li><strong>Evidence Extraction:</strong> Extracts dates, locations, names, and emails using regex</li>
+          <li><strong>Timeline Analysis:</strong> Analyzes text for chronological information</li>
+        </ul>
+      </div>
     </div>
   );
 };

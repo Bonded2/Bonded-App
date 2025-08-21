@@ -1,26 +1,49 @@
 /**
- * AI Services Index - Optimized for Lazy Loading
+ * AI Services Index
  * 
- * This module provides lazy-loaded AI services to improve initial app load time.
- * Heavy models (Tesseract.js, NSFWJS, TensorFlow.js, Gemma 3 270M) are only loaded when actually needed.
+ * Centralized AI service management with lazy loading
+ * Heavy models (Tesseract.js, NSFWJS, TensorFlow.js) are only loaded when actually needed.
  */
 
-// LAZY LOADING: Create service factories instead of immediate instances
-let _nsfwDetectionService = null;
+// Service instances (lazy loaded)
+let _tensorflowService = null;
+let _nsfwService = null;
+let _faceDetectionService = null;
 let _ocrService = null;
 let _textClassificationService = null;
 let _evidenceFilterService = null;
-let _gemmaService = null;
 
 /**
- * Get NSFW Detection Service (lazy loaded)
+ * Get TensorFlow Service (lazy loaded)
  */
-export const getNSFWDetectionService = async () => {
-  if (!_nsfwDetectionService) {
-    const { nsfwDetectionService: service } = await import('./nsfwDetection.js');
-    _nsfwDetectionService = service;
+export const getTensorFlowService = async () => {
+  if (!_tensorflowService) {
+    const { tensorflowService: service } = await import('./tensorflowService.js');
+    _tensorflowService = service;
   }
-  return _nsfwDetectionService;
+  return _tensorflowService;
+};
+
+/**
+ * Get NSFW Service (lazy loaded)
+ */
+export const getNSFWService = async () => {
+  if (!_nsfwService) {
+    const { nsfwService: service } = await import('./nsfwService.js');
+    _nsfwService = service;
+  }
+  return _nsfwService;
+};
+
+/**
+ * Get Face Detection Service (lazy loaded)
+ */
+export const getFaceDetectionService = async () => {
+  if (!_faceDetectionService) {
+    const { faceDetectionService: service } = await import('./faceDetection.js');
+    _faceDetectionService = service;
+  }
+  return _faceDetectionService;
 };
 
 /**
@@ -50,106 +73,94 @@ export const getTextClassificationService = async () => {
  */
 export const getEvidenceFilterService = async () => {
   if (!_evidenceFilterService) {
-    const { aiEvidenceFilter } = await import('./evidenceFilter.js');
-    _evidenceFilterService = aiEvidenceFilter;
+    const { evidenceFilterService: service } = await import('./evidenceFilter.js');
+    _evidenceFilterService = service;
   }
   return _evidenceFilterService;
 };
 
 /**
- * Get Gemma 3 270M Service (lazy loaded)
+ * Get AI services status
  */
-export const getGemmaService = async () => {
-  if (!_gemmaService) {
-    const { gemmaService: service } = await import('./gemmaService.js');
-    _gemmaService = service;
-  }
-  return _gemmaService;
+export const getAIStatus = async () => {
+  const status = {
+    tensorflow: _tensorflowService !== null,
+    nsfw: _nsfwService !== null,
+    faceDetection: _faceDetectionService !== null,
+    ocr: _ocrService !== null,
+    textClassification: _textClassificationService !== null,
+    evidenceFilter: _evidenceFilterService !== null
+  };
+  
+  return status;
 };
 
 /**
- * Initialize AI services (non-blocking)
- * This can be called in the background to pre-load services
+ * Initialize all AI services
  */
 export const initializeAIServices = async () => {
   try {
-    // Initialize services in background without blocking
-    const promises = [
-      getNSFWDetectionService(),
-      getOCRService(), 
+    console.log('🚀 Initializing AI services...');
+    
+    // Initialize services in parallel
+    await Promise.all([
+      getTensorFlowService(),
+      getNSFWService(),
+      getFaceDetectionService(),
+      getOCRService(),
       getTextClassificationService(),
-      getEvidenceFilterService(),
-      getGemmaService()
-    ];
+      getEvidenceFilterService()
+    ]);
     
-    // Use Promise.allSettled to avoid blocking on any single failure
-    const results = await Promise.allSettled(promises);
-    
-    return {
-      success: true,
-      initialized: results.filter(r => r.status === 'fulfilled').length,
-      failed: results.filter(r => r.status === 'rejected').length
-    };
+    console.log('✅ All AI services initialized successfully');
+    return true;
   } catch (error) {
-    return {
-      success: false,
-      error: error.message
-    };
+    console.error('❌ Failed to initialize AI services:', error);
+    return false;
   }
 };
 
 /**
- * Check AI service availability without loading them
+ * Cleanup all AI services
  */
-export const getAIServiceStatus = () => {
-  return {
-    nsfwDetection: _nsfwDetectionService !== null,
-    ocr: _ocrService !== null,
-    textClassification: _textClassificationService !== null,
-    evidenceFilter: _evidenceFilterService !== null,
-    gemma: _gemmaService !== null
-  };
-};
-
-/**
- * Dispose of all AI services to free memory
- */
-export const disposeAIServices = async () => {
+export const cleanupAIServices = async () => {
   try {
+    console.log('🧹 Cleaning up AI services...');
+    
     const disposalPromises = [];
     
-    if (_nsfwDetectionService && typeof _nsfwDetectionService.dispose === 'function') {
-      disposalPromises.push(_nsfwDetectionService.dispose());
+    if (_tensorflowService && typeof _tensorflowService.cleanup === 'function') {
+      disposalPromises.push(_tensorflowService.cleanup());
     }
-    
-    if (_ocrService && typeof _ocrService.dispose === 'function') {
-      disposalPromises.push(_ocrService.dispose());
+    if (_nsfwService && typeof _nsfwService.cleanup === 'function') {
+      disposalPromises.push(_nsfwService.cleanup());
     }
-    
-    if (_textClassificationService && typeof _textClassificationService.dispose === 'function') {
-      disposalPromises.push(_textClassificationService.dispose());
+    if (_faceDetectionService && typeof _faceDetectionService.cleanup === 'function') {
+      disposalPromises.push(_faceDetectionService.cleanup());
     }
-    
-    if (_evidenceFilterService && typeof _evidenceFilterService.dispose === 'function') {
-      disposalPromises.push(_evidenceFilterService.dispose());
+    if (_ocrService && typeof _ocrService.cleanup === 'function') {
+      disposalPromises.push(_ocrService.cleanup());
     }
-    
-    if (_gemmaService && typeof _gemmaService.cleanup === 'function') {
-      disposalPromises.push(_gemmaService.cleanup());
+    if (_textClassificationService && typeof _textClassificationService.cleanup === 'function') {
+      disposalPromises.push(_textClassificationService.cleanup());
+    }
+    if (_evidenceFilterService && typeof _evidenceFilterService.cleanup === 'function') {
+      disposalPromises.push(_evidenceFilterService.cleanup());
     }
     
     await Promise.allSettled(disposalPromises);
     
     // Clear references
-    _nsfwDetectionService = null;
+    _tensorflowService = null;
+    _nsfwService = null;
+    _faceDetectionService = null;
     _ocrService = null;
     _textClassificationService = null;
     _evidenceFilterService = null;
-    _gemmaService = null;
     
-    return { success: true };
+    console.log('✅ AI services cleaned up successfully');
   } catch (error) {
-    return { success: false, error: error.message };
+    console.error('❌ Error during AI services cleanup:', error);
   }
 };
 
@@ -166,19 +177,19 @@ export const aiEvidenceFilter = {
   },
   
   async dispose() {
-    return disposeAIServices();
+    return cleanupAIServices();
   }
 };
 
 // Export individual services with lazy loading
 export const nsfwDetectionService = {
   async detectNSFW(image) {
-    const service = await getNSFWDetectionService();
+    const service = await getNSFWService();
     return service.detectNSFW(image);
   },
   
   async dispose() {
-    const service = await getNSFWDetectionService();
+    const service = await getNSFWService();
     return service.dispose();
   }
 };
@@ -209,13 +220,15 @@ export const textClassificationService = {
 
 // Default export for convenience
 export default {
-  getNSFWDetectionService,
+  getTensorFlowService,
+  getNSFWService,
+  getFaceDetectionService,
   getOCRService,
   getTextClassificationService,
   getEvidenceFilterService,
   initializeAIServices,
-  getAIServiceStatus,
-  disposeAIServices,
+  cleanupAIServices,
+  getAIStatus,
   // Legacy exports
   aiEvidenceFilter,
   nsfwDetectionService,
