@@ -28,5 +28,8 @@ rand_core = { version = "0.6", default-features = false }
 hkdf = "0.12"
 aes-gcm = "0.10"
 
-# Note: Simplified XOR-based threshold cryptography for MVP
-# sharks = "0.3"  # Can be added later for full Shamir's Secret Sharing
+# Production-ready threshold cryptography using Shamir's Secret Sharing
+shamir = "2.0.0"
+
+# ✅ Production-ready threshold cryptography using Shamir's Secret Sharing is now available
+# The shamir crate provides secure key sharing and reconstruction

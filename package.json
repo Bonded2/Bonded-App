@@ -1,6 +1,6 @@
 {
   "name": "bonded-app",
-  "version": "1.0.0",
+  "version": "1.0.14",
   "description": "Relationship verification app for immigration success. Privacy-first. AI runs fully in-browser. Storage on ICP blockchain.",
   "private": true,
   "workspaces": [
