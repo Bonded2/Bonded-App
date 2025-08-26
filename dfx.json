@@ -8,6 +8,14 @@
         "output": "src/declarations/bonded-app-backend",
         "node_compatibility": true
       }
+    },
+    "bonded-app-frontend": {
+      "source": ["src/bonded-app-frontend/dist"],
+      "type": "assets",
+      "declarations": {
+        "output": "src/declarations/bonded-app-frontend",
+        "node_compatibility": true
+      }
     }
   },
   "networks": {

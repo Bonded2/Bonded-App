@@ -135,9 +135,6 @@ pub struct CanisterState {
     pub next_evidence_id: u64,
     pub next_relationship_id: u64,
     pub next_invite_id: u64,
-    pub total_evidence_count: u64,
-    pub total_relationship_count: u64,
-    pub total_invite_count: u64,
 }
 
 // Storage access functions
@@ -183,10 +180,6 @@ pub fn with_invite_store_read<R>(f: impl FnOnce(&InviteStorage) -> R) -> R {
 
 pub fn with_canister_state<R>(f: impl FnOnce(&mut CanisterState) -> R) -> R {
     CANISTER_STATE.with(|state| f(&mut state.borrow_mut()))
-}
-
-pub fn with_canister_state_read<R>(f: impl FnOnce(&CanisterState) -> R) -> R {
-    CANISTER_STATE.with(|state| f(&state.borrow()))
 }
 
 // Timeline storage accessors
