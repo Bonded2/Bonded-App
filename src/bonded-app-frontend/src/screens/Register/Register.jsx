@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import icpUserService from "../../services/icpUserService";
-import userRegistrationService from "../../services/userRegistrationService.js";
 import { AuthClient } from "@dfinity/auth-client";
 import { api } from "../../services/api.js";
 import "./style.css";
@@ -163,30 +162,15 @@ export const Register = () => {
                 registeredAt: Date.now()
               };
               
-                          // Save profile data to ICP canister
-            try {
-              await icpUserService.updateUserSettings({
-                profile_metadata: JSON.stringify(profileData)
-              });
-              
-              // Save user registration data to local storage for future automatic login
-              const userData = {
-                principal: principal,
-                fullName: registrationData.fullName,
-                email: registrationData.email,
-                profileMetadata: profileData
-              };
-              
-              const savedToLocal = userRegistrationService.saveUserRegistration(userData);
-              if (savedToLocal) {
-                console.log('✅ User registration data saved to local storage');
-              } else {
-                console.warn('⚠️ Failed to save user registration data to local storage');
+              // Save profile data to ICP canister
+              try {
+                await icpUserService.updateUserSettings({
+                  profile_metadata: JSON.stringify(profileData)
+                });
+              } catch (saveError) {
+                console.error('Failed to save profile data to ICP canister:', saveError);
+                throw new Error('Failed to save registration data to canister');
               }
-            } catch (saveError) {
-              console.error('Failed to save profile data to ICP canister:', saveError);
-              throw new Error('Failed to save registration data to canister');
-            }
             }
             
             // Show success greeting from backend

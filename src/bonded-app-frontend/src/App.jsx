@@ -3,7 +3,6 @@ import { RouterProvider, createBrowserRouter, Navigate } from "react-router-dom"
 
 // CRITICAL PATH: Only load absolutely essential components immediately
 import { Splash } from "./screens/Splash/Splash";
-import { Greeting } from "./screens/Greeting/Greeting";
 
 // LAZY LOAD: ALL other components to minimize initial bundle
 const Login = lazy(() => import("./screens/Login/Login"));
@@ -169,11 +168,6 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <Splash />,
-    errorElement: <ErrorBoundary />,
-  },
-  {
-    path: "/greeting",
-    element: <Greeting />,
     errorElement: <ErrorBoundary />,
   },
   {
@@ -429,10 +423,6 @@ export const App = () => {
   useEffect(() => {
     // ULTRA-OPTIMIZED: Minimal background initialization
     const initializeApp = async () => {
-      // Check if we are in development mode
-      const isDevelopment = window.location.hostname === "localhost" || 
-                           window.location.hostname === "127.0.0.1" ||
-                           window.location.hostname.includes("localhost");
       // Background service worker registration (non-blocking)
       if ('serviceWorker' in navigator) {
         setTimeout(() => {

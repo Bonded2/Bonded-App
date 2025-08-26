@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CountrySelect, AsyncCountrySelect } from '../../components/CountrySelect/CountrySelect';
 import icpUserService from "../../services/icpUserService";
-import userRegistrationService from "../../services/userRegistrationService.js";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import { useBondedServices } from "../../hooks/useBondedServices";
 import { 
@@ -386,24 +385,6 @@ export const ProfileSetup = () => {
       await icpUserService.updateUserSettings({
         profile_metadata: profileMetadata
       });
-
-      // Update local storage with completed profile status
-      try {
-        const profileUpdate = {
-          profileComplete: true,
-          profileCompletedAt: Date.now(),
-          ...userData
-        };
-        
-        const updated = userRegistrationService.updateUserProfile(profileUpdate);
-        if (updated) {
-          console.log('✅ Profile completion status saved to local storage');
-        } else {
-          console.warn('⚠️ Failed to update profile completion status in local storage');
-        }
-      } catch (localStorageError) {
-        console.warn('⚠️ Error updating local storage:', localStorageError);
-      }
 
       const urlParams = new URLSearchParams(window.location.search);
       const fromInvite = urlParams.get('from') === 'invite';

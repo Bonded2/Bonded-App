@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import { useBondedServices } from "../../hooks/useBondedServices";
 import { AuthClient } from "@dfinity/auth-client";
-import userRegistrationService from "../../services/userRegistrationService.js";
 import "./style.css";
 export const Login = () => {
   const [email, setEmail] = useState("");
@@ -19,22 +18,6 @@ export const Login = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // First check local storage for existing user registration
-        const isRegistered = userRegistrationService.isUserRegistered();
-        
-        if (isRegistered) {
-          // User is registered in local storage, check if profile is complete
-          if (userRegistrationService.hasCompletedProfileSetup()) {
-            // Profile is complete, go to timeline
-            navigate("/timeline");
-            return;
-          } else {
-            // Profile incomplete, go to profile setup
-            navigate("/profile-setup");
-            return;
-          }
-        }
-        
         const client = await AuthClient.create();
         setAuthClient(client);
         // Check if user is already authenticated
