@@ -131,22 +131,29 @@ export const getIpLocation = async () => {
       return JSON.parse(cachedData);
     }
     
+    // Check if we're in a browser environment that supports fetch
+    if (typeof fetch === 'undefined') {
+      throw new Error('Fetch API not available');
+    }
+    
     // Try to fetch from API with CORS handling
-    // Use a CORS proxy or fallback to avoid CORS issues
     let apiUrl = APIS.IP_INFO;
     
-    // First try direct API call with no-cors mode to avoid CORS errors
     try {
+      // Use a more CORS-friendly approach
       const response = await fetch(apiUrl, {
-        mode: 'no-cors',
+        method: 'GET',
+        mode: 'cors', // Try CORS first
         headers: {
           'Accept': 'application/json',
-        }
+          'Content-Type': 'application/json',
+        },
+        // Add timeout to prevent hanging requests
+        signal: AbortSignal.timeout(5000) // 5 second timeout
       });
       
-      // If no-cors worked but can't read response, try cors mode
-      if (response.status === 0) {
-        throw new Error('CORS blocked - trying alternative approach');
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
@@ -176,14 +183,26 @@ export const getIpLocation = async () => {
       sessionStorage.setItem(CACHE_KEYS.IP_DATA, JSON.stringify(ipData));
       return ipData;
       
-    } catch (corsError) {
-      // If CORS fails, use fallback geolocation approach
-      throw new Error('IP location service unavailable due to CORS restrictions');
+    } catch (fetchError) {
+      console.warn('🔍 LocationService: IP location fetch failed:', fetchError.message);
+      
+      // If CORS or fetch fails, return fallback data immediately
+      // Don't throw error to avoid breaking the app
+      return {
+        ip: '',
+        country: '',
+        countryName: '',
+        region: '',
+        city: '',
+        isVpn: false,
+        vpnDetail: 'IP location service unavailable (CORS restricted)',
+        error: fetchError.message,
+        fallback: true
+      };
     }
     
-          // This section is now handled in the try block above
   } catch (error) {
-    // Silently handle CORS issues - this is expected in browser environment
+    console.warn('🔍 LocationService: IP location service error:', error.message);
     
     // Return minimal fallback object in case of failure
     return {
@@ -193,8 +212,9 @@ export const getIpLocation = async () => {
       region: '',
       city: '',
       isVpn: false,
-      vpnDetail: 'Could not determine VPN status (external service unavailable)',
-      error: error.message
+      vpnDetail: 'Could not determine VPN status (service unavailable)',
+      error: error.message,
+      fallback: true
     };
   }
 };

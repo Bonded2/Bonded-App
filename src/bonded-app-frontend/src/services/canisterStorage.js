@@ -28,7 +28,7 @@ class CanisterStorageService {
             await api.initialize();
             
             // Only set backend actor if user is authenticated
-            if (api.isAuthenticated) {
+            if (await api.isAuthenticated()) {
                 this.backendActor = api.actor;
             }
             

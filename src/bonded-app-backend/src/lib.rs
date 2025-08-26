@@ -119,7 +119,7 @@ fn get_canister_stats() -> HashMap<String, u64> {
 
 #[query]
 fn greet(name: String) -> String {
-    format!("🔗💕 Hello from Bonded backend, {}! Ready to secure your relationship evidence on the blockchain.", name)
+    format!("🔗💕 Hello from Bonded Team, {}! Ready to secure your relationship evidence on the blockchain.", name)
 }
 
 // ==================

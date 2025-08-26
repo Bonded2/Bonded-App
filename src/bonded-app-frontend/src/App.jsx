@@ -3,6 +3,7 @@ import { RouterProvider, createBrowserRouter, Navigate } from "react-router-dom"
 
 // CRITICAL PATH: Only load absolutely essential components immediately
 import { Splash } from "./screens/Splash/Splash";
+import { Greeting } from "./screens/Greeting/Greeting";
 
 // LAZY LOAD: ALL other components to minimize initial bundle
 const Login = lazy(() => import("./screens/Login/Login"));
@@ -106,7 +107,7 @@ export class ErrorBoundary extends React.Component {
     }
     
     // For development debugging
-    if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
   }
@@ -125,7 +126,7 @@ export class ErrorBoundary extends React.Component {
         }}>
           <h1>Something went wrong</h1>
           <p>Please refresh the page to continue.</p>
-          {process.env.NODE_ENV === 'development' && this.state.errorDetails && (
+          {import.meta.env.DEV && this.state.errorDetails && (
             <details style={{ marginTop: '20px', textAlign: 'left' }}>
               <summary>Error Details (Development)</summary>
               <pre style={{ 
@@ -168,6 +169,11 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <Splash />,
+    errorElement: <ErrorBoundary />,
+  },
+  {
+    path: "/greeting",
+    element: <Greeting />,
     errorElement: <ErrorBoundary />,
   },
   {
@@ -423,6 +429,10 @@ export const App = () => {
   useEffect(() => {
     // ULTRA-OPTIMIZED: Minimal background initialization
     const initializeApp = async () => {
+      // Check if we are in development mode
+      const isDevelopment = window.location.hostname === "localhost" || 
+                           window.location.hostname === "127.0.0.1" ||
+                           window.location.hostname.includes("localhost");
       // Background service worker registration (non-blocking)
       if ('serviceWorker' in navigator) {
         setTimeout(() => {

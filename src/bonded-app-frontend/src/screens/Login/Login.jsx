@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import { useBondedServices } from "../../hooks/useBondedServices";
 import { AuthClient } from "@dfinity/auth-client";
+import userRegistrationService from "../../services/userRegistrationService.js";
 import "./style.css";
 export const Login = () => {
   const [email, setEmail] = useState("");
@@ -18,6 +19,22 @@ export const Login = () => {
   useEffect(() => {
     const initAuth = async () => {
       try {
+        // First check local storage for existing user registration
+        const isRegistered = userRegistrationService.isUserRegistered();
+        
+        if (isRegistered) {
+          // User is registered in local storage, check if profile is complete
+          if (userRegistrationService.hasCompletedProfileSetup()) {
+            // Profile is complete, go to timeline
+            navigate("/timeline");
+            return;
+          } else {
+            // Profile incomplete, go to profile setup
+            navigate("/profile-setup");
+            return;
+          }
+        }
+        
         const client = await AuthClient.create();
         setAuthClient(client);
         // Check if user is already authenticated
@@ -125,8 +142,8 @@ export const Login = () => {
     try {
       // Configure the login options
       const loginOptions = {
-        identityProvider: process.env.DFX_NETWORK === "local" 
-          ? `http://localhost:4943/?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID}`
+        identityProvider: import.meta.env.VITE_DFX_NETWORK === "local" 
+          ? `${import.meta.env.VITE_API_HOST || 'http://127.0.0.1:4943'}/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
           : "https://identity.ic0.app",
         maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days in nanoseconds
         onSuccess: async () => {

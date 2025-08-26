@@ -29,6 +29,30 @@ self.addEventListener('fetch', event => {
   return;
 });
 
+// Sync event - basic sync support for development
+self.addEventListener('sync', event => {
+  console.log('Development service worker sync event:', event.tag);
+  
+  if (event.tag === 'daily-evidence-processing') {
+    event.waitUntil(
+      // In development, just log the sync event
+      Promise.resolve().then(() => {
+        console.log('🔄 Daily evidence processing sync triggered in development');
+        // Notify the main thread that sync was triggered
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'TRIGGER_DAILY_PROCESSING',
+              timestamp: Date.now(),
+              source: 'service-worker-dev'
+            });
+          });
+        });
+      })
+    );
+  }
+});
+
 // Message event - handle basic messages
 self.addEventListener('message', event => {
   if (event.data && event.data.type === 'SKIP_WAITING') {

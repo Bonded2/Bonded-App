@@ -51,10 +51,10 @@ export default defineConfig({
           return resolve(__dirname, 'src/services/canisterIntegration.dev.js');
         }
         
-        // Handle API service during development
-        if (isDev && id.endsWith('api.js')) {
-          return resolve(__dirname, 'src/services/api.dev.js');
-        }
+        // Handle API service during development - DISABLED to use full API service
+        // if (isDev && id.endsWith('api.js')) {
+        //   return resolve(__dirname, 'src/services/api.dev.js');
+        // }
         
         return null;
       }

@@ -15,8 +15,28 @@ export const AcceptInvite = () => {
   const [userChoice, setUserChoice] = useState(null); // 'new' or 'existing'
 
   useEffect(() => {
-    validateInvitation();
+    initializeAndValidateInvitation();
   }, []);
+
+  const initializeAndValidateInvitation = async () => {
+    try {
+      // Initialize the API service first
+      console.log('🔍 AcceptInvite: Initializing API service...');
+      await api.init();
+      console.log('🔍 AcceptInvite: API service initialized successfully');
+      
+      // Now validate the invitation
+      await validateInvitation();
+    } catch (error) {
+      console.error('🔍 AcceptInvite: Failed to initialize API service:', error);
+      setInviteState({
+        status: 'error',
+        message: 'Failed to connect to the network. Please check your connection and try again.',
+        inviteData: null,
+        error: error.message
+      });
+    }
+  };
 
   const validateInvitation = async () => {
     try {
@@ -47,7 +67,15 @@ export const AcceptInvite = () => {
       // Get invite from ICP canister using proper service with resilient error handling
       
       try {
+        console.log('🔍 AcceptInvite: About to call api.getPartnerInvite with ID:', inviteId);
+        console.log('🔍 AcceptInvite: API service state:', {
+          isInitialized: api.isInitialized?.() || 'method not available',
+          actor: !!api.actor,
+          authClient: !!api.authClient
+        });
+        
         const inviteData = await api.getPartnerInvite(inviteId);
+        console.log('🔍 AcceptInvite: Received invite data:', inviteData);
         
         // Handle network error (certificate validation issues) - removed as this is now handled in service
         
@@ -96,19 +124,33 @@ export const AcceptInvite = () => {
         });
 
       } catch (inviteError) {
+        console.error('🔍 AcceptInvite: Error calling getPartnerInvite:', inviteError);
+        
         // Suppress certificate validation errors (expected in playground environment)
         const isCertError = inviteError.message?.includes('Invalid certificate') || 
                            inviteError.message?.includes('Invalid signature from replica');
         
         if (!isCertError) {
-// Console statement removed for production
+          console.error('🔍 AcceptInvite: Non-certificate error details:', inviteError);
+        }
+
+        // Provide more specific error messages
+        let errorMessage = 'Failed to validate invitation';
+        if (inviteError.message?.includes('API not initialized')) {
+          errorMessage = 'Service not ready. Please refresh the page and try again.';
+        } else if (inviteError.message?.includes('Failed to fetch')) {
+          errorMessage = 'Network connection issue. Please check your internet connection.';
+        } else if (isCertError) {
+          errorMessage = 'Unable to connect to verify invitation. Please try again or join Bonded anyway.';
+        } else {
+          errorMessage = `Failed to validate invitation: ${inviteError.message}`;
         }
 
         setInviteState({
           status: 'error',
-          message: isCertError ? 'Unable to connect to verify invitation. Please try again or join Bonded anyway.' : 'Failed to validate invitation - network connectivity issue',
+          message: errorMessage,
           inviteData: null,
-          error: isCertError ? 'Network connectivity issue (certificate validation)' : inviteError.message
+          error: inviteError.message
         });
       }
     } catch (error) {
@@ -283,12 +325,20 @@ export const AcceptInvite = () => {
             <div className="error-icon">😞</div>
             <h2>Invitation Issue</h2>
             <p>{inviteState.message}</p>
-            <button 
-              className="retry-btn"
-              onClick={() => navigate('/register')}
-            >
-              Join Bonded Anyway
-            </button>
+            <div className="error-actions">
+              <button 
+                className="retry-btn primary"
+                onClick={() => initializeAndValidateInvitation()}
+              >
+                🔄 Try Again
+              </button>
+              <button 
+                className="retry-btn secondary"
+                onClick={() => navigate('/register')}
+              >
+                Join Bonded Anyway
+              </button>
+            </div>
           </div>
         );
 
