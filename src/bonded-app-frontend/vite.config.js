@@ -150,6 +150,9 @@ export default defineConfig({
       'onnxruntime-web', 
       'tesseract.js', 
       'nsfwjs',
+      '@tensorflow/tfjs',
+      '@tensorflow/tfjs-backend-wasm',
+      '@tensorflow/tfjs-backend-webgl',
       // Exclude ICP packages to avoid resolution issues during development
       '@dfinity/identity',
       '@dfinity/agent',
@@ -230,7 +233,12 @@ export default defineConfig({
         ...(isProduction ? [
           '@xenova/transformers',
           'onnxruntime-web',
-          '@noble/curves/bls12-381'
+          '@noble/curves/bls12-381',
+          'tesseract.js',
+          'nsfwjs',
+          '@tensorflow/tfjs',
+          '@tensorflow/tfjs-backend-wasm',
+          '@tensorflow/tfjs-backend-webgl'
         ] : [])
       ],
       output: {
