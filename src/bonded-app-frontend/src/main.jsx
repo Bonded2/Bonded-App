@@ -88,14 +88,7 @@ import('./utils/fontLoader.js').then(({ initializeFonts }) => {
   console.warn('Could not load font loader:', err);
 });
 
-// Service worker registration
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => console.log('SW registered:', registration))
-      .catch(error => console.log('SW registration failed:', error));
-  });
-}
+// Service worker registration is handled in sw-registration.js
 
 // Render the app
 const root = ReactDOM.createRoot(document.getElementById('root'));

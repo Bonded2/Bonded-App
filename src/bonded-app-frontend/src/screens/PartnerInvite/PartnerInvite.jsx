@@ -21,17 +21,69 @@ export const PartnerInvite = () => {
     manualInstructions: null
   });
 
-  // Load current user data
-  useEffect(() => {
-    const loadCurrentUser = async () => {
-      try {
-        const user = await icpUserService.getCurrentUser();
-        setCurrentUser(user);
-      } catch (error) {
-        console.error('Failed to load current user:', error);
+    // Initialize services function
+  const initializeServices = async () => {
+    try {
+      console.log('🔍 PartnerInvite: Initializing services...');
+      
+      // First, try to restore authentication state
+      console.log('🔍 PartnerInvite: Attempting to restore authentication state...');
+      const authRestored = await api.restoreAuthState();
+      
+      if (!authRestored) {
+        console.log('🔍 PartnerInvite: Auth state not restored, trying to initialize...');
+        await api.init();
       }
-    };
-    loadCurrentUser();
+      
+      // Load current user data
+      const user = await icpUserService.getCurrentUser();
+      console.log('🔍 PartnerInvite: Current user loaded:', user);
+      setCurrentUser(user);
+      
+      // Verify API is working
+      if (api.actor) {
+        console.log('🔍 PartnerInvite: API actor is available');
+      } else {
+        console.error('🔍 PartnerInvite: API actor is not available');
+        
+        // Try one more time to restore auth state
+        console.log('🔍 PartnerInvite: Retrying auth state restoration...');
+        const retryResult = await api.restoreAuthState();
+        if (retryResult) {
+          console.log('🔍 PartnerInvite: Auth state restored on retry');
+        } else {
+          console.error('🔍 PartnerInvite: Failed to restore auth state after retry');
+        }
+      }
+      
+      // Log detailed debug info
+      console.log('🔍 PartnerInvite: API debug info:', api.getDebugInfo());
+      
+      // Clear any error status if successful
+      if (inviteStatus.status === 'error') {
+        setInviteStatus({
+          status: 'ready',
+          message: '',
+          error: null,
+          inviteId: null
+        });
+      }
+    } catch (error) {
+      console.error('🔍 PartnerInvite: Failed to initialize services:', error);
+      
+      // Set error status for API initialization failure
+      setInviteStatus({
+        status: 'error',
+        message: '🔧 Unable to connect to the blockchain. Please refresh the page and try again.',
+        error: error.message,
+        inviteId: null
+      });
+    }
+  };
+
+  // Load current user data and ensure API is initialized
+  useEffect(() => {
+    initializeServices();
   }, []);
 
   const isValidEmail = (email) => {
@@ -276,6 +328,14 @@ export const PartnerInvite = () => {
       };
 
       // Create invite in ICP canister (proper canister storage)
+      console.log('🔍 PartnerInvite: About to create partner invite...');
+      const isAuth = await api.isAuthenticated();
+      console.log('🔍 PartnerInvite: API state:', {
+        isAuthenticated: isAuth,
+        hasActor: !!api.actor,
+        identity: !!api.identity
+      });
+      
       const inviteResult = await api.createPartnerInvite(inviteData);
 
       if (inviteResult.success) {
@@ -448,6 +508,149 @@ export const PartnerInvite = () => {
                   <summary>Technical Details</summary>
                   <pre>{inviteStatus.error}</pre>
                 </details>
+              )}
+              
+              {inviteStatus.status === 'error' && (
+                <div className="error-actions">
+                  <button 
+                    type="button"
+                    onClick={async () => {
+                      console.log('🔍 PartnerInvite: User clicked retry button');
+                      setInviteStatus({
+                        status: 'ready',
+                        message: '',
+                        error: null,
+                        inviteId: null
+                      });
+                      
+                      // Try to reinitialize services
+                      try {
+                        await initializeServices();
+                      } catch (error) {
+                        console.error('🔍 PartnerInvite: Retry failed:', error);
+                      }
+                    }}
+                    className="retry-button"
+                  >
+                    🔄 Retry Connection
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onClick={async () => {
+                      console.log('🔍 PartnerInvite: User clicked recreate auth button');
+                      setInviteStatus({
+                        status: 'ready',
+                        message: '🔄 Recreating authentication...',
+                        error: null,
+                        inviteId: null
+                      });
+                      
+                      try {
+                        // Force recreation of AuthClient
+                        await api.recreateAuthClient();
+                        
+                        // Try to reinitialize services
+                        await initializeServices();
+                      } catch (error) {
+                        console.error('🔍 PartnerInvite: Auth recreation failed:', error);
+                        setInviteStatus({
+                          status: 'error',
+                          message: '❌ Failed to recreate authentication. Please refresh the page.',
+                          error: error.message,
+                          inviteId: null
+                        });
+                      }
+                    }}
+                    className="retry-button secondary"
+                    style={{ marginTop: '8px' }}
+                  >
+                    🔐 Recreate Authentication
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onClick={async () => {
+                      console.log('🔍 PartnerInvite: User clicked compatibility check button');
+                      setInviteStatus({
+                        status: 'ready',
+                        message: '🔍 Checking DFINITY package compatibility...',
+                        error: null,
+                        inviteId: null
+                      });
+                      
+                      try {
+                        const compatibility = await api.checkDfinityCompatibility();
+                        console.log('🔍 PartnerInvite: Compatibility check result:', compatibility);
+                        
+                        if (compatibility?.hasWorkingActor) {
+                          setInviteStatus({
+                            status: 'ready',
+                            message: '✅ DFINITY packages are compatible. Try the retry button above.',
+                            error: null,
+                            inviteId: null
+                          });
+                        } else {
+                          setInviteStatus({
+                            status: 'error',
+                            message: '❌ DFINITY package compatibility issue detected. Check console for details.',
+                            error: 'Actor.createActor method not available',
+                            inviteId: null
+                          });
+                        }
+                      } catch (error) {
+                        console.error('🔍 PartnerInvite: Compatibility check failed:', error);
+                        setInviteStatus({
+                          status: 'error',
+                          message: '❌ Compatibility check failed. Check console for details.',
+                          error: error.message,
+                          inviteId: null
+                        });
+                      }
+                    }}
+                    className="retry-button secondary"
+                    style={{ marginTop: '8px' }}
+                  >
+                    🔍 Check Compatibility
+                  </button>
+                  
+                  <button 
+                    type="button"
+                    onClick={async () => {
+                      console.log('🔍 PartnerInvite: User clicked debug auth button');
+                      setInviteStatus({
+                        status: 'ready',
+                        message: '🔍 Debugging authentication state...',
+                        error: null,
+                        inviteId: null
+                      });
+                      
+                      try {
+                        const authDebug = await api.debugAuthState();
+                        console.log('🔍 PartnerInvite: Auth debug result:', authDebug);
+                        
+                        setInviteStatus({
+                          status: 'ready',
+                          message: '🔍 Authentication state debug completed. Check console for details.',
+                          error: null,
+                          inviteId: null
+                        });
+                      } catch (error) {
+                        console.error('🔍 PartnerInvite: Auth debug failed:', error);
+                        setInviteStatus({
+                          status: 'error',
+                          message: '❌ Auth debug failed. Check console for details.',
+                          error: error.message,
+                          inviteId: null
+                        });
+                      }
+                    }}
+                    className="retry-button secondary"
+                    style={{ marginTop: '8px' }}
+                  >
+                    🔐 Debug Auth State
+                  </button>
+                </div>
               )}
               
               {inviteStatus.status === 'manual_required' && inviteStatus.manualInstructions && (

@@ -87,8 +87,8 @@ export const Register = () => {
       const loginOptions = {
         identityProvider: window.location.hostname.includes('icp0.io') 
           ? "https://identity.ic0.app"
-          : (process.env.DFX_NETWORK === "local" 
-            ? `http://localhost:4943/?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
+          : (import.meta.env.VITE_DFX_NETWORK === "local" 
+            ? `${import.meta.env.VITE_API_HOST || 'http://127.0.0.1:4943'}/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
             : "https://identity.ic0.app"),
         maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days in nanoseconds
         onSuccess: async () => {
@@ -120,7 +120,14 @@ export const Register = () => {
             await icpUserService.initialize();
             
             // Register user first (basic registration)
-            await icpUserService.registerUser();
+            console.log('🔍 Starting user registration...');
+            const registrationResult = await icpUserService.registerUser();
+            console.log('🔍 Registration result:', registrationResult);
+            
+            // Check if user was already registered
+            if (registrationResult.isExistingUser) {
+              console.log('🔍 User already exists, proceeding to next step...');
+            }
             
             // REAL IMPLEMENTATION: Handle invite acceptance through URL params
             if (fromInvite) {
@@ -164,17 +171,22 @@ export const Register = () => {
             }
             
             // Handle different flows based on how user arrived
+            console.log('🔍 Navigating to next step...');
             if (fromInvite) {
               // If coming from invite, skip partner invite and go to profile setup
               // then directly to timeline (bypassing KYC)
+              console.log('🔍 Navigating to profile-setup (from invite)');
               navigate("/profile-setup");
             } else {
               // For normal registration, go to partner invite first
+              console.log('🔍 Navigating to partner-invite (normal registration)');
               navigate("/partner-invite");
             }
           } catch (error) {
+            console.error('🔍 Registration error:', error);
             setErrors({ submit: "Registration successful, but setup failed. Please try again." });
           } finally {
+            console.log('🔍 Registration flow completed, setting loading to false');
             setIsLoading(false);
           }
         },
@@ -233,6 +245,43 @@ export const Register = () => {
           <div className="error-banner" role="alert" aria-live="polite">
             <span className="error-icon">⚠️</span>
             {errors.submit}
+          </div>
+        )}
+
+        {/* Debug section for stuck registration */}
+        {isLoading && (
+          <div className="debug-section" style={{ 
+            background: '#f0f8ff', 
+            border: '1px solid #007acc', 
+            borderRadius: '8px', 
+            padding: '16px', 
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 12px 0', color: '#007acc' }}>
+              <strong>Registration in progress...</strong>
+            </p>
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#666' }}>
+              If this takes too long, the account may already exist.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                console.log('🔍 Manual navigation triggered');
+                navigate("/partner-invite");
+              }}
+              style={{
+                background: '#007acc',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Continue to Next Step
+            </button>
           </div>
         )}
 

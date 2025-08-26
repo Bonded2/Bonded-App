@@ -28,8 +28,8 @@
     "build:emergency": "bash scripts/emergency-build.sh"
   },
   "devDependencies": {
-    "@dfinity/candid": "2.1.3",
-    "@dfinity/principal": "2.1.3"
+    "@dfinity/candid": "2.4.1",
+    "@dfinity/principal": "2.4.1"
   },
   "keywords": [
     "icp",
@@ -48,8 +48,8 @@
   },
   "resolutions": {
     "@noble/curves": "1.4.0",
-    "@dfinity/agent": "2.1.3",
-    "@dfinity/auth-client": "2.1.3",
-    "@dfinity/identity": "2.1.3"
+    "@dfinity/agent": "2.4.1",
+    "@dfinity/auth-client": "2.4.1",
+    "@dfinity/identity": "2.4.1"
   }
 }

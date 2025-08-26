@@ -363,6 +363,28 @@
   transform: translateY(-1px);
 }
 
+.error-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.retry-btn.primary {
+  background: linear-gradient(135deg, #2C4CDF 0%, #3a5bef 100%);
+  color: #ffffff;
+}
+
+.retry-btn.secondary {
+  background: linear-gradient(135deg, #FF704D 0%, #ff8566 100%);
+  color: #ffffff;
+}
+
+.retry-btn.secondary:hover {
+  background: linear-gradient(135deg, #ff8566 0%, #FF704D 100%);
+}
+
 /* Security Note */
 .security-note {
   background-color: rgba(44, 76, 223, 0.05);

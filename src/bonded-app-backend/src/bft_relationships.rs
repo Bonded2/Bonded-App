@@ -100,7 +100,8 @@ pub fn bft_create_partner_invite(
                invite_id, 
                hex::encode(&integrity_proof))
     } else {
-        format!("https://bonded.app/accept-invite?invite={}&proof={}", 
+        // For local development, default to localhost:3001
+        format!("http://localhost:3001/accept-invite?invite={}&proof={}", 
                invite_id, 
                hex::encode(&integrity_proof))
     };

@@ -106,7 +106,7 @@ export class ErrorBoundary extends React.Component {
     }
     
     // For development debugging
-    if (process.env.NODE_ENV === 'development') {
+            if (import.meta.env.DEV) {
       console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
   }
@@ -125,7 +125,7 @@ export class ErrorBoundary extends React.Component {
         }}>
           <h1>Something went wrong</h1>
           <p>Please refresh the page to continue.</p>
-          {process.env.NODE_ENV === 'development' && this.state.errorDetails && (
+          {import.meta.env.DEV && this.state.errorDetails && (
             <details style={{ marginTop: '20px', textAlign: 'left' }}>
               <summary>Error Details (Development)</summary>
               <pre style={{ 

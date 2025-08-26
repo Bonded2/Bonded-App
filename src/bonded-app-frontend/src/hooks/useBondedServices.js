@@ -70,7 +70,7 @@ export const useBondedServices = () => {
       // Initialize ICP canister service
       try {
         await services.api.initialize();
-        const isAuthenticated = services.api.isAuthenticated;
+        const isAuthenticated = await services.api.isAuthenticated();
         const principal = isAuthenticated ? services.api.getPrincipal()?.toString() : null;
         setAuthState({ 
           isAuthenticated, 

@@ -547,8 +547,8 @@ export default localVault;
 // Auto-initialize sync service when Local Vault is imported
 (async () => {
   try {
-    const { localVaultSync } = await import('./localVaultSync.js');
-    await localVaultSync.initialize();
+    const localVaultSync = await import('./localVaultSync.js');
+    await localVaultSync.default.initialize();
   } catch (error) {
     console.warn('⚠️ Failed to initialize Local Vault Sync:', error);
   }

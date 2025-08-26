@@ -52,7 +52,7 @@ class CanisterIntegrationService {
     
     // Determine the correct host based on network
     if (this.isLocal) {
-      this.host = 'http://127.0.0.1:4943';
+      this.host = import.meta.env.VITE_API_HOST || 'http://127.0.0.1:4943';
     } else {
       // Use the configured API host or default to ic0.app for mainnet
       this.host = import.meta.env.VITE_API_HOST || 'https://ic0.app';

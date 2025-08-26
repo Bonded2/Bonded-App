@@ -125,8 +125,8 @@ export const Login = () => {
     try {
       // Configure the login options
       const loginOptions = {
-        identityProvider: process.env.DFX_NETWORK === "local" 
-          ? `http://localhost:4943/?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID}`
+        identityProvider: import.meta.env.VITE_DFX_NETWORK === "local" 
+          ? `${import.meta.env.VITE_API_HOST || 'http://127.0.0.1:4943'}/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
           : "https://identity.ic0.app",
         maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days in nanoseconds
         onSuccess: async () => {

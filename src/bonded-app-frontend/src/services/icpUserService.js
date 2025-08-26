@@ -57,16 +57,28 @@ class ICPUserService {
     if (this.isInitialized) return;
     
     try {
+      console.log('🔍 ICP User Service: Starting initialization...');
+      console.log('🔍 ICP User Service: api object before initialize:', api);
+      console.log('🔍 ICP User Service: api methods before initialize:', Object.getOwnPropertyNames(api));
+      
       await api.initialize();
+      console.log('🔍 ICP User Service: API service initialized successfully');
       
       // Check if user is already authenticated
-      if (api.isAuthenticated) {
+      console.log('🔍 ICP User Service: Checking authentication...');
+      const isAuth = await api.isAuthenticated();
+      console.log('🔍 ICP User Service: Authentication result:', isAuth);
+      
+      if (isAuth) {
+        console.log('🔍 ICP User Service: User is authenticated, loading current user...');
         await this.loadCurrentUser();
       }
       
       this.isInitialized = true;
+      console.log('🔍 ICP User Service: Initialization completed successfully');
 // Console statement removed for production
     } catch (error) {
+      console.error('🔍 ICP User Service: Initialization failed:', error);
 // Console statement removed for production
       throw error;
     }
@@ -105,24 +117,29 @@ class ICPUserService {
    */
   async registerUser(profileMetadata = null) {
     try {
+      console.log('🔍 ICP User Service: Starting registration...');
       const result = await api.registerUser(profileMetadata);
+      console.log('🔍 ICP User Service: API result:', result);
       
       // For existing users or successful new registrations, load current user data
       if (result.success) {
-      await this.loadCurrentUser();
-      return result;
+        console.log('🔍 ICP User Service: Registration successful, loading user...');
+        await this.loadCurrentUser();
+        return result;
       }
       
+      console.log('🔍 ICP User Service: Registration failed, result:', result);
       throw new Error('Registration failed');
     } catch (error) {
+      console.log('🔍 ICP User Service: Registration error:', error);
       // For returning users, this might not be an error
       if (error.message && error.message.includes('User already registered')) {
-// Console statement removed for production
+        console.log('🔍 ICP User Service: User already registered, loading existing user...');
         await this.loadCurrentUser();
         return { success: true, isExistingUser: true };
       }
       
-// Console statement removed for production
+      console.log('🔍 ICP User Service: Throwing error:', error);
       throw error;
     }
   }
@@ -133,7 +150,7 @@ class ICPUserService {
   async loadCurrentUser() {
     try {
       // Ensure we're authenticated first
-      if (!api.isAuthenticated) {
+      if (!(await api.isAuthenticated())) {
         throw new Error('User not authenticated');
       }
 
@@ -170,7 +187,7 @@ class ICPUserService {
         principal: api.getPrincipal()?.toString(),
         profile: null,
         settings: null,
-        isAuthenticated: api.isAuthenticated
+        isAuthenticated: await api.isAuthenticated()
       };
       return this.currentUser;
     }
@@ -190,7 +207,7 @@ class ICPUserService {
    * Check if user is authenticated
    */
   async isAuthenticated() {
-    return api.isAuthenticated;
+    return await api.isAuthenticated();
   }
 
   /**
@@ -251,7 +268,17 @@ class ICPUserService {
    */
   async updateUserSettings(settings) {
     try {
+      console.log('🔍 ICP User Service: updateUserSettings called with:', settings);
+      console.log('🔍 ICP User Service: api object:', api);
+      console.log('🔍 ICP User Service: api methods:', Object.getOwnPropertyNames(api));
+      console.log('🔍 ICP User Service: api.updateUserSettings type:', typeof api.updateUserSettings);
+      
+      if (typeof api.updateUserSettings !== 'function') {
+        throw new Error(`api.updateUserSettings is not a function. Available methods: ${Object.getOwnPropertyNames(api).join(', ')}`);
+      }
+      
       const result = await api.updateUserSettings(settings);
+      console.log('🔍 ICP User Service: updateUserSettings result:', result);
       
       // Wait a moment for the canister to process the update
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -280,6 +307,7 @@ class ICPUserService {
       
       return result;
     } catch (error) {
+      console.error('🔍 ICP User Service: updateUserSettings error:', error);
       throw error;
     }
   }
