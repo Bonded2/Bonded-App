@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { CountrySelect, AsyncCountrySelect } from '../../components/CountrySelect/CountrySelect';
 import icpUserService from "../../services/icpUserService";
+import userRegistrationService from "../../services/userRegistrationService.js";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import { useBondedServices } from "../../hooks/useBondedServices";
 import { 
@@ -69,23 +70,31 @@ export const ProfileSetup = () => {
   useEffect(() => {
     const loadUserData = async () => {
       try {
+        console.log('🔍 ProfileSetup: Starting initialization...');
         await icpUserService.initialize();
+        console.log('🔍 ProfileSetup: icpUserService initialized successfully');
         
         let getUserAttempts = 0;
         let currentUser = null;
         
         while (getUserAttempts < 8) {
           try {
+            console.log(`🔍 ProfileSetup: Attempt ${getUserAttempts + 1} to get current user...`);
             currentUser = await icpUserService.getCurrentUser(true);
+            console.log('🔍 ProfileSetup: Current user result:', currentUser);
+            
             if (currentUser && currentUser.isAuthenticated) {
               if (currentUser.settings && 
                   (currentUser.settings.profile_metadata || currentUser.settings.profileMetadata)) {
+                console.log('🔍 ProfileSetup: User has existing profile metadata');
                 break;
               } else if (getUserAttempts < 6) {
+                console.log(`🔍 ProfileSetup: No profile metadata yet, waiting ${1000 * (getUserAttempts + 1)}ms...`);
                 await new Promise(resolve => setTimeout(resolve, 1000 * (getUserAttempts + 1)));
                 getUserAttempts++;
                 continue;
               } else {
+                console.log('🔍 ProfileSetup: Max attempts reached, proceeding without profile metadata');
                 break;
               }
             }
@@ -333,8 +342,14 @@ export const ProfileSetup = () => {
   // Complete profile setup
   const completeProfileSetup = async () => {
     try {
+      console.log('🔍 ProfileSetup: Starting profile setup completion...');
+      
+      console.log('🔍 ProfileSetup: About to call icpUserService.getCurrentUser...');
       const currentUser = await icpUserService.getCurrentUser(true);
+      console.log('🔍 ProfileSetup: Current user result:', currentUser);
+      
       const userPrincipal = currentUser?.principal?.toString() || 'User';
+      console.log('🔍 ProfileSetup: User principal:', userPrincipal);
       
       const avatar = formData.fullName ? 
         formData.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 
@@ -350,11 +365,45 @@ export const ProfileSetup = () => {
         profileCompletedAt: Date.now()
       };
       
+      console.log('🔍 ProfileSetup: User data prepared:', userData);
       const profileMetadata = JSON.stringify(userData);
+      console.log('🔍 ProfileSetup: Profile metadata JSON:', profileMetadata);
+      
+      console.log('🔍 ProfileSetup: About to call icpUserService.updateUserSettings...');
+      console.log('🔍 ProfileSetup: icpUserService object:', icpUserService);
+      console.log('🔍 ProfileSetup: icpUserService methods:', Object.getOwnPropertyNames(icpUserService));
+      console.log('🔍 ProfileSetup: icpUserService.updateUserSettings type:', typeof icpUserService.updateUserSettings);
+      
+      // Check if the API service is properly initialized
+      console.log('🔍 ProfileSetup: Checking API service state...');
+      try {
+        const apiDebugInfo = await icpUserService.api?.getDebugInfo?.();
+        console.log('🔍 ProfileSetup: API debug info:', apiDebugInfo);
+      } catch (debugError) {
+        console.warn('🔍 ProfileSetup: Could not get API debug info:', debugError);
+      }
       
       await icpUserService.updateUserSettings({
         profile_metadata: profileMetadata
       });
+
+      // Update local storage with completed profile status
+      try {
+        const profileUpdate = {
+          profileComplete: true,
+          profileCompletedAt: Date.now(),
+          ...userData
+        };
+        
+        const updated = userRegistrationService.updateUserProfile(profileUpdate);
+        if (updated) {
+          console.log('✅ Profile completion status saved to local storage');
+        } else {
+          console.warn('⚠️ Failed to update profile completion status in local storage');
+        }
+      } catch (localStorageError) {
+        console.warn('⚠️ Error updating local storage:', localStorageError);
+      }
 
       const urlParams = new URLSearchParams(window.location.search);
       const fromInvite = urlParams.get('from') === 'invite';
@@ -375,6 +424,8 @@ export const ProfileSetup = () => {
       
       navigate("/timeline");
     } catch (error) {
+      console.error('🔍 ProfileSetup: Error in completeProfileSetup:', error);
+      console.error('🔍 ProfileSetup: Error stack:', error.stack);
       setFormErrors({ 
         submit: `Failed to complete profile setup: ${error.message}. Please try again.` 
       });

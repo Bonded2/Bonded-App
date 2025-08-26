@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import icpUserService from "../../services/icpUserService";
+import userRegistrationService from "../../services/userRegistrationService.js";
 import { AuthClient } from "@dfinity/auth-client";
+import { api } from "../../services/api.js";
 import "./style.css";
 
 export const Register = () => {
@@ -14,6 +16,8 @@ export const Register = () => {
   const [errors, setErrors] = useState({});
   const [authClient, setAuthClient] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSuccessGreeting, setShowSuccessGreeting] = useState(false);
+  const [greetingMessage, setGreetingMessage] = useState("");
   const fromInvite = searchParams.get('from') === 'invite';
 
   // Initialize auth client
@@ -87,8 +91,8 @@ export const Register = () => {
       const loginOptions = {
         identityProvider: window.location.hostname.includes('icp0.io') 
           ? "https://identity.ic0.app"
-          : (process.env.DFX_NETWORK === "local" 
-            ? `http://localhost:4943/?canisterId=${process.env.INTERNET_IDENTITY_CANISTER_ID || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
+          : (import.meta.env.VITE_DFX_NETWORK === "local" 
+            ? `${import.meta.env.VITE_API_HOST || 'http://127.0.0.1:4943'}/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
             : "https://identity.ic0.app"),
         maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days in nanoseconds
         onSuccess: async () => {
@@ -120,7 +124,14 @@ export const Register = () => {
             await icpUserService.initialize();
             
             // Register user first (basic registration)
-            await icpUserService.registerUser();
+            console.log('🔍 Starting user registration...');
+            const registrationResult = await icpUserService.registerUser();
+            console.log('🔍 Registration result:', registrationResult);
+            
+            // Check if user was already registered
+            if (registrationResult.isExistingUser) {
+              console.log('🔍 User already exists, proceeding to next step...');
+            }
             
             // REAL IMPLEMENTATION: Handle invite acceptance through URL params
             if (fromInvite) {
@@ -152,29 +163,66 @@ export const Register = () => {
                 registeredAt: Date.now()
               };
               
-              // Save profile data to ICP canister
-              try {
-                await icpUserService.updateUserSettings({
-                  profile_metadata: JSON.stringify(profileData)
-                });
-              } catch (saveError) {
-                console.error('Failed to save profile data to ICP canister:', saveError);
-                throw new Error('Failed to save registration data to canister');
+                          // Save profile data to ICP canister
+            try {
+              await icpUserService.updateUserSettings({
+                profile_metadata: JSON.stringify(profileData)
+              });
+              
+              // Save user registration data to local storage for future automatic login
+              const userData = {
+                principal: principal,
+                fullName: registrationData.fullName,
+                email: registrationData.email,
+                profileMetadata: profileData
+              };
+              
+              const savedToLocal = userRegistrationService.saveUserRegistration(userData);
+              if (savedToLocal) {
+                console.log('✅ User registration data saved to local storage');
+              } else {
+                console.warn('⚠️ Failed to save user registration data to local storage');
               }
+            } catch (saveError) {
+              console.error('Failed to save profile data to ICP canister:', saveError);
+              throw new Error('Failed to save registration data to canister');
+            }
+            }
+            
+            // Show success greeting from backend
+            try {
+              console.log('🔍 Getting greeting from backend...');
+              const greeting = await api.greet(registrationData.fullName);
+              setGreetingMessage(greeting);
+              setShowSuccessGreeting(true);
+              
+              // Wait 3 seconds to show the greeting before navigating
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            } catch (greetingError) {
+              console.warn('Could not get backend greeting:', greetingError);
+              // Use fallback greeting
+              setGreetingMessage(`🔗💕 Welcome to Bonded, ${registrationData.fullName}! Ready to secure your relationship evidence on the blockchain.`);
+              setShowSuccessGreeting(true);
+              await new Promise(resolve => setTimeout(resolve, 3000));
             }
             
             // Handle different flows based on how user arrived
+            console.log('🔍 Navigating to next step...');
             if (fromInvite) {
               // If coming from invite, skip partner invite and go to profile setup
               // then directly to timeline (bypassing KYC)
+              console.log('🔍 Navigating to profile-setup (from invite)');
               navigate("/profile-setup");
             } else {
               // For normal registration, go to partner invite first
+              console.log('🔍 Navigating to partner-invite (normal registration)');
               navigate("/partner-invite");
             }
           } catch (error) {
+            console.error('🔍 Registration error:', error);
             setErrors({ submit: "Registration successful, but setup failed. Please try again." });
           } finally {
+            console.log('🔍 Registration flow completed, setting loading to false');
             setIsLoading(false);
           }
         },
@@ -236,6 +284,43 @@ export const Register = () => {
           </div>
         )}
 
+        {/* Debug section for stuck registration */}
+        {isLoading && (
+          <div className="debug-section" style={{ 
+            background: '#f0f8ff', 
+            border: '1px solid #007acc', 
+            borderRadius: '8px', 
+            padding: '16px', 
+            marginBottom: '20px',
+            textAlign: 'center'
+          }}>
+            <p style={{ margin: '0 0 12px 0', color: '#007acc' }}>
+              <strong>Registration in progress...</strong>
+            </p>
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#666' }}>
+              If this takes too long, the account may already exist.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                console.log('🔍 Manual navigation triggered');
+                navigate("/partner-invite");
+              }}
+              style={{
+                background: '#007acc',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                fontSize: '14px'
+              }}
+            >
+              Continue to Next Step
+            </button>
+          </div>
+        )}
+
         <form className="register-form" onSubmit={handleSubmit}>
           <CustomTextField
             label="Full Name"
@@ -284,6 +369,25 @@ export const Register = () => {
             </div>
           </button>
         </form>
+
+        {/* Success Greeting Message */}
+        {showSuccessGreeting && greetingMessage && (
+          <div className="success-greeting-overlay">
+            <div className="success-greeting-content">
+              <div className="success-icon">🎉</div>
+              <h2 className="success-title">Welcome to Bonded!</h2>
+              <p className="success-message">{greetingMessage}</p>
+              <div className="success-loading">
+                <div className="loading-dots">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <p>Preparing your secure environment...</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="login-redirect">
           <span className="login-text">Already have an account?</span>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Worker Fix Test</title>
+</head>
+<body>
+    <h1>Service Worker Registration Test</h1>
+    <div id="status">Testing...</div>
+    <div id="logs"></div>
+
+    <script>
+        function log(message) {
+            const logs = document.getElementById('logs');
+            const p = document.createElement('p');
+            p.textContent = new Date().toISOString() + ': ' + message;
+            logs.appendChild(p);
+            console.log(message);
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+
+        // Test service worker registration
+        if ('serviceWorker' in navigator) {
+            log('Service Worker API is supported');
+            
+            const isDevelopment = window.location.hostname === 'localhost' || 
+                                 window.location.hostname === '127.0.0.1' ||
+                                 window.location.hostname.includes('localhost');
+            
+            log('Development mode: ' + isDevelopment);
+            
+            const swPath = isDevelopment ? '/service-worker-dev.js' : '/service-worker.js';
+            log('Using service worker: ' + swPath);
+            
+            navigator.serviceWorker.register(swPath)
+                .then(registration => {
+                    log('✅ Service worker registered successfully');
+                    updateStatus('Service Worker Registered Successfully');
+                    
+                    // Test background sync registration
+                    if ('sync' in window && registration.sync) {
+                        if (registration.active) {
+                            registration.sync.register('daily-evidence-processing')
+                                .then(() => {
+                                    log('✅ Background sync registered successfully');
+                                })
+                                .catch(error => {
+                                    log('⚠️ Background sync registration failed: ' + error.message);
+                                });
+                        } else {
+                            log('ℹ️ Service worker not yet active, skipping background sync');
+                        }
+                    } else {
+                        log('ℹ️ Background sync not supported');
+                    }
+                })
+                .catch(error => {
+                    log('❌ Service worker registration failed: ' + error.message);
+                    updateStatus('Service Worker Registration Failed');
+                });
+        } else {
+            log('❌ Service Worker API is not supported');
+            updateStatus('Service Worker Not Supported');
+        }
+    </script>
+</body>
+</html>

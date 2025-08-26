@@ -73,8 +73,8 @@ class LocalVaultSyncService {
    */
   async initializeCanisterIntegration() {
     try {
-      const { canisterIntegration } = await import('./canisterIntegration.js');
-      this.canisterIntegration = canisterIntegration;
+      const canisterIntegration = await import('./canisterIntegration.js');
+      this.canisterIntegration = canisterIntegration.default;
       await this.canisterIntegration.initialize();
     } catch (error) {
       console.warn('⚠️ Canister integration not available, sync will be limited:', error);

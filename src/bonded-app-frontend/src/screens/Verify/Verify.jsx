@@ -42,8 +42,8 @@ export const Verify = () => {
       
       // Initialize Yoti service
       const initialized = await yotiService.initialize({
-        baseUrl: process.env.REACT_APP_YOTI_BASE_URL || 'https://api.yoti.com/idverify/v1',
-        apiKey: process.env.REACT_APP_YOTI_API_KEY || 'demo_key',
+        baseUrl: import.meta.env.VITE_YOTI_BASE_URL || 'https://api.yoti.com/idverify/v1',
+        apiKey: import.meta.env.VITE_YOTI_API_KEY || 'demo_key',
         userId: principal,
         verificationType: 'identity' // Use identity verification for highest security
       });

@@ -1,9 +1,7 @@
-const CACHE_NAME = 'bonded-app-v3-cors-auth-fixed';
+const CACHE_NAME = 'bonded-app-v4-fixed';
 const OFFLINE_URL = '/offline.html';
-// Core app assets that should be cached for offline use
+// Core app assets that should be cached for offline use - only include files that actually exist
 const urlsToCache = [
-  '/',
-  '/index.html',
   '/offline.html',
   '/manifest.json',
   '/favicon.ico',
@@ -17,34 +15,37 @@ const urlsToCache = [
   '/images/apple-touch-icon-120x120.png',
   '/images/apple-touch-icon-152x152.png',
   '/images/apple-touch-icon-167x167.png',
-  // Add iOS splash screens
-  '/images/splash/apple-splash-2048-2732.png',
-  '/images/splash/apple-splash-1668-2388.png',
-  '/images/splash/apple-splash-1536-2048.png',
-  '/images/splash/apple-splash-1125-2436.png',
-  '/images/splash/apple-splash-1242-2688.png',
-  '/images/splash/apple-splash-828-1792.png',
-  '/images/splash/apple-splash-750-1334.png',
-  '/images/splash/apple-splash-640-1136.png',
-  // Add Microsoft tile images
-  '/images/ms-tile-70x70.png',
-  '/images/ms-tile-144x144.png',
-  '/images/ms-tile-150x150.png',
-  '/images/ms-tile-310x150.png',
-  '/images/ms-tile-310x310.png',
-  '/browserconfig.xml',
-  // Main app scripts and styles
-  '/src/main.jsx',
-  '/src/index.scss'
+  '/browserconfig.xml'
 ];
 // Install a service worker
 self.addEventListener('install', event => {
   console.log('Service worker installing...');
+  
+  // Check if we're in development mode (localhost or 127.0.0.1)
+  const isDevelopment = self.location.hostname === 'localhost' || 
+                       self.location.hostname === '127.0.0.1' ||
+                       self.location.hostname.includes('localhost');
+  
+  if (isDevelopment) {
+    console.log('Development mode detected, skipping aggressive caching');
+    // In development, just install without caching to avoid errors
+    self.skipWaiting();
+    return;
+  }
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
         console.log('Cache opened, adding URLs to cache...');
-        return cache.addAll(urlsToCache);
+        // Try to cache each URL individually to avoid failing on one bad URL
+        const cachePromises = urlsToCache.map(url => {
+          return cache.add(url).catch(error => {
+            console.warn(`Failed to cache ${url}:`, error);
+            // Continue with other URLs even if one fails
+            return Promise.resolve();
+          });
+        });
+        return Promise.all(cachePromises);
       })
       .then(() => {
         console.log('Service worker installed successfully');
@@ -63,6 +64,17 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
     return;
   }
+  
+  // Check if we're in development mode
+  const isDevelopment = self.location.hostname === 'localhost' || 
+                       self.location.hostname === '127.0.0.1' ||
+                       self.location.hostname.includes('localhost');
+  
+  // In development mode, let all requests pass through without caching
+  if (isDevelopment) {
+    return;
+  }
+  
   // Handle cross-origin requests differently
   const isSameOrigin = event.request.url.startsWith(self.location.origin);
   // Skip analytics, tracking, external services and Yoti requests that should bypass service worker
@@ -237,6 +249,25 @@ self.addEventListener('fetch', event => {
 // Update a service worker and clean up old cache versions
 self.addEventListener('activate', event => {
   console.log('Service worker activating...');
+  
+  // Check if we're in development mode
+  const isDevelopment = self.location.hostname === 'localhost' || 
+                       self.location.hostname === '127.0.0.1' ||
+                       self.location.hostname.includes('localhost');
+  
+  if (isDevelopment) {
+    console.log('Development mode detected, skipping cache cleanup');
+    // In development, just claim clients without cache cleanup
+    event.waitUntil(
+      self.clients.claim().then(() => {
+        console.log('Service worker activated successfully in development mode');
+      }).catch(error => {
+        console.error('Service worker activation failed in development mode:', error);
+      })
+    );
+    return;
+  }
+  
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
