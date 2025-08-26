@@ -53,16 +53,40 @@ if ('serviceWorker' in navigator) {
           });
         });
         
-        // Register for background sync tags (T4.16)
-        if ('sync' in registration) {
-          // Register daily processing sync
-          registration.sync.register('daily-evidence-processing')
-            .then(() => {
-              console.log('🔄 Daily processing background sync registered');
-            })
-            .catch((error) => {
-              console.warn('⚠️ Daily processing background sync registration failed:', error);
+        // Register for background sync tags (T4.16) - with better error handling
+        if ('sync' in window && registration.sync) {
+          // Check if the service worker is active before registering sync
+          if (registration.active) {
+            registration.sync.register('daily-evidence-processing')
+              .then(() => {
+                console.log('🔄 Daily processing background sync registered');
+              })
+              .catch((error) => {
+                console.warn('⚠️ Daily processing background sync registration failed:', error);
+                // Don't throw the error, just log it as this is not critical for app functionality
+              });
+          } else {
+            console.log('ℹ️ Service worker not yet active, skipping background sync registration');
+            // Wait for service worker to become active
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'activated' && registration.sync) {
+                    registration.sync.register('daily-evidence-processing')
+                      .then(() => {
+                        console.log('🔄 Daily processing background sync registered (delayed)');
+                      })
+                      .catch((error) => {
+                        console.warn('⚠️ Delayed background sync registration failed:', error);
+                      });
+                  }
+                });
+              }
             });
+          }
+        } else {
+          console.log('ℹ️ Background sync not supported in this environment');
         }
         
         return registration;
@@ -124,4 +148,4 @@ if ('serviceWorker' in navigator) {
       }
     }
   });
-} 
+}

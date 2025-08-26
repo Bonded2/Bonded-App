@@ -324,33 +324,54 @@ export const detectVPN = async () => {
       };
     }
     // First get basic IP info
-    const response = await fetch(LOCATION_APIS.IP_INFO);
-    if (!response.ok) {
-      // Instead of throwing, just return a default response
+    try {
+      const response = await fetch(LOCATION_APIS.IP_INFO, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const ipData = await response.json();
+      
+      // Simulate VPN detection logic
+      // In reality, this would be a call to a service like ipinfo.io or similar
+      const isDatacenter = ipData.hostname?.includes('aws') || 
+                           ipData.hostname?.includes('azure') || 
+                           ipData.hostname?.includes('cloud');
+      const suspiciousOrg = ipData.org?.toLowerCase().includes('vpn') ||
+                           ipData.org?.toLowerCase().includes('proxy') ||
+                           ipData.org?.toLowerCase().includes('hosting');
+      return {
+        isVPN: isDatacenter || suspiciousOrg,
+        detail: isDatacenter ? 'Datacenter IP detected' : 
+                suspiciousOrg ? 'VPN service detected' : 'No VPN detected',
+        ipInfo: ipData
+      };
+    } catch (fetchError) {
+      console.warn('🔍 LocationService: IP info fetch failed:', fetchError.message);
+      // Return fallback data instead of throwing
       return { 
         isVPN: false, 
         detail: 'VPN detection skipped - service unavailable',
-        error: `Status: ${response.status}`
+        error: fetchError.message,
+        fallback: true
       };
     }
-    const ipData = await response.json();
-    // Simulate VPN detection logic
-    // In reality, this would be a call to a service like ipinfo.io or similar
-    const isDatacenter = ipData.hostname?.includes('aws') || 
-                         ipData.hostname?.includes('azure') || 
-                         ipData.hostname?.includes('cloud');
-    const suspiciousOrg = ipData.org?.toLowerCase().includes('vpn') ||
-                         ipData.org?.toLowerCase().includes('proxy') ||
-                         ipData.org?.toLowerCase().includes('hosting');
-    return {
-      isVPN: isDatacenter || suspiciousOrg,
-      detail: isDatacenter ? 'Datacenter IP detected' : 
-              suspiciousOrg ? 'VPN service detected' : 'No VPN detected',
-      ipInfo: ipData
-    };
   } catch (error) {
-    // Default to not reporting VPN in case of errors
-    return { isVPN: false, detail: 'Unable to verify VPN status', error: error.message };
+    // Return fallback data in case of any other errors
+    return { 
+      isVPN: false, 
+      detail: 'VPN detection failed',
+      error: error.message,
+      fallback: true
+    };
   }
 };
 /**
@@ -368,39 +389,61 @@ export const validateLocationConsistency = async (coordinates) => {
       };
     }
     // Get IP-based location
-    const ipResponse = await fetch(LOCATION_APIS.IP_INFO);
-    if (!ipResponse.ok) {
-      return { 
-        isConsistent: true, 
-        message: 'Location validation skipped - service unavailable'
-      };
-    }
-    const ipData = await ipResponse.json();
-    const ipLocation = ipData.loc ? ipData.loc.split(',').map(Number) : null;
-    // If we don't have IP location data, we can't validate
-    if (!ipLocation) {
-      return { isConsistent: true, message: 'IP location validation skipped' };
-    }
-    // Get browser-reported location
-    const { lat, lng } = coordinates;
-    // Calculate distance between IP location and browser location
-    const distance = calculateDistance(
-      ipLocation[0], ipLocation[1],
-      lat, lng
-    );
-    // If distance is more than 100km, flag as inconsistent
-    if (distance > 100) {
+    try {
+      const ipResponse = await fetch(LOCATION_APIS.IP_INFO, {
+        method: 'GET',
+        mode: 'cors',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      
+      if (!ipResponse.ok) {
+        throw new Error(`HTTP ${ipResponse.status}: ${ipResponse.statusText}`);
+      }
+      
+      const ipData = await ipResponse.json();
+      const ipLocation = ipData.loc ? ipData.loc.split(',').map(Number) : null;
+      
+      // If we don't have IP location data, we can't validate
+      if (!ipLocation) {
+        return { isConsistent: true, message: 'IP location validation skipped' };
+      }
+      
+      // Get browser-reported location
+      const { lat, lng } = coordinates;
+      
+      // Calculate distance between IP location and browser location
+      const distance = calculateDistance(
+        ipLocation[0], ipLocation[1],
+        lat, lng
+      );
+      
+      // If distance is more than 100km, flag as inconsistent
+      if (distance > 100) {
+        return {
+          isConsistent: false,
+          message: `Location mismatch detected: Browser location is ${Math.round(distance)}km from your IP location.`,
+          distance
+        };
+      }
+      
       return {
-        isConsistent: false,
-        message: `Location mismatch detected: Browser location is ${Math.round(distance)}km from your IP location.`,
+        isConsistent: true,
+        message: 'Location verified',
         distance
       };
+    } catch (fetchError) {
+      console.warn('🔍 LocationService: IP location fetch failed in validation:', fetchError.message);
+      // Return fallback data instead of throwing
+      return { 
+        isConsistent: true, 
+        message: 'Location validation skipped - IP service unavailable',
+        error: fetchError.message,
+        fallback: true
+      };
     }
-    return {
-      isConsistent: true,
-      message: 'Location verified',
-      distance
-    };
   } catch (error) {
     // Default to accepting the location in case of errors
     return { isConsistent: true, message: 'Location validation skipped due to error' };
@@ -428,4 +471,4 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
  */
 const deg2rad = (deg) => {
   return deg * (Math.PI/180);
-}; 
+};

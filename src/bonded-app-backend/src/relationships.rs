@@ -56,8 +56,9 @@ pub fn create_partner_invite(request: CreatePartnerInviteRequest) -> BondedResul
     let invite_link = if let Some(frontend_url) = request.frontend_url {
         format!("{}/accept-invite?invite={}", frontend_url, invite_id)
     } else {
-        // Fallback to a default URL (this should not happen in production)
-        format!("https://bonded.app/accept-invite?invite={}", invite_id)
+        // For local development, default to localhost:3001
+        // In production, this should always provide a frontend_url
+        format!("http://localhost:3001/accept-invite?invite={}", invite_id)
     };
 
     BondedResult::ok(CreatePartnerInviteResponse {
