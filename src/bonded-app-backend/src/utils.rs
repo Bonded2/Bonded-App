@@ -40,6 +40,7 @@ pub fn generate_evidence_hash(data: &[u8], metadata: &EvidenceMetadata) -> Strin
     hex::encode(hasher.finalize())
 }
 
+#[allow(dead_code)]
 pub fn generate_relationship_key_share() -> Vec<u8> {
     // In a real implementation, this would use proper threshold cryptography
     // For MVP, we generate a random 32-byte key share
@@ -116,6 +117,7 @@ pub fn split_key_threshold(master_key: &[u8]) -> Result<(Vec<u8>, Vec<u8>, Vec<u
 }
 
 /// Reconstruct master key from any 2 of the 3 shares
+#[allow(dead_code)]
 pub fn reconstruct_key_from_shares(share1: &[u8], share2: &[u8]) -> Result<Vec<u8>, String> {
     if share1.len() != 32 || share2.len() != 32 {
         return Err("Both shares must be exactly 32 bytes".to_string());
@@ -146,6 +148,7 @@ pub fn derive_public_key(master_key: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 /// Derive AES encryption key from master key using HKDF
+#[allow(dead_code)]
 pub fn derive_encryption_key(master_key: &[u8], relationship_id: &str) -> Result<Vec<u8>, String> {
     if master_key.len() != 32 {
         return Err("Master key must be exactly 32 bytes".to_string());
@@ -161,6 +164,7 @@ pub fn derive_encryption_key(master_key: &[u8], relationship_id: &str) -> Result
 }
 
 /// Sign data with master key (for evidence authenticity)
+#[allow(dead_code)]
 pub fn sign_data(master_key: &[u8], data: &[u8]) -> Result<Vec<u8>, String> {
     if master_key.len() != 32 {
         return Err("Master key must be exactly 32 bytes".to_string());
@@ -173,6 +177,7 @@ pub fn sign_data(master_key: &[u8], data: &[u8]) -> Result<Vec<u8>, String> {
 }
 
 /// Verify signature with public key
+#[allow(dead_code)]
 pub fn verify_signature(public_key: &[u8], data: &[u8], signature: &[u8]) -> Result<bool, String> {
     if public_key.len() != 32 {
         return Err("Public key must be exactly 32 bytes".to_string());

@@ -1,10 +1,10 @@
 {
   "bonded-app-backend": {
-    "local": "uxrrr-q7777-77774-qaaaq-cai",
-    "ic": "f4nqh-tiaaa-aaaab-qb2ba-cai"
+    "ic": "akcy4-wqaaa-aaaab-qb5cq-cai",
+    "local": "uxrrr-q7777-77774-qaaaq-cai"
   },
   "bonded-app-frontend": {
-    "local": "f3mwt-6qaaa-aaaab-qb2ba-cai",
-    "ic": "f3mwt-6qaaa-aaaab-qb2ba-cai"
+    "ic": "f3mwt-6qaaa-aaaab-qb2ba-cai",
+    "local": "f3mwt-6qaaa-aaaab-qb2ba-cai"
   }
 }
