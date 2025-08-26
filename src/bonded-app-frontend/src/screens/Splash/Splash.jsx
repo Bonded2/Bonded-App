@@ -12,8 +12,24 @@ export const Splash = () => {
   const [isLoadingGreeting, setIsLoadingGreeting] = useState(true);
 
   useEffect(() => {
-    // No greeting on splash - it will appear after registration
-    setIsLoadingGreeting(false);
+    // Call the backend greet function to show connectivity
+    const callBackendGreeting = async () => {
+      try {
+        // Initialize the API service
+        await api.init();
+        
+        // Call the greet function with a friendly name
+        const greeting = await api.greet("User");
+        setGreetingMessage(greeting);
+      } catch (error) {
+        console.warn("Could not load backend greeting:", error);
+        setGreetingMessage("🔗💕 Welcome to Bonded! Ready to secure your relationship evidence on the blockchain.");
+      } finally {
+        setIsLoadingGreeting(false);
+      }
+    };
+
+    callBackendGreeting();
 
     // ULTRA-FAST: Reduced animation time for immediate responsiveness
     const animationTimer = setTimeout(() => {
@@ -45,7 +61,26 @@ export const Splash = () => {
           src="/images/bonded-logo-blue.svg"
         />
         
-        {/* No greeting on splash - it appears after registration */}
+        {/* Backend Greeting Message */}
+        {!isLoadingGreeting && greetingMessage && (
+          <div className="splash-greeting">
+            <p className="greeting-text">{greetingMessage}</p>
+          </div>
+        )}
+        
+        {/* Loading indicator for greeting */}
+        {isLoadingGreeting && (
+          <div className="splash-greeting">
+            <div className="greeting-loading">
+              <div className="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <p>Connecting to secure network...</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

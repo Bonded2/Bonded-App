@@ -174,7 +174,7 @@ class APIService {
       
       if (isAuthenticated) {
         if (typeof this.authClient.getIdentity === 'function') {
-          this.identity = this.authClient.getIdentity();
+        this.identity = this.authClient.getIdentity();
           console.log('🔍 API Service: Identity restored from auth client');
         } else {
           console.warn('🔍 API Service: getIdentity method not available');
@@ -200,10 +200,10 @@ class APIService {
         
         // Check if Actor.createActor is available
         if (typeof Actor.createActor === 'function') {
-          this.actor = Actor.createActor(idlFactory, {
-            agent: this.agent,
-            canisterId: CANISTER_ID,
-          });
+        this.actor = Actor.createActor(idlFactory, {
+          agent: this.agent,
+          canisterId: CANISTER_ID,
+        });
           console.log('🔍 API Service: Actor created successfully');
           console.log('🔍 API Service: Actor methods:', Object.getOwnPropertyNames(this.actor));
         } else if (typeof Actor === 'function') {

@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CustomTextField } from "../../components/CustomTextField/CustomTextField";
 import icpUserService from "../../services/icpUserService";
 import { AuthClient } from "@dfinity/auth-client";
-import { api } from "../../services/api.js";
 import "./style.css";
 
 export const Register = () => {
@@ -15,8 +14,6 @@ export const Register = () => {
   const [errors, setErrors] = useState({});
   const [authClient, setAuthClient] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showSuccessGreeting, setShowSuccessGreeting] = useState(false);
-  const [greetingMessage, setGreetingMessage] = useState("");
   const fromInvite = searchParams.get('from') === 'invite';
 
   // Initialize auth client
@@ -171,23 +168,6 @@ export const Register = () => {
                 console.error('Failed to save profile data to ICP canister:', saveError);
                 throw new Error('Failed to save registration data to canister');
               }
-            }
-            
-            // Show success greeting from backend
-            try {
-              console.log('🔍 Getting greeting from backend...');
-              const greeting = await api.greet(registrationData.fullName);
-              setGreetingMessage(greeting);
-              setShowSuccessGreeting(true);
-              
-              // Wait 3 seconds to show the greeting before navigating
-              await new Promise(resolve => setTimeout(resolve, 3000));
-            } catch (greetingError) {
-              console.warn('Could not get backend greeting:', greetingError);
-              // Use fallback greeting
-              setGreetingMessage(`🔗💕 Welcome to Bonded, ${registrationData.fullName}! Ready to secure your relationship evidence on the blockchain.`);
-              setShowSuccessGreeting(true);
-              await new Promise(resolve => setTimeout(resolve, 3000));
             }
             
             // Handle different flows based on how user arrived
@@ -353,25 +333,6 @@ export const Register = () => {
             </div>
           </button>
         </form>
-
-        {/* Success Greeting Message */}
-        {showSuccessGreeting && greetingMessage && (
-          <div className="success-greeting-overlay">
-            <div className="success-greeting-content">
-              <div className="success-icon">🎉</div>
-              <h2 className="success-title">Welcome to Bonded!</h2>
-              <p className="success-message">{greetingMessage}</p>
-              <div className="success-loading">
-                <div className="loading-dots">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <p>Preparing your secure environment...</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="login-redirect">
           <span className="login-text">Already have an account?</span>
