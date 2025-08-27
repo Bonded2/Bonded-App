@@ -98,11 +98,11 @@ class EmailService {
       // Check if EmailJS is properly configured before attempting to send
       // Get EmailJS configuration from environment variables
       const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 
-                       'service_n2rlbye'; // Your actual service ID as fallback
+                       'service_dxvgu0f'; // Your actual service ID as fallback
       const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 
-                        'template_9qqunmm'; // Your actual template ID as fallback
+                        'template_gllp3ap'; // Your actual template ID as fallback
       const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
-                       '2C_y5Y8A7moWYpk96'; // Your actual public key as fallback
+                       'o4hq7EBQJGbKiHG0V'; // Your actual public key as fallback
       
       // Validate configuration - all should be available now with fallbacks
       if (!serviceId || !templateId || !publicKey) {
