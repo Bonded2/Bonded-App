@@ -122,6 +122,14 @@ pub fn get_user_settings() -> BondedResult<UserSettings> {
     }
 }
 
+#[query]
+pub fn get_user_settings_by_principal(principal: Principal) -> BondedResult<UserSettings> {
+    match with_settings_store_read(|store| store.get(&principal)) {
+        Some(settings) => BondedResult::ok(settings),
+        None => BondedResult::err("Settings not found"),
+    }
+}
+
 // =================
 // PROFILE MANAGEMENT
 // =================

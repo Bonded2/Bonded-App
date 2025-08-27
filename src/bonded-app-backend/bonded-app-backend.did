@@ -140,6 +140,7 @@ service : () -> {
   get_user_profile : () -> (BondedResult_6) query;
   get_user_relationships : () -> (BondedResult_7) query;
   get_user_settings : () -> (BondedResult_8) query;
+  get_user_settings_by_principal : (principal) -> (BondedResult_8) query;
   greet : (text) -> (text) query;
   health_check : () -> (text) query;
   register_user : (opt text) -> (BondedResult_2);
