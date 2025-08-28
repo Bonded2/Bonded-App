@@ -3,37 +3,43 @@
     "bonded-app-backend": {
       "candid": "src/bonded-app-backend/bonded-app-backend.did",
       "package": "bonded-app-backend",
-      "type": "rust",
-      "declarations": {
-        "output": "src/declarations/bonded-app-backend",
-        "node_compatibility": true
+      "wasm": "target/wasm32-unknown-unknown/release/bonded-app-backend.wasm",
+      "type": "rust"
+    },
+    "internet_identity": {
+      "type": "custom",
+      "candid": "https://github.com/dfinity/internet-identity/releases/download/release-2025-03-07-v2/internet_identity.did",
+      "wasm": "https://github.com/dfinity/internet-identity/releases/download/release-2025-03-07-v2/internet_identity_dev.wasm.gz",
+      "init_arg": "(opt record { captcha_config = opt record { max_unsolved_captchas= 50:nat64; captcha_trigger = variant {Static = variant {CaptchaDisabled}}}})",
+      "specified_id": "rdmx6-jaaaa-aaaaa-aaadq-cai",
+      "remote": {
+        "id": {
+          "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai",
+          "playground": "rdmx6-jaaaa-aaaaa-aaadq-cai"
+        }
+      },
+      "frontend": {
+        "entrypoint": "src/bonded-app-frontend/dist/index.html"
       }
     },
     "bonded-app-frontend": {
-      "source": ["src/bonded-app-frontend/dist"],
+      "dependencies": [
+        "bonded-app-backend"
+      ],
+      "source": [
+        "src/bonded-app-frontend/dist"
+      ],
       "type": "assets",
-      "declarations": {
-        "output": "src/declarations/bonded-app-frontend",
-        "node_compatibility": true
-      }
-    }
-  },
-  "networks": {
-    "local": {
-      "bind": "127.0.0.1:8000",
-      "type": "ephemeral"
-    },
-    "ic": {
-      "providers": ["https://ic0.app"],
-      "type": "persistent" 
+      "workspace": "bonded-app-frontend"
     }
   },
   "defaults": {
     "build": {
       "args": "",
-      "packtool": ""
+      "packtool": "mops sources"
     }
   },
   "output_env_file": ".env",
   "version": 1
 }
+

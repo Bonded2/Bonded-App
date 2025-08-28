@@ -1,0 +1,39 @@
+{
+  "canisters": {
+    "bonded-app-backend": {
+      "candid": "src/bonded-app-backend/bonded-app-backend.did",
+      "package": "bonded-app-backend",
+      "type": "rust",
+      "declarations": {
+        "output": "src/declarations/bonded-app-backend",
+        "node_compatibility": true
+      }
+    },
+    "bonded-app-frontend": {
+      "source": ["src/bonded-app-frontend/dist"],
+      "type": "assets",
+      "declarations": {
+        "output": "src/declarations/bonded-app-frontend",
+        "node_compatibility": true
+      }
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "ic": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent" 
+    }
+  },
+  "defaults": {
+    "build": {
+      "args": "",
+      "packtool": ""
+    }
+  },
+  "output_env_file": ".env",
+  "version": 1
+}

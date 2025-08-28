@@ -24,6 +24,12 @@
     "dev": "npm run start:local && npm run deploy:local && cd src/bonded-app-frontend && npm run start",
     "frontend:dev": "cd src/bonded-app-frontend && npm run dev",
     "frontend:build": "cd src/bonded-app-frontend && npm run build:laptop",
+    "frontend:build:fast": "cd src/bonded-app-frontend && npm run build:fast",
+    "deploy:local:fast": "npm run frontend:build:fast && dfx deploy bonded-app-frontend --network local",
+    "deploy:local:minimal": "cd src/bonded-app-frontend && npm run build:minimal && cd ../.. && dfx deploy bonded-app-frontend --network local",
+    "deploy:fast": "./scripts/fast-deploy.sh",
+    "deploy:instant": "./scripts/instant-deploy.sh",
+    "deploy:direct": "cd src/bonded-app-frontend && npm run build:ultra-light && cd ../.. && dfx deploy bonded-app-frontend --network local",
     "clean": "dfx stop && rm -rf .dfx && rm -rf src/bonded-app-frontend/dist && rm -rf target",
     "build:emergency": "bash scripts/emergency-build.sh"
   },

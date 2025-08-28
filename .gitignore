@@ -46,6 +46,7 @@ src/bonded-app-frontend/service-worker.js
 emailjs-bonded-template.html
 
 .mcp-cache
+.rerdao
 
 mvp-validation-test.js
 mcp-collaboration-state.json

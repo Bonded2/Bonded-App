@@ -13,6 +13,10 @@ dotenv.config();
 
 const isDev = process.env["DFX_NETWORK"] !== "ic" && process.env["NODE_ENV"] !== "production";
 const isProduction = process.env.NODE_ENV === "production" || process.env["DFX_NETWORK"] === "ic";
+const buildMode = process.env.VITE_BUILD_MODE || 'normal';
+const isLaptopBuild = buildMode === 'laptop' || buildMode === 'fast' || buildMode === 'emergency' || buildMode === 'minimal';
+const excludeAI = process.env.EXCLUDE_AI_MODELS === 'true' || buildMode === 'fast' || buildMode === 'emergency' || buildMode === 'minimal';
+const isMinimalBuild = buildMode === 'minimal';
 
 // Determine the network from process.env["DFX_NETWORK"]
 // If it's not defined then we default to local and assume
@@ -59,10 +63,10 @@ export default defineConfig({
         return null;
       }
     },
-    // NUCLEAR BigInt elimination - apply to ALL files including dependencies
-    {
-      name: 'ultimate-bigint-elimination',
-      enforce: 'pre', // Apply before other transforms
+    // OPTIMIZED BigInt elimination - skip in laptop builds to save CPU
+    ...(isLaptopBuild ? [] : [{
+      name: 'selective-bigint-elimination',
+      enforce: 'pre',
       transform(code, id) {
         // Skip our own BigInt replacement file to avoid circular transformation
         if (id.includes('bigint-replacement.js') || id.includes('bigint-polyfill.js')) {
@@ -73,6 +77,12 @@ export default defineConfig({
         if (id.includes('@noble/curves') || id.includes('@noble/hashes') || id.includes('@noble/')) {
           return null;
         }
+        
+        // LAPTOP OPTIMIZATION: Only process our own files, not dependencies
+        if (id.includes('node_modules') && isLaptopBuild) {
+          return null;
+        }
+        
         // Apply selective BigInt elimination - preserve CBOR functionality
         if (code.includes('BigInt') || code.includes('bigint')) {
           // Skip CBOR-related files to preserve serialization
@@ -130,7 +140,7 @@ export default defineConfig({
         }
         return null;
       }
-    }
+    }])
     // Temporarily disable PWA plugin to fix build issues
   ],
   esbuild: {
@@ -146,13 +156,16 @@ export default defineConfig({
   optimizeDeps: {
     // Exclude heavy AI dependencies from pre-bundling to save CPU
     exclude: [
-      '@xenova/transformers', 
-      'onnxruntime-web', 
-      'tesseract.js', 
-      'nsfwjs',
-      '@tensorflow/tfjs',
-      '@tensorflow/tfjs-backend-wasm',
-      '@tensorflow/tfjs-backend-webgl',
+      // Always exclude AI dependencies for laptop builds
+      ...(excludeAI || isLaptopBuild ? [
+        '@xenova/transformers', 
+        'onnxruntime-web', 
+        'tesseract.js', 
+        'nsfwjs',
+        '@tensorflow/tfjs',
+        '@tensorflow/tfjs-backend-wasm',
+        '@tensorflow/tfjs-backend-webgl'
+      ] : []),
       // Exclude ICP packages to avoid resolution issues during development
       '@dfinity/identity',
       '@dfinity/agent',
@@ -176,19 +189,19 @@ export default defineConfig({
   root: path.join(__dirname),
   build: {
     outDir: "dist",
-    sourcemap: false,
+    sourcemap: isLaptopBuild ? false : false, // Always disable for speed
     // Reasonable chunk size limits to prevent CPU overload
-    chunkSizeWarningLimit: isProduction ? 1000 : 2000,
+    chunkSizeWarningLimit: isLaptopBuild ? 5000 : (isProduction ? 1000 : 2000),
     // Optimize for build speed, not ultra-light bundles
     target: 'es2020',
-    minify: isProduction ? 'esbuild' : false, // esbuild is much faster than terser
-    cssMinify: 'esbuild',
+    minify: isLaptopBuild ? false : (isProduction ? 'esbuild' : false),
+    cssMinify: isLaptopBuild ? false : 'esbuild',
     // CPU-friendly options to prevent laptop overheating
     reportCompressedSize: false, // Disable size analysis to save CPU
     emptyOutDir: true,
     // Limit concurrent workers to prevent CPU overload
     rollupOptions: {
-      maxParallelFileOps: 2, // Reduce parallel operations
+      maxParallelFileOps: isLaptopBuild ? 1 : 2, // Single-threaded for laptops
       // Handle polyfill resolution issues
       plugins: [
         {
@@ -229,8 +242,8 @@ export default defineConfig({
         '@dfinity/auth-client',
         '@dfinity/candid',
         '@dfinity/principal',
-        // AI libraries (only in production)
-        ...(isProduction ? [
+        // AI libraries (exclude in laptop builds)
+        ...(excludeAI || isLaptopBuild ? [
           '@xenova/transformers',
           'onnxruntime-web',
           '@noble/curves/bls12-381',
@@ -245,7 +258,21 @@ export default defineConfig({
         // Remove globals configuration - using import maps instead
         // Import maps in HTML handle module resolution automatically
         manualChunks: (id) => {
-          // Simplified chunking to reduce build complexity
+          // MINIMAL BUILD: Everything in one file for ultra-fast deployment
+          if (isMinimalBuild) {
+            return 'main'; // Single bundle for fastest deployment
+          }
+          
+          // LAPTOP OPTIMIZATION: Force everything into fewer chunks for faster deployment
+          if (isLaptopBuild) {
+            // Bundle everything together for minimal file count
+            if (id.includes('node_modules')) {
+              return 'vendor'; // Single vendor bundle
+            }
+            return 'app'; // Single app bundle
+          }
+          
+          // Production chunking
           if (isProduction) {
             // ICP SDK - keep bundled as it's specific to our app
             if (id.includes('@dfinity/')) {
@@ -256,6 +283,8 @@ export default defineConfig({
               return 'vendor';
             }
           }
+          
+          return undefined;
         }
       }
     }
