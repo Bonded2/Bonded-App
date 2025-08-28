@@ -30,7 +30,7 @@
   },
   "defaults": {
     "build": {
-      "args": "",
+      "args": "--jobs 1",
       "packtool": ""
     }
   },

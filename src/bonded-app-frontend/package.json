@@ -6,10 +6,14 @@
   "scripts": {
     "dev": "vite --port 3000 --host",
     "build": "vite build",
+    "build:safe": "NODE_OPTIONS='--max-old-space-size=1024' vite build --config vite.config.optimized.js",
+    "build:ultra-light": "VITE_BUILD_MODE=emergency EXCLUDE_AI_MODELS=true NODE_OPTIONS='--max-old-space-size=512' vite build --config vite.config.minimal.js",
+    "build:emergency": "NODE_OPTIONS='--max-old-space-size=256' vite build --config vite.config.minimal.js",
     "preview": "vite preview",
     "format": "prettier --write \"src/**/*.{json,js,jsx,ts,tsx,css,scss}\"",
     "generate": "dfx generate bonded-app-backend",
-    "deploy": "npm run build && echo 'Deploy to Vercel/Netlify via their CLI or dashboard'"
+    "deploy": "npm run build && echo 'Deploy to Vercel/Netlify via their CLI or dashboard'",
+    "deploy:safe": "npm run build:safe && echo 'Safe build completed for deployment'"
   },
   "dependencies": {
     "@dfinity/agent": "2.4.1",
