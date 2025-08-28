@@ -370,6 +370,77 @@ class ICPUserService {
   }
 
   /**
+   * Get partner information from relationship
+   */
+  async getPartnerInfo() {
+    try {
+      const relationships = await this.getUserRelationships();
+      
+      if (!relationships || relationships.length === 0) {
+        return null;
+      }
+
+      // Get the first active relationship
+      const activeRelationship = relationships.find(r => r.status === 'Active') || relationships[0];
+      
+      if (!activeRelationship) {
+        return null;
+      }
+
+      // Get current user's principal
+      const currentUser = await this.getCurrentUser();
+      const currentPrincipal = currentUser.principal;
+
+      // Determine partner's principal
+      let partnerPrincipal;
+      if (activeRelationship.partner1 === currentPrincipal) {
+        partnerPrincipal = activeRelationship.partner2;
+      } else {
+        partnerPrincipal = activeRelationship.partner1;
+      }
+
+      if (!partnerPrincipal) {
+        return null;
+      }
+
+      // Get partner's settings to extract profile information
+      const partnerSettings = await api.getUserSettingsByPrincipal(partnerPrincipal);
+      
+      if (partnerSettings && partnerSettings.profileMetadata) {
+        const profileData = JSON.parse(partnerSettings.profileMetadata);
+        return {
+          principal: partnerPrincipal,
+          name: profileData.fullName || 'Unknown Partner',
+          relationshipId: activeRelationship.id,
+          status: activeRelationship.status
+        };
+      }
+
+      return {
+        principal: partnerPrincipal,
+        name: 'Unknown Partner',
+        relationshipId: activeRelationship.id,
+        status: activeRelationship.status
+      };
+
+    } catch (error) {
+      console.error('Failed to get partner info:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Terminate relationship
+   */
+  async terminateRelationship(relationshipId) {
+    try {
+      return await api.terminateRelationship(relationshipId);
+    } catch (error) {
+      throw new Error(`Failed to terminate relationship: ${error.message}`);
+    }
+  }
+
+  /**
    * Upload evidence
    */
   async uploadEvidence(relationshipId, encryptedData, metadata) {

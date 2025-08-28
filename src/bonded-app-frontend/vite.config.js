@@ -9,7 +9,8 @@ import { fileURLToPath, URL } from 'url';
 import { readFileSync } from 'fs';
 import { createRequire } from 'module';
 
-dotenv.config();
+// Load environment variables from the frontend directory
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 const isDev = process.env["DFX_NETWORK"] !== "ic" && process.env["NODE_ENV"] !== "production";
 const isProduction = process.env.NODE_ENV === "production" || process.env["DFX_NETWORK"] === "ic";

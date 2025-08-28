@@ -1,0 +1,14 @@
+[build]
+jobs = 1  # Limit parallel jobs to reduce memory usage
+
+[target.wasm32-unknown-unknown]
+rustflags = [
+    "-C", "opt-level=z",
+    "-C", "codegen-units=1",
+    "-C", "panic=abort",
+    "-C", "link-arg=--export-table",
+    "-C", "link-arg=--export-memory"
+]
+
+[env]
+CARGO_BUILD_JOBS = "1"

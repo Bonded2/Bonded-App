@@ -409,6 +409,12 @@ class APIService {
     return this.handleResult(result);
   }
 
+  async getUserSettingsByPrincipal(principal) {
+    if (!this.actor) throw new Error('API not initialized');
+    const result = await this.actor.get_user_settings_by_principal(principal);
+    return this.handleResult(result);
+  }
+
   async acceptRelationship(relationshipId) {
     if (!this.actor) throw new Error('API not initialized');
     const result = await this.actor.accept_relationship(relationshipId);
