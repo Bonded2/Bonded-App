@@ -32,6 +32,7 @@ export const Account = () => {
     currentCity: null,
     currentCountry: null
   });
+  const [partnerInfo, setPartnerInfo] = useState(null);
   // Password change state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordData, setPasswordData] = useState({
@@ -48,11 +49,16 @@ export const Account = () => {
         setIsLoading(true); // Start loading
         
         // OPTIMIZATION: Start initialization and user fetch concurrently
-        const [_, currentUser] = await Promise.all([
+        const [_, currentUser, partnerData] = await Promise.all([
           icpUserService.initialize(),
           // Use timeout to prevent hanging
           Promise.race([
             icpUserService.getCurrentUser(true),
+            new Promise(resolve => setTimeout(() => resolve(null), 5000)) // 5 second timeout
+          ]),
+          // Get partner information
+          Promise.race([
+            icpUserService.getPartnerInfo(),
             new Promise(resolve => setTimeout(() => resolve(null), 5000)) // 5 second timeout
           ])
         ]);
@@ -71,6 +77,9 @@ export const Account = () => {
             currentCountry: null
           });
         }
+
+        // Set partner information
+        setPartnerInfo(partnerData);
       } catch (error) {
         // If ICP data fails, show empty profile
         setUserData({
@@ -81,6 +90,7 @@ export const Account = () => {
           currentCity: null,
           currentCountry: null
         });
+        setPartnerInfo(null);
       } finally {
         setIsLoading(false); // End loading regardless of success/failure
       }
@@ -131,10 +141,19 @@ export const Account = () => {
       setShowUnbondConfirm(false);
     }
   };
-  const handleUnbondPartner = () => {
+  const handleUnbondPartner = async () => {
     if (showUnbondConfirm) {
-      // Actual unbonding logic would go here
-      navigate('/');
+      // Actual unbonding logic
+      try {
+        if (partnerInfo && partnerInfo.relationshipId) {
+          await icpUserService.terminateRelationship(partnerInfo.relationshipId);
+        }
+        navigate('/');
+      } catch (error) {
+        console.error('Failed to unbond partner:', error);
+        // Still navigate even if unbonding fails for UX
+        navigate('/');
+      }
     } else {
       setShowUnbondConfirm(true);
       setShowDeleteConfirm(false);
@@ -335,47 +354,62 @@ export const Account = () => {
         <div className="account-divider"></div>
         <div className="account-section">
           <h2 className="section-title">Partner connection</h2>
-          <div className="partner-status">
-            <p className="status-label">Status</p>
-            <p className="status-value connected">Connected</p>
-          </div>
-          <div className="partner-info">
-            <p className="profile-label">Partner name</p>
-            <p className="profile-value">Jane Doe</p>
-          </div>
-        </div>
-        <div className="account-divider"></div>
-        <div className="account-section danger-section">
-          <h2 className="section-title danger-title">Unbond from partner</h2>
-          {!showUnbondConfirm ? (
-            <button 
-              className="danger-button" 
-              onClick={handleUnbondPartner}
-            >
-              Unbond from partner
-            </button>
-          ) : (
+          {partnerInfo ? (
             <>
-              <p className="danger-description">
-                If you do this both of you will lose all access to all your shared data permanently.
-              </p>
-              <div className="danger-actions">
-                <button 
-                  className="danger-confirm-button" 
-                  onClick={handleUnbondPartner}
-                >
-                  Confirm unbond
-                </button>
-                <button 
-                  className="danger-cancel-button" 
-                  onClick={cancelAction}
-                >
-                  Cancel
-                </button>
+              <div className="partner-status">
+                <p className="status-label">Status</p>
+                <p className={`status-value ${partnerInfo.status === 'Active' ? 'connected' : 'pending'}`}>
+                  {partnerInfo.status === 'Active' ? 'Connected' : 'Pending'}
+                </p>
+              </div>
+              <div className="partner-info">
+                <p className="profile-label">Partner name</p>
+                <p className="profile-value">{partnerInfo.name}</p>
               </div>
             </>
+          ) : (
+            <div className="partner-info">
+              <p className="profile-label">Partner name</p>
+              <p className="profile-value">No partner connected</p>
+            </div>
           )}
         </div>
+        {partnerInfo && (
+          <>
+            <div className="account-divider"></div>
+            <div className="account-section danger-section">
+              <h2 className="section-title danger-title">Unbond from partner</h2>
+              {!showUnbondConfirm ? (
+                <button 
+                  className="danger-button" 
+                  onClick={handleUnbondPartner}
+                >
+                  Unbond from partner
+                </button>
+              ) : (
+                <>
+                  <p className="danger-description">
+                    If you do this both of you will lose all access to all your shared data permanently.
+                  </p>
+                  <div className="danger-actions">
+                    <button 
+                      className="danger-confirm-button" 
+                      onClick={handleUnbondPartner}
+                    >
+                      Confirm unbond
+                    </button>
+                    <button 
+                      className="danger-cancel-button" 
+                      onClick={cancelAction}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
         <div className="account-divider"></div>
         <div className="account-section danger-section">
           <h2 className="section-title danger-title">Remove data or delete Account</h2>

@@ -6,5 +6,8 @@
   "bonded-app-frontend": {
     "ic": "f3mwt-6qaaa-aaaab-qb2ba-cai",
     "local": "f3mwt-6qaaa-aaaab-qb2ba-cai"
+  },
+  "bonded-app-frontend-v2": {
+    "ic": "adbta-ayaaa-aaaab-qb5da-cai"
   }
 }

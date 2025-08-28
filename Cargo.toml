@@ -3,3 +3,9 @@ members = [
     "src/bonded-app-backend"
 ]
 resolver = "2"
+
+[profile.release]
+opt-level = "z"  # Optimize for size
+lto = true       # Link-time optimization
+codegen-units = 1 # Reduce parallel codegen to save memory
+panic = "abort"  # Reduce binary size
