@@ -1,10 +1,10 @@
 {
   "canisters": {
     "bonded-app-backend": {
+      "type": "rust",
       "candid": "src/bonded-app-backend/bonded-app-backend.did",
       "package": "bonded-app-backend",
-      "wasm": "target/wasm32-unknown-unknown/release/bonded-app-backend.wasm",
-      "type": "rust"
+      "wasm": "target/wasm32-unknown-unknown/release/bonded-app-backend.wasm"
     },
     "internet_identity": {
       "type": "custom",
@@ -17,20 +17,12 @@
           "ic": "rdmx6-jaaaa-aaaaa-aaadq-cai",
           "playground": "rdmx6-jaaaa-aaaaa-aaadq-cai"
         }
-      },
-      "frontend": {
-        "entrypoint": "src/bonded-app-frontend/dist/index.html"
       }
     },
     "bonded-app-frontend": {
-      "dependencies": [
-        "bonded-app-backend"
-      ],
-      "source": [
-        "src/bonded-app-frontend/dist"
-      ],
       "type": "assets",
-      "workspace": "bonded-app-frontend"
+      "source": ["src/bonded-app-frontend/dist"],
+      "dependencies": ["bonded-app-backend"]
     }
   },
   "defaults": {
@@ -42,4 +34,3 @@
   "output_env_file": ".env",
   "version": 1
 }
-

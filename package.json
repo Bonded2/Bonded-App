@@ -3,12 +3,10 @@
   "version": "1.0.0",
   "description": "Relationship verification app for immigration success. Privacy-first. AI runs fully in-browser. Storage on ICP blockchain.",
   "private": true,
-  "workspaces": [
-    "src/bonded-app-frontend"
-  ],
+  "workspaces": ["src/bonded-app-frontend"],
   "scripts": {
     "setup": "npm install && cd src/bonded-app-frontend && npm install",
-    "build": "dfx build",
+    "build": "cross-env VITE_DFX_NETWORK=${VITE_DFX_NETWORK:-local} npm run build --prefix src/bonded-app-frontend",
     "deploy": "dfx deploy",
     "deploy:local": "dfx deploy --network local",
     "deploy:playground": "dfx deploy --network playground",
@@ -23,19 +21,20 @@
     "test:stats": "dfx canister call bonded-app-backend get_canister_stats",
     "dev": "npm run start:local && npm run deploy:local && cd src/bonded-app-frontend && npm run start",
     "frontend:dev": "cd src/bonded-app-frontend && npm run dev",
-    "frontend:build": "cd src/bonded-app-frontend && npm run build:laptop",
+    "frontend:build": "cd src/bonded-app-frontend && npm run build",
     "frontend:build:fast": "cd src/bonded-app-frontend && npm run build:fast",
-    "deploy:local:fast": "npm run frontend:build:fast && dfx deploy bonded-app-frontend --network local",
-    "deploy:local:minimal": "cd src/bonded-app-frontend && npm run build:minimal && cd ../.. && dfx deploy bonded-app-frontend --network local",
+    "deploy:local:fast": "npm run frontend:build:fast && dfx deploy bonded-app-frontend --network local --upgrade-unchanged",
+    "deploy:local:minimal": "cd src/bonded-app-frontend && npm run build:minimal && cd ../.. && dfx deploy bonded-app-frontend --network local --upgrade-unchanged",
     "deploy:fast": "./scripts/fast-deploy.sh",
     "deploy:instant": "./scripts/instant-deploy.sh",
-    "deploy:direct": "cd src/bonded-app-frontend && npm run build:ultra-light && cd ../.. && dfx deploy bonded-app-frontend --network local",
-    "clean": "dfx stop && rm -rf .dfx && rm -rf src/bonded-app-frontend/dist && rm -rf target",
+    "deploy:direct": "cd src/bonded-app-frontend && npm run build:ultra-light && cd ../.. && dfx deploy bonded-app-frontend --network local --no-asset-upgrade",
+    "clean": "dfx stop || true && rm -rf .dfx src/bonded-app-frontend/dist target",
     "build:emergency": "bash scripts/emergency-build.sh"
   },
   "devDependencies": {
     "@dfinity/candid": "2.4.1",
-    "@dfinity/principal": "2.4.1"
+    "@dfinity/principal": "2.4.1",
+    "cross-env": "^7.0.3"
   },
   "keywords": [
     "icp",
@@ -50,6 +49,8 @@
   "author": "Bonded Team",
   "license": "MIT",
   "dependencies": {
+    "esbuild": "^0.25.9",
+    "esbuild-wasm": "^0.25.9",
     "process": "^0.11.10"
   },
   "resolutions": {

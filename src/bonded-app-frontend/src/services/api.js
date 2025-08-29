@@ -97,6 +97,15 @@ class APIService {
               'whoami': IDL.Func([], [IDL.Principal], ['query']),
               'register_user': IDL.Func([IDL.Opt(IDL.Text)], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
               'get_user_profile': IDL.Func([], [IDL.Variant({ 'Ok': IDL.Record({}), 'Err': IDL.Text })], ['query']),
+              'update_user_settings': IDL.Func([IDL.Record({
+                'ai_filters_enabled': IDL.Opt(IDL.Bool),
+                'nsfw_filter': IDL.Opt(IDL.Bool),
+                'explicit_text_filter': IDL.Opt(IDL.Bool),
+                'upload_schedule': IDL.Opt(IDL.Text),
+                'geolocation_enabled': IDL.Opt(IDL.Bool),
+                'notification_preferences': IDL.Opt(IDL.Vec(IDL.Text)),
+                'profile_metadata': IDL.Opt(IDL.Text)
+              })], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
             });
           };
         }
@@ -315,7 +324,7 @@ class APIService {
     try {
       await this.authClient.login({
         identityProvider: IS_LOCAL 
-          ? `http://127.0.0.1:4943/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
+          ? `http://127.0.0.1:4943/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaaa-aaadq-cai'}`
           : 'https://identity.ic0.app',
         onSuccess: async () => {
           this.identity = this.authClient.getIdentity();
@@ -357,9 +366,23 @@ class APIService {
     console.log('🔍 API Service: Calling register_user with metadata:', metadata);
     const result = await this.actor.register_user(metadata ? [metadata] : []);
     console.log('🔍 API Service: Raw canister result:', result);
-    const handledResult = this.handleResult(result);
-    console.log('🔍 API Service: Handled result:', handledResult);
-    return handledResult;
+    
+    // Handle the result properly for registration
+    if ('Ok' in result) {
+      console.log('🔍 API Service: Registration successful:', result.Ok);
+      return { success: true, message: result.Ok };
+    } else if ('Err' in result) {
+      // Handle "User already registered" as a success case
+      if (result.Err === 'User already registered') {
+        console.log('🔍 API Service: User already registered, treating as success');
+        return { success: true, isExistingUser: true, message: result.Err };
+      }
+      console.log('🔍 API Service: Registration error:', result.Err);
+      throw new Error(result.Err);
+    }
+    
+    console.log('🔍 API Service: Unexpected result format:', result);
+    return result;
   }
 
   async getUserProfile() {

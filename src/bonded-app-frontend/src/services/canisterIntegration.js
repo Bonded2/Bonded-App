@@ -60,7 +60,7 @@ class CanisterIntegrationService {
     
     // Internet Identity configuration
     this.identityProvider = this.isLocal 
-      ? `http://127.0.0.1:4943/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
+      ? `http://127.0.0.1:4943/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaaa-aaadq-cai'}`
       : 'https://identity.ic0.app';
   }
 

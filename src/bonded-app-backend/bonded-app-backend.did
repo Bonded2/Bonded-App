@@ -1,14 +1,219 @@
-service : {
-  health_check : () -> (text);
-  greet : (text) -> (text);
-  whoami : () -> (principal);
-  register_user : (opt text) -> (variant { Ok : text; Err : text; });
-  upload_evidence : (text, vec nat8, record { timestamp : nat64; content_type : text; location : opt text; description : opt text; tags : vec text; }, text, opt vec nat8) -> (variant { Ok : text; Err : text; });
-  get_timeline : (text, opt nat32, opt text, opt nat64, opt nat64) -> (variant { Ok : record { evidence : vec record { id : text; relationship_id : text; encrypted_data : vec nat8; metadata : record { timestamp : nat64; content_type : text; location : opt text; description : opt text; tags : vec text; }; upload_timestamp : nat64; hash : text; uploader : principal; signature : opt vec nat8; }; total_count : nat64; has_more : bool; }; Err : text; });
-  create_partner_invite : (record { partner_email : text; inviter_name : text; expires_at : nat64; metadata : opt text; frontend_url : opt text; }) -> (variant { Ok : record { invite_id : text; invite_link : text; expires_at : nat64; }; Err : text; });
-  get_partner_invite : (text) -> (variant { Ok : record { id : text; inviter_principal : principal; partner_email : text; inviter_name : text; status : variant { Pending; Accepted; Expired; Cancelled; }; created_at : nat64; expires_at : nat64; metadata : opt text; }; Err : text; });
-  accept_partner_invite : (text) -> (variant { Ok : record { relationship_id : text; relationship : record { id : text; partner1 : principal; partner2 : opt principal; status : variant { Pending; Active; Terminated; }; created_at : nat64; bonded_key_share : vec nat8; evidence_count : nat64; last_activity : nat64; }; user_key_share : vec nat8; public_key : vec nat8; }; Err : text; });
-  create_relationship : (record { partner_principal : principal; }) -> (variant { Ok : record { relationship_id : text; user_key_share : vec nat8; public_key : vec nat8; }; Err : text; });
-  get_relationship : (text) -> (variant { Ok : record { id : text; partner1 : principal; partner2 : opt principal; status : variant { Pending; Active; Terminated; }; created_at : nat64; bonded_key_share : vec nat8; evidence_count : nat64; last_activity : nat64; }; Err : text; });
-  get_user_relationships : () -> (variant { Ok : vec record { id : text; partner1 : principal; partner2 : opt principal; status : variant { Pending; Active; Terminated; }; created_at : nat64; bonded_key_share : vec nat8; evidence_count : nat64; last_activity : nat64; }; Err : text; });
+type AcceptInviteResponse = record {
+  relationship : Relationship;
+  public_key : blob;
+  relationship_id : text;
+  user_key_share : blob;
+};
+type BondedResult = variant { Ok : AcceptInviteResponse; Err : text };
+type BondedResult_1 = variant { Ok : blob; Err : text };
+type BondedResult_10 = variant { Ok : UserFaceEmbedding; Err : text };
+type BondedResult_11 = variant { Ok : PartnerInvite; Err : text };
+type BondedResult_12 = variant { Ok : ProcessedContent; Err : text };
+type BondedResult_13 = variant { Ok : vec ProcessedContent; Err : text };
+type BondedResult_14 = variant { Ok : Relationship; Err : text };
+type BondedResult_15 = variant { Ok : TimelineResponse; Err : text };
+type BondedResult_16 = variant { Ok : UserProfile; Err : text };
+type BondedResult_17 = variant { Ok : vec Relationship; Err : text };
+type BondedResult_18 = variant { Ok : UserSettings; Err : text };
+type BondedResult_19 = variant { Ok : SendEmailResponse; Err : text };
+type BondedResult_2 = variant { Ok : text; Err : text };
+type BondedResult_3 = variant { Ok : CreatePartnerInviteResponse; Err : text };
+type BondedResult_4 = variant { Ok : CreateRelationshipResponse; Err : text };
+type BondedResult_5 = variant { Ok : vec text; Err : text };
+type BondedResult_6 = variant { Ok : vec UserFaceEmbedding; Err : text };
+type BondedResult_7 = variant { Ok : record { text; text }; Err : text };
+type BondedResult_8 = variant { Ok : vec EmailLog; Err : text };
+type BondedResult_9 = variant { Ok : Evidence; Err : text };
+type CreatePartnerInviteRequest = record {
+  partner_email : text;
+  metadata : opt text;
+  inviter_name : text;
+  frontend_url : opt text;
+  expires_at : nat64;
+};
+type CreatePartnerInviteResponse = record {
+  invite_id : text;
+  invite_link : text;
+  expires_at : nat64;
+};
+type CreateRelationshipRequest = record { partner_principal : principal };
+type CreateRelationshipResponse = record {
+  public_key : blob;
+  relationship_id : text;
+  user_key_share : blob;
+};
+type EmailLog = record {
+  id : text;
+  log_data : text;
+  user : principal;
+  created_at : nat64;
+};
+type Evidence = record {
+  id : text;
+  encrypted_data : blob;
+  signature : opt blob;
+  metadata : EvidenceMetadata;
+  hash : text;
+  uploader : principal;
+  relationship_id : text;
+  upload_timestamp : nat64;
+};
+type EvidenceMetadata = record {
+  tags : vec text;
+  content_type : text;
+  description : opt text;
+  timestamp : nat64;
+  location : opt text;
+};
+type InviteStatus = variant { Accepted; Cancelled; Expired; Pending };
+type PartnerInvite = record {
+  id : text;
+  status : InviteStatus;
+  partner_email : text;
+  inviter_principal : principal;
+  metadata : opt text;
+  inviter_name : text;
+  created_at : nat64;
+  expires_at : nat64;
+};
+type ProcessedContent = record {
+  id : text;
+  updated_at : nat64;
+  content_data : text;
+  user : principal;
+  content_type : text;
+  created_at : nat64;
+  relationship_id : opt text;
+};
+type Relationship = record {
+  id : text;
+  status : RelationshipStatus;
+  bonded_key_share : blob;
+  created_at : nat64;
+  partner1 : principal;
+  partner2 : opt principal;
+  last_activity : nat64;
+  evidence_count : nat64;
+};
+type RelationshipStatus = variant { Terminated; Active; Pending };
+type Result = variant { Ok : UserDashboardData; Err : text };
+type SendEmailResponse = record {
+  provider : text;
+  success : bool;
+  message_id : text;
+};
+type SendInviteEmailRequest = record {
+  subject : text;
+  recipient_email : text;
+  email_content : text;
+};
+type TimelineQuery = record {
+  category_filter : opt text;
+  page : opt nat32;
+  end_date : opt nat64;
+  start_date : opt nat64;
+  relationship_id : text;
+};
+type TimelineResponse = record {
+  evidence : vec Evidence;
+  total_count : nat64;
+  has_more : bool;
+};
+type UpdateSettingsRequest = record {
+  notification_preferences : opt vec text;
+  upload_schedule : opt text;
+  explicit_text_filter : opt bool;
+  nsfw_filter : opt bool;
+  profile_metadata : opt text;
+  geolocation_enabled : opt bool;
+  ai_filters_enabled : opt bool;
+};
+type UserDashboardData = record {
+  last_updated : nat64;
+  recent_evidence : vec Evidence;
+  settings : UserSettings;
+  relationships : vec Relationship;
+  profile : UserProfile;
+};
+type UserFaceEmbedding = record {
+  updated_at : nat64;
+  user : principal;
+  created_at : nat64;
+  embedding_data : vec float32;
+  partner_id : opt principal;
+};
+type UserProfile = record {
+  total_evidence_uploaded : nat64;
+  "principal" : principal;
+  kyc_verified : bool;
+  created_at : nat64;
+  last_seen : nat64;
+  relationships : vec text;
+};
+type UserSettings = record {
+  updated_at : nat64;
+  notification_preferences : vec text;
+  upload_schedule : text;
+  explicit_text_filter : bool;
+  nsfw_filter : bool;
+  profile_metadata : opt text;
+  geolocation_enabled : bool;
+  ai_filters_enabled : bool;
+};
+service : () -> {
+  accept_partner_invite : (text) -> (BondedResult);
+  accept_relationship : (text) -> (BondedResult_1);
+  cleanup_expired_geo_cache : () -> (BondedResult_2);
+  clear_all_user_data : () -> (BondedResult_2);
+  create_partner_invite : (CreatePartnerInviteRequest) -> (BondedResult_3);
+  create_relationship : (CreateRelationshipRequest) -> (BondedResult_4);
+  debug_list_all_invites : () -> (BondedResult_5) query;
+  delete_evidence : (text, text) -> (BondedResult_2);
+  delete_face_embeddings : () -> (BondedResult_2);
+  delete_processed_content : (text) -> (BondedResult_2);
+  delete_user_account : () -> (BondedResult_2);
+  get_all_face_embeddings : () -> (BondedResult_6) query;
+  get_auto_scanner_settings : () -> (BondedResult_2) query;
+  get_canister_stats : () -> (vec record { text; nat64 }) query;
+  get_capture_settings : () -> (BondedResult_7) query;
+  get_client_data : (text) -> (BondedResult_2) query;
+  get_email_logs : () -> (BondedResult_8) query;
+  get_evidence_by_id : (text) -> (BondedResult_9) query;
+  get_face_embedding : () -> (BondedResult_10) query;
+  get_geo_cache : (text) -> (BondedResult_2) query;
+  get_key_share : (text) -> (BondedResult_1) query;
+  get_partner_invite : (text) -> (BondedResult_11) query;
+  get_processed_content : (text) -> (BondedResult_12) query;
+  get_processed_content_by_type : (text) -> (BondedResult_13) query;
+  get_relationship : (text) -> (BondedResult_14) query;
+  get_scheduler_settings : () -> (BondedResult_2) query;
+  get_timeline : (text, nat32, nat32) -> (BondedResult_15) query;
+  get_timeline_data : () -> (BondedResult_5) query;
+  get_timeline_with_filters : (TimelineQuery) -> (BondedResult_15) query;
+  get_user_dashboard_data : () -> (Result) query;
+  get_user_data : (text) -> (BondedResult_2) query;
+  get_user_profile : () -> (BondedResult_16) query;
+  get_user_relationships : () -> (BondedResult_17) query;
+  get_user_settings : () -> (BondedResult_18) query;
+  get_user_settings_by_principal : (principal) -> (BondedResult_18) query;
+  greet : (text) -> (text) query;
+  health_check : () -> (text) query;
+  register_user : (opt text) -> (BondedResult_2);
+  save_auto_scanner_settings : (text) -> (BondedResult_2);
+  save_capture_settings : (text, text) -> (BondedResult_2);
+  save_email_log : (text) -> (BondedResult_2);
+  save_face_embedding : (vec float32, opt principal) -> (BondedResult_2);
+  save_geo_cache : (text, text, nat64) -> (BondedResult_2);
+  save_processed_content : (text, opt text, text, text) -> (BondedResult_2);
+  save_scheduler_settings : (text) -> (BondedResult_2);
+  save_timeline_data : (vec text) -> (BondedResult_2);
+  save_user_data : (text, text) -> (BondedResult_2);
+  send_invite_email : (SendInviteEmailRequest) -> (BondedResult_19);
+  store_client_data : (text, text) -> (BondedResult_2);
+  terminate_relationship : (text) -> (BondedResult_2);
+  update_face_embedding : (vec float32) -> (BondedResult_2);
+  update_user_settings : (UpdateSettingsRequest) -> (BondedResult_2);
+  upload_evidence : (text, blob, EvidenceMetadata) -> (BondedResult_2);
+  verify_kyc : () -> (BondedResult_2);
+  whoami : () -> (principal) query;
 }

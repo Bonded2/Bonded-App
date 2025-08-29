@@ -90,30 +90,33 @@
 .user-profile {
   display: flex;
   align-items: center;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 16px 16px 0;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  padding: 22px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 18px 18px 0;
+  border-radius: 18px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.15);
   position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .avatar {
-  width: 60px;
-  height: 60px;
+  width: 75px;
+  height: 75px;
   border-radius: 50%;
   background: #FF704D;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-right: 16px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  margin-right: 18px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .avatar span {
   color: white;
-  font-size: 24px;
-  font-weight: 500;
+  font-size: 28px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .user-info {
@@ -452,22 +455,103 @@
 }
 
 /* Responsive styles */
+@media (max-width: 768px) {
+  .user-profile {
+    padding: 18px;
+    margin: 12px 12px 0;
+  }
+  
+  .avatar {
+    width: 70px;
+    height: 70px;
+    margin-right: 14px;
+  }
+  
+  .avatar span {
+    font-size: 26px;
+  }
+  
+  .user-name {
+    font-size: 19px;
+  }
+  
+  .user-email {
+    font-size: 13px;
+  }
+  
+  .edit-profile-button {
+    width: 38px;
+    height: 38px;
+    top: 14px;
+    right: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-profile {
+    padding: 16px;
+    margin: 10px 10px 0;
+  }
+  
+  .avatar {
+    width: 65px;
+    height: 65px;
+    margin-right: 12px;
+  }
+  
+  .avatar span {
+    font-size: 24px;
+  }
+  
+  .user-name {
+    font-size: 18px;
+  }
+  
+  .user-email {
+    font-size: 12px;
+  }
+  
+  .edit-profile-button {
+    width: 36px;
+    height: 36px;
+    top: 12px;
+    right: 12px;
+  }
+}
+
 @media (max-width: 320px) {
   .menu-item {
     padding: 12px 16px;
   }
   
   .user-profile {
-    padding: 16px;
+    padding: 14px;
+    margin: 8px 8px 0;
   }
   
   .avatar {
-    width: 50px;
-    height: 50px;
+    width: 55px;
+    height: 55px;
+    margin-right: 10px;
+  }
+  
+  .avatar span {
+    font-size: 22px;
   }
   
   .user-name {
-    font-size: 18px;
+    font-size: 17px;
+  }
+  
+  .user-email {
+    font-size: 11px;
+  }
+  
+  .edit-profile-button {
+    width: 56px;
+    height: 32px;
+    top: 10px;
+    right: 10px;
   }
 
   /* AI Section responsive */
