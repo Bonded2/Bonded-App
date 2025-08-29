@@ -30,7 +30,7 @@
   background: var(--glass-background);
   backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,6 +38,9 @@
   transition: all var(--transition-normal);
   color: white;
   box-shadow: var(--shadow-lg);
+  flex-shrink: 0;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .modern-back-button:hover {
@@ -591,9 +594,35 @@
 }
 
 /* Responsive Design */
+@media (max-width: 768px) {
+  .modern-back-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .modern-back-button svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
 @media (max-width: 640px) {
   .navigation-header {
     padding: 8px 12px;
+  }
+  
+  .modern-back-button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .modern-back-button svg {
+    width: 20px;
+    height: 20px;
   }
   
   .skip-invite-button {
@@ -662,7 +691,20 @@
   .bottom-nav-buttons {
     flex-direction: column;
   }
-  
+}
+
+@media (max-width: 480px) {
+  .modern-back-button {
+    width: 80px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .modern-back-button svg {
+    width: 18px;
+    height: 18px;
+  }
   .outline-button {
     max-width: none;
   }

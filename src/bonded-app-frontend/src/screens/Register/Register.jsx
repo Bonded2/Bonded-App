@@ -116,12 +116,19 @@ export const Register = () => {
               throw new Error('Authentication verification failed after login');
             }
             
+            // IMPORTANT: Update the icpUserService to use the same authenticated API instance
+            // Import the icpUserService and update its API reference
+            const { icpUserService: freshIcpUserService } = await import('../../services/icpUserService.js');
+            
+            // Set the authenticated API instance in the icpUserService
+            freshIcpUserService.api = api;
+            
             // Initialize ICP user service (it will now use the authenticated canister integration)
-            await icpUserService.initialize();
+            await freshIcpUserService.initialize();
             
             // Register user first (basic registration)
             console.log('🔍 Starting user registration...');
-            const registrationResult = await icpUserService.registerUser();
+            const registrationResult = await freshIcpUserService.registerUser();
             console.log('🔍 Registration result:', registrationResult);
             
             // Check if user was already registered
@@ -161,7 +168,7 @@ export const Register = () => {
               
               // Save profile data to ICP canister
               try {
-                await icpUserService.updateUserSettings({
+                await freshIcpUserService.updateUserSettings({
                   profile_metadata: JSON.stringify(profileData)
                 });
               } catch (saveError) {
