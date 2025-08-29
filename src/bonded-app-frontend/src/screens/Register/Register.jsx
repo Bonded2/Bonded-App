@@ -88,7 +88,7 @@ export const Register = () => {
         identityProvider: window.location.hostname.includes('icp0.io') 
           ? "https://identity.ic0.app"
           : (import.meta.env.VITE_DFX_NETWORK === "local" 
-            ? `${import.meta.env.VITE_API_HOST || 'http://127.0.0.1:4943'}/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaah-qdrqq-cai'}`
+            ? `${import.meta.env.VITE_API_HOST || 'http://127.0.0.1:4943'}/?canisterId=${import.meta.env.VITE_CANISTER_ID_INTERNET_IDENTITY || 'rdmx6-jaaaa-aaaaa-aaadq-cai'}`
             : "https://identity.ic0.app"),
         maxTimeToLive: BigInt(7 * 24 * 60 * 60 * 1000 * 1000 * 1000), // 7 days in nanoseconds
         onSuccess: async () => {
@@ -209,9 +209,12 @@ export const Register = () => {
       {/* Enhanced navigation header */}
       <div className="navigation-header">
         <button onClick={handleBackNavigation} className="modern-back-button">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+         
+         
+         
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg> 
         </button>
         
         {/* Login link for users who want to login instead */}

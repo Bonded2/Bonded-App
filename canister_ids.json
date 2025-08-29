@@ -1,13 +1,10 @@
 {
   "bonded-app-backend": {
     "ic": "akcy4-wqaaa-aaaab-qb5cq-cai",
-    "local": "uxrrr-q7777-77774-qaaaq-cai"
+    "local": "ulvla-h7777-77774-qaacq-cai"
   },
   "bonded-app-frontend": {
-    "ic": "f3mwt-6qaaa-aaaab-qb2ba-cai",
-    "local": "f3mwt-6qaaa-aaaab-qb2ba-cai"
-  },
-  "bonded-app-frontend-v2": {
-    "ic": "adbta-ayaaa-aaaab-qb5da-cai"
+    "ic": "bopxo-pqaaa-aaaab-qb5eq-cai",
+    "local": "vizcg-th777-77774-qaaea-cai"
   }
 }

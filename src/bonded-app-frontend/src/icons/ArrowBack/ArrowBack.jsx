@@ -14,6 +14,11 @@ export const ArrowBack = ({ className }) => {
       viewBox="0 0 24 24"
       width="24"
       xmlns="http://www.w3.org/2000/svg"
+      style={{
+        minWidth: '24px',
+        minHeight: '24px',
+        flexShrink: 0
+      }}
     >
       <path
         className="path"

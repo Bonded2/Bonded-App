@@ -4,8 +4,6 @@
  * Emails appear in sender's Sent folder and recipient's Inbox
  */
 
-import { logEnvironmentVariables } from '../utils/envDebug.js';
-
 class EmailService {
   constructor() {
     this.isInitialized = false;
@@ -21,13 +19,6 @@ class EmailService {
    */
   async initialize(userEmail, userName) {
     try {
-      // Debug environment variables in development
-      if (import.meta.env.DEV) {
-        console.log('🔧 EmailService: Debugging environment variables...');
-        const envStatus = logEnvironmentVariables();
-        console.log('📧 EmailJS Configuration Status:', envStatus);
-      }
-
       // Load EmailJS library if not already loaded
       if (!this.emailJSLoaded) {
         await this.loadEmailJS();
@@ -35,7 +26,7 @@ class EmailService {
 
       // Get EmailJS public key from environment variables
       const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
-                       'IySvZB7dyZbYcqMij'; // Fallback public key from .env
+                       '2C_y5Y8A7moWYpk96'; // Fallback public key
 
       // Initialize EmailJS with production configuration
       // Note: This requires proper EmailJS account setup as documented in EMAILJS_PRODUCTION_SETUP.md
@@ -106,20 +97,15 @@ class EmailService {
 
       // Check if EmailJS is properly configured before attempting to send
       // Get EmailJS configuration from environment variables
-//  const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 
-//                    'service_dxvgu0f'; // Your actual service ID as fallback from .env
-// const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 
-//                   'template_gllp3ap'; // Your actual template ID as fallback from .env
-// const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
-//                  'o4hq7EBQJGbKiHG0V; // Your actual public key as fallback from .env
-//       // Get EmailJS configuration from environment variables
+
       const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 
-                       'service_c7hb19g'; // Your actual service ID as fallback from .env
+           'service_c7hb19g'; // Your actual service ID as fallback - 'service_n2rlbye'
       const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 
-                        'template_mbgwe3j'; // Your actual template ID as fallback from .env
+           'template_mbgwe3j'; // Your actual template ID as fallback - 'template_9qqunmm'
       const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 
-                       'IySvZB7dyZbYcqMij'; // Your actual public key as fallback from .env
-      
+           'IySvZB7dyZbYcqMij'; // Your actual public key as fallback - '2C_y5Y8A7moWYpk96'
+
+
       // Validate configuration - all should be available now with fallbacks
       if (!serviceId || !templateId || !publicKey) {
         throw new Error('EmailJS not configured - missing environment variables');
