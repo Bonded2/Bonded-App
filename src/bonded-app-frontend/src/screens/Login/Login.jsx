@@ -189,7 +189,7 @@ export const Login = () => {
         <img
           className="bonded-logo-blue"
           alt="Bonded logo blue"
-          src="/images/bonded-logo-blue.svg"
+          src="/images/bonded-logo-gray.svg"
         />
         <h1 className="login-title">Welcome back</h1>
         {error && (

@@ -27,12 +27,12 @@
 }
 
 .modern-back-button {
-  width: 65px;
+  width: 48px;
   height: 48px;
   background: var(--glass-background);
   backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -40,6 +40,9 @@
   transition: all var(--transition-normal);
   color: white;
   box-shadow: var(--shadow-lg);
+  flex-shrink: 0;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .modern-back-button:hover {
@@ -80,7 +83,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(circle at 20% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
     radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 40% 40%, rgba(37, 99, 235, 0.15) 0%, transparent 50%);
@@ -316,12 +319,12 @@
   .navigation-header {
     padding: 8px 12px;
   }
-  
+
   .skip-invite-button {
     padding: 10px 16px;
     font-size: 13px;
   }
-  
+
   .register-container {
     padding: 80px 20px 24px;
     max-width: 100%;
@@ -385,17 +388,19 @@
   .register-form {
     gap: 16px;
   }
+}
 
+/* Override back‑button sizing for small screens using clamp() */
+@media (max-width: 640px) {
   .modern-back-button {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    min-height: 40px;
+    width: clamp(80px, 10vw, 64px);
+    height: clamp(44px, 10vw, 64px);
+    min-width: clamp(44px, 10vw, 64px);
+    min-height: clamp(44px, 10vw, 64px);
   }
 
   .modern-back-button svg {
-    width: 20px;
-    height: 20px;
+    width: 50%;
+    height: 50%;
   }
 }
-  

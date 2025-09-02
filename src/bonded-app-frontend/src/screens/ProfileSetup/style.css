@@ -39,6 +39,9 @@
   transition: all 0.2s ease;
   color: white;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .modern-back-button:hover {
@@ -578,5 +581,42 @@
   .submit-button {
     height: 48px;
     border-radius: 12px;
+  }
+}
+
+/* Responsive back button */
+@media (max-width: 768px) {
+  .modern-back-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 640px) {
+  .modern-back-button {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modern-back-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 320px) {
+  .modern-back-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
   }
 }

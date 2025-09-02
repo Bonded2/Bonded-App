@@ -106,6 +106,7 @@ class APIService {
                 'notification_preferences': IDL.Opt(IDL.Vec(IDL.Text)),
                 'profile_metadata': IDL.Opt(IDL.Text)
               })], [IDL.Variant({ 'Ok': IDL.Text, 'Err': IDL.Text })], []),
+              'get_timeline': IDL.Func([IDL.Text, IDL.Nat32, IDL.Nat32], [IDL.Variant({ 'Ok': IDL.Record({}), 'Err': IDL.Text })], ['query']),
             });
           };
         }
@@ -509,6 +510,13 @@ class APIService {
   async getTimelineWithFilters(query) {
     if (!this.actor) throw new Error('API not initialized');
     const result = await this.actor.get_timeline_with_filters(query);
+    return this.handleResult(result);
+  }
+
+  async fetchTimeline(options = {}) {
+    if (!this.actor) throw new Error('API not initialized');
+    const { relationshipId = 'default', page = 0, limit = 20, forceRefresh = false } = options;
+    const result = await this.actor.get_timeline(relationshipId, page, limit);
     return this.handleResult(result);
   }
 

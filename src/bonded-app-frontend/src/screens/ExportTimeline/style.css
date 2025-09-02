@@ -64,26 +64,29 @@
 .back-button-et {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: #FF704D;
-  font-size: 16px;
-  font-weight: 500;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 112, 77, 0.15);
+  border: 1px solid rgba(255, 112, 77, 0.3);
+  border-radius: 50%;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 8px;
   transition: all 0.2s ease;
+  flex-shrink: 0;
+  min-width: 48px;
+  min-height: 48px;
 }
 
 .back-button-et:hover {
-  background: rgba(255, 112, 77, 0.1);
-  transform: translateX(-2px);
+  background: rgba(255, 112, 77, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .back-button-et svg {
   width: 24px;
   height: 24px;
+  color: #FF704D;
 }
 
 .export-timeline-title {
@@ -1074,4 +1077,61 @@
   0% { background: rgba(185, 255, 70, 0.15); }
   50% { background: rgba(185, 255, 70, 0.25); }
   100% { background: rgba(185, 255, 70, 0.15); }
+}
+
+/* Responsive back button */
+@media (max-width: 768px) {
+  .back-button-et {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  .back-button-et svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .back-button-et {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  
+  .back-button-et svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .back-button-et {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  .back-button-et svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+@media (max-width: 320px) {
+  .back-button-et {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+  
+  .back-button-et svg {
+    width: 16px;
+    height: 16px;
+  }
 } 
