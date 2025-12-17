@@ -1,5 +1,9 @@
 # Bonded App
 
+> **Project stewardship:**  
+> This repository is maintained as part of the Together Alone Ventures (TAV) research and product portfolio.  
+> https://github.com/Together-Alone-Ventures/tav-org
+
 > Relationship verification app for immigration success. Privacy-first. AI runs fully in-browser. Storage on ICP blockchain.
 
 ## Architecture
